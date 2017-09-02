@@ -1,0 +1,183 @@
+<project name="icmp4j/build" default="build" basedir="..">
+  
+    <!--
+    Imports, relative to the build.xml path and not its basedir
+  -->
+  <import file="../../build/thirdparty.xml" />
+
+  <!--
+    Initialization target
+  -->
+  <target name="init">
+
+    <!--
+      Timestamp
+    -->
+    <tstamp />
+
+    <!--
+      sets the BUILD_* properties for this (5)
+    -->
+    <property name="BUILD_NUMBER_FILE" location="../build/build.number" />
+    <property file="${BUILD_NUMBER_FILE}" prefix="build.number." />
+    <property name="BUILD_NUMBER"  value="${build.number.build.number}" />
+    
+    <!--
+      by default, build for the most popular version of java installed on user systems: 1.6
+    -->
+    <property name="JAVAC_SOURCE" value="1.6" />
+    <property name="JAVAC_TARGET" value="1.6" />
+  </target>
+
+  <!--
+    Builds this module
+  -->
+  <target name="build" depends="init">
+
+    <!--
+      compile
+    -->
+    <fail unless="JAVAC_SOURCE" />
+    <fail unless="JAVAC_TARGET" />
+    <mkdir dir="output/classes" />
+    <javac
+      srcdir="src"
+      destdir="output/classes"
+      debug="on"
+      includeantruntime="false"
+      source="${JAVAC_SOURCE}"
+      target="${JAVAC_TARGET}">
+      
+      <classpath>
+        <fileset refid="jna.lib" />
+      </classpath>
+    </javac>
+    
+    <mkdir dir="output/classes-test" />
+    <javac
+      srcdir="test"
+      destdir="output/classes-test"
+      debug="on"
+      includeantruntime="false"
+      source="${JAVAC_SOURCE}"
+      target="${JAVAC_TARGET}">
+
+      <classpath>
+        <fileset refid="junit.lib" />
+        <pathelement location="output/classes" />
+      </classpath>
+    </javac>
+
+    <!--
+      icmp4j.jar
+    -->
+    <fail unless="BUILD_NUMBER" />
+    <mkdir dir="output/lib" />
+    <jar destfile="output/lib/icmp4j.jar">
+
+      <fileset dir="output/classes">
+        <include name="org/**" />
+      </fileset>
+    </jar>
+    
+    <!--
+      icmp4j-android.jar
+      minimal distribution that only runs on android
+    -->
+    <fail unless="BUILD_NUMBER" />
+    <mkdir dir="output/lib" />
+    <jar destfile="output/lib/icmp4j-android.jar">
+
+      <fileset dir="output/classes">
+        <include name="org/**" />
+        <exclude name="org/icmp4j/platform/java/**" />
+        <exclude name="org/icmp4j/platform/unix/**" />
+        <exclude name="org/icmp4j/platform/windows/**" />
+      </fileset>
+    </jar>
+
+    <!--
+      Copy the native libraries
+    -->
+    <copy todir="output/lib/">
+      <fileset dir="../platform/unix/release/">
+	      <include name="*.so" />
+        <include name="*.dylib" />
+      </fileset>
+    </copy>
+    
+    <!--
+      Build a jar with everything
+    -->
+    <jar destfile="output/lib/icmp4j-all.jar">
+
+      <fileset dir="output/classes">
+        <include name="org/**" />
+      </fileset>
+      
+      <fileset dir="../platform/unix/release/">
+	      <include name="*.so" />
+        <include name="*.dylib" />
+      </fileset>
+    </jar>
+ 
+    <!--
+      make a directory where we can run as a command line tool
+    -->
+    <mkdir dir="output/tool" />
+    <fail unless="BUILD_NUMBER" />
+    <copy todir="output/tool">
+      <fileset dir="output/lib">
+        <include name="icmp4j-all.jar" />
+      </fileset>
+      <fileset refid="jna.lib" />
+    </copy>
+    
+    <!--
+      build the full project distribution
+      1. full project
+      2. icmp4j-all.jar
+      3. icmp4j.jar and libraries
+      4. readme.txt
+    -->
+    <fail unless="BUILD_NUMBER" />
+    <zip update="true"
+      destfile="output/publish/icmp4j-project.zip">
+      <fileset dir="../..">
+        <include name="trunk/**" />
+        <exclude name="trunk/build/release/**" />
+        <exclude name="trunk/icmp4j/output/publish/**" />
+      </fileset>
+    </zip>
+    
+    <copy todir="output/publish/">
+      <fileset dir="output/lib/">
+        <include name="*.jar" />
+        <include name="*.so" />
+        <include name="*.dylib" />
+      </fileset>
+    </copy>
+    
+    <zip update="true"
+      destfile="output/publish/icmp4j-src.zip">
+      <fileset dir="src" />
+    </zip>
+
+    <copy
+      todir="output/publish"
+      file="${BUILD_NUMBER_FILE}" />
+    
+    <copy todir="output/publish">
+      <fileset dir="../build/release">
+        <include name="readme.txt" />
+      </fileset>
+    </copy>
+  </target>
+
+  <!--
+    Cleans this distribution
+  -->
+  <target name="clean">
+    <delete dir="output" />
+  </target>
+</project>

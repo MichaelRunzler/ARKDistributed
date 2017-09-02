@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<project name="shortpasta/build/thirdparty.xml" basedir="..">
+
+  <!--
+    Root directory.
+    This must be a path relative to these paths so either one can access it with the same refid:
+      C:\dev\shortpasta\trunk
+      C:\dev\shortDesktop\trunk
+  -->
+  <property name="THIRDPARTY_REPOSITORY_ROOT_DIRECTORY" location="c:/dev/icmp4j/trunk/thirdparty" />
+  
+
+  <!--
+    jna
+  -->
+  <fileset id="jna.lib" dir="${THIRDPARTY_REPOSITORY_ROOT_DIRECTORY}/jna/3.5.1">
+    <include name="jna-3.5.1.jar"/>
+    <include name="platform-3.5.1.jar"/>
+  </fileset>
+
+  <fileset id="junit.lib" dir="${THIRDPARTY_REPOSITORY_ROOT_DIRECTORY}/junit/4.7">
+    <include name="junit-4.7.jar"/>
+  </fileset>
+</project>

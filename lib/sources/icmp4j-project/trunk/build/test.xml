@@ -1,0 +1,107 @@
+<project name="icmp4j/build/test" default="build" basedir="..">
+  
+  <!--
+    Imports, relative to this file's path and not its basedir
+  -->
+  <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+  
+  <!--
+    Initialization target
+  -->
+  <target name="init">
+    <tstamp/>
+  </target>
+
+  <!--
+    The default target
+    Runs the junit reports. Note: the build that includes this file must define a test-init target.
+  -->
+  <target name="build">
+    
+    <!--
+      delegate
+      include a classpath with the default locations of class files
+      include all unit tests
+    -->
+    <path id="classpath">
+      <pathelement path="output/classes" />
+      <pathelement path="output/classes-test" />
+    </path>
+    <antcall target="junit-run">
+      <param name="INCLUDE_PATTERN" value="**/*Test.java" /> 
+      <param name="EXCLUDE_PATTERN" value="**/*SimulationTest.java" />
+    </antcall>
+  </target>
+
+  <!--
+    Runs the given unit test
+  -->
+  <target name="junit-run" depends="init">
+    
+    <!-- setup the library path -->
+    <property name="JUNIT_LIBRARY_PATH" value="" />
+    
+    <!-- run the junit tests -->
+    <property environment="env"/>
+    <fail unless="env.JAVA_HOME" />
+    <fail unless="INCLUDE_PATTERN" />
+    <mkdir dir="output/junit/temp" />
+    <junit
+      printSummary="no"
+      haltOnFailure="no"
+      showOutput="yes"
+      fork="no"
+      forkMode="perTest"
+      jvm="${env.JAVA_HOME}/bin/java"
+      dir="test"
+      failureProperty="JUNIT_FAILED_FLAG"
+      errorProperty="ERROR">
+
+      <jvmarg value="-Djava.library.path=${JUNIT_LIBRARY_PATH}"/>
+      <jvmarg value="-Xmx512M"/>
+      <jvmarg value="-Xms64M"/>
+
+      <!-- for the log4j.xml file -->
+      <classpath refid="classpath" />
+
+      <!-- display errors to System.out -->
+      <formatter type="plain" usefile="false"/>
+
+      <!-- store the output as an xml file -->
+      <formatter type="xml"/>
+
+      <batchtest todir="output/junit/temp">
+        <fileset dir="test">
+          <include name="${INCLUDE_PATTERN}" />
+          <exclude name="${EXCLUDE_PATTERN}" />
+        </fileset>
+      </batchtest>
+    </junit>
+    
+    <!--
+      Log failure
+    -->
+    <if>
+      <isset property="JUNIT_FAILED_FLAG" />
+      <then>
+        <echo message="ERROR: ${ERROR}"/>
+      </then>
+    </if>
+
+    <!--
+      Build the HTML reports
+    -->
+    <mkdir dir="output/junit/report/html" />
+    <junitreport todir="output/junit/report/html">
+      <fileset dir="output/junit/temp">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report format="frames" todir="output/junit/report/html"/>
+    </junitreport>
+
+    <!--
+      Fail this script if junit failed
+    -->
+    <fail if="JUNIT_FAILED_FLAG" message="the junit task failed" />
+  </target>
+</project>
