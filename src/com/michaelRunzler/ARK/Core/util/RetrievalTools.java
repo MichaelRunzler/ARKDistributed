@@ -1,6 +1,7 @@
 package util;
 
 import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -276,5 +277,25 @@ public class RetrievalTools
         br.close();
 
         return result.toString();
+    }
+
+    /**
+     * Gets the size of a remote URL, be it a file or a page, by sending it an HTTP HEAD request for its content-length attribute.
+     * Sourced from the Stack Overflow user 'user1723178'.
+     * @param url the URL to check
+     * @return the size of the URL's content in bytes
+     */
+    public static int getRemoteFileSize(URL url) {
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("HEAD");
+            conn.getInputStream();
+            return conn.getContentLength();
+        } catch (IOException e) {
+            return -1;
+        } finally {
+            conn.disconnect();
+        }
     }
 }

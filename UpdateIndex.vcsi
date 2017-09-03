@@ -1,1 +1,3 @@
-R34UI:https://github.com/MichaelRunzler/ARKDistributed/
+R34UI>https://raw.githubusercontent.com/MichaelRunzler/ARKDistributed/master/artifacts/R34/R34.jar
+RP>https://raw.githubusercontent.com/MichaelRunzler/ARKDistributed/master/artifacts/RP/RPlanner.jar
+IP>https://raw.githubusercontent.com/MichaelRunzler/ARKDistributed/master/artifacts/IP/IPSearch.jar

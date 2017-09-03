@@ -49,7 +49,7 @@ JNA (Java Native Access) by The JNA Team, licensed under LGPL and Apache Commons
 HTMLManipulator by Nick Frolov, licensed under GPL.
 
 
-SECTION III: MEDIA AND INTELLECTUAL PROPERTY MATERIAL
+SECTION III: MEDIA AND INTELLECTUAL PROPERTY MATERIAL //todo update
 
 Media file copyright and intellectual property attribution information is as follows:
 
