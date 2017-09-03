@@ -126,7 +126,8 @@ public class ARKAutoupdater extends Application
             srcDisplay.setText(f.getName());
         });
 
-        update.setOnAction(e ->{
+        update.setOnAction(e ->
+        {
             updateTask = new Service<String>() {
                 @Override
                 protected Task<String> createTask() {
@@ -134,14 +135,16 @@ public class ARKAutoupdater extends Application
                         @Override
                         protected String call() throws Exception {
                             updateMTStatus("Status: Checking for Update");
-                            return runUpdate();
+                            return checkVersion();
                         }
                     };
                 }
             };
 
+            // Start the update check task.
             updateTask.restart();
 
+            // If the update check failed, tell the user and return to the main menu.
             updateTask.setOnFailed(e1 ->{
                 if(updateTask.getException() instanceof ARKTransThreadTransport){
                     ((ARKTransThreadTransport) updateTask.getException()).handleTransportPacket();
@@ -151,6 +154,7 @@ public class ARKAutoupdater extends Application
                 }
             });
 
+            // If the update check succeeded, proceed to the next prompt and the download phase.
             updateTask.setOnSucceeded(e1 ->
             {
                 // If for some reason the task finished without throwing an exception and has no value, return silently.
@@ -159,16 +163,22 @@ public class ARKAutoupdater extends Application
                 }
 
                 // Check with the user to see what they would like to do with the new version.
-                File downloadTarget;
+                File downloadTarget = null;
+                boolean doFileCheck = true;
                 if(new ARKInterfaceDialogYN("Query", "Would you like to replace the existing JAR, or download " +
-                        "the new version somewhere else?", "Replace", "Elsewhere", 150, 150).display())
+                        "the new version somewhere else?", "Replace", "Elsewhere", 200, 150).display())
                 {
                     downloadTarget = currentTarget;
                     if (downloadTarget.exists() && !downloadTarget.delete()) {
                         new ARKInterfaceAlert("Warning", "Couldn't delete the existing JAR! Specify another location.", 120, 120).display();
+                    }else{
+                        doFileCheck = false;
                     }
+                }
 
-                }else{
+                // If the user wishes to download to another location, show the file select prompt.
+                if(doFileCheck)
+                {
                     FileChooser targetChooser = new FileChooser();
                     targetChooser.setInitialDirectory(new File(System.getProperty("user.home")));
                     targetChooser.setTitle("Select Destination");
@@ -191,32 +201,52 @@ public class ARKAutoupdater extends Application
                     downloadTarget = f;
                 }
 
+                // Download the new version to the specified location.
                 updateMTStatus("Status: Downloading Update");
 
-                updateTask = new Service<String>() {
+                // Create the download task.
+                final File downloadTargetFN = downloadTarget;
+                final String source = updateTask.getValue();
+                Service<Void> downloadTask = new Service<Void>() {
                     @Override
-                    protected Task<String> createTask() {
-                        return new Task<String>() {
+                    protected Task<Void> createTask() {
+                        return new Task<Void>() {
                             @Override
-                            protected String call() throws Exception {
+                            protected Void call() throws Exception {
                                 updateMTStatus("Status: Downloading Update");
-                                RetrievalTools.getFileFromURL(updateTask.getValue(), downloadTarget, true);
+                                RetrievalTools.getFileFromURL(source, downloadTargetFN, true);
                                 return null;
                             }
                         };
                     }
                 };
 
-                updateTask.setOnSucceeded(e2 -> new ARKInterfaceAlert("Notice", "Update complete!", 100, 100));
+                // Start the download task.
+                downloadTask.restart();
 
-                updateTask.setOnFailed(e2 -> new ARKInterfaceAlert("Notice", "Error while downloading new version!", 100, 100).display());
+                // If the download succeeds, notify the user.
+                downloadTask.setOnSucceeded(e2 -> {
+                    new ARKInterfaceAlert("Notice", "Update complete!", 100, 100).display();
+                    updateMTStatus("Status: Complete");
+                });
 
-                updateMTStatus("Status: Complete");
+                // If the download fails, notify the user and log the exception to the console.
+                downloadTask.setOnFailed(e2 -> {
+                    new ARKInterfaceAlert("Notice", "Error while downloading new version!", 100, 100).display();
+                    downloadTask.getException().printStackTrace();
+                    updateMTStatus("Status: Complete");
+                });
+
             });
         });
     }
 
-    private String runUpdate() throws ARKTransThreadTransport
+    /**
+     * Checks the version of the current target JAR file against the remote repo version.
+     * @return the URI of the new version of the file, or null if an issue was encountered during checking
+     * @throws ARKTransThreadTransport if an error occurred during the check
+     */
+    private String checkVersion() throws ARKTransThreadTransport
     {
         // Check to make sure that the current target is a valid JAR file.
         if(currentTarget == null || !currentTarget.exists() || !currentTarget.getName().contains(".jar")){
@@ -257,9 +287,12 @@ public class ARKAutoupdater extends Application
                 case "IPSearch":
                     appIdentifier = "IP";
                     break;
+                case "com.michaelRunzler.ARK.application.retrieval.R34.R34UI":
+                    dispatcher.dispatchTransThreadPacket("Selected JAR is from the legacy ARK IAF series, which is not supported at this time.");
+                    return null;
             }
 
-            if(!appIdentifier.equals("")){
+            if(!appIdentifier.isEmpty()){
                 break;
             }
         }
