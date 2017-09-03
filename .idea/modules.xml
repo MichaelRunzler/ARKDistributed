@@ -3,8 +3,11 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ARK Distributed Application System.iml" filepath="$PROJECT_DIR$/ARK Distributed Application System.iml" />
-      <module fileurl="file://$PROJECT_DIR$/Application/Application.iml" filepath="$PROJECT_DIR$/Application/Application.iml" />
-      <module fileurl="file://$PROJECT_DIR$/Core/Core.iml" filepath="$PROJECT_DIR$/Core/Core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Application.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Application.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Core/Core.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Core/Core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/IP/IP.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/IP/IP.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/R34/R34.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/R34/R34.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/RPlanner/RPlanner.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/RPlanner/RPlanner.iml" />
     </modules>
   </component>
 </project>
