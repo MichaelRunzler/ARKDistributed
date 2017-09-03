@@ -1,0 +1,128 @@
+ARK Open Application Library End-User Licensing and Release of Liability Agreement
+Version 1.1.3
+Revised 23/8/2017
+
+ARK Open Application Library
+Copyright 2016-2018 Michael Runzler
+MichaelRunzler@users.noreply.github.com
+https://www.github.com/MichaelRunzler/
+
+Welcome, user!
+As the developer of this program library, I sincerely hope that you will find it useful and convenient.
+Before you proceed, however, there is a small matter that I must unfortunately present to you - 
+that of the Licensing and Release of Liability Agreement, or LRLA. This is a small piece of 
+legal documentation that is necessary to protect both of our legal rights, mine as a developer,
+and yours as an end-user. Please, read it carefully - I know it has become an common habit to
+simply scroll to the bottom and click 'Accept'. This is unfortunate, but understandable, considering
+the climate of legal fanaticism that surrounds so many companies in this day and age. I have endeavored
+to keep these terms short and to the point as much as I can. Particular attention should be given to Sections 2, 3, and 4.
+Thank you for using this ARK-series application!
+
+SECTION I: TERMINOLOGY
+
+For the purposes of this document, the following terms
+shall be used for the sake of simplicity:
+
+'Document': This legally binding agreement in its entirety.
+'Developer': GitHub user Michael Runzler.
+'You': The person or legal entity reading and agreeing to this Document, otherwise known as the User.
+'Program': The collection of code, assets, and associated intellectual property 
+	   that makes up the software that is displaying (or is accompanied by) this Document.
+
+SECTION II: LICENSING AND WARRANTY
+
+This Program is provided 'as-is', without warranty of any kind, real or implied,
+including the implied warranties of 'merchantability' and 'fitness of purpose'.
+The Program is distributed free-of-charge, and as such, its usage is dictated 
+by the terms of this Document.
+
+As the developer of this program, I hereby grant You the following rights. You may:
+
+-Utilize the Program for its intended purpose for non-commercial uses
+-Decompile, disassemble, or reverse engineer the Program
+-Modify the Program as you see fit
+-Use the Program for educational purposes, such as programming tutorial videos, etc
+-Make an unlimited number of copies of the Program and its components, restricted by the
+ terms of the included Copyright Attribution Document, detailed in Section III.
+-Redistribute the Program in an unmodified form to any number of users, provided that:
+ (a). Proper and sufficient attributions are provided, and no claim of original work
+      or ownership is made by the User distributing the Program,
+ (b). No monetary gain or compensation, including ad-redirects (including but not limited
+      to adf.ly and similar) and pay-gates, is sought by the distributing User, and
+ (c). These licensing terms, the Document, accompany the Program in their original form.
+
+-Redistribute individual Program components as dictated by the Program Component 
+ Redistribution Guideline Document, available at 
+ https://github.com/MichaelRunzler/ARKCore/blob/master/src/com/michaelRunzler/ARK/distribution.txt, or in
+ the source files for this Program
+
+You may NOT:
+
+-Redistribute the Program or the Program's components, including modified versions,
+ without explicit permission from the Developer. This includes, but is not limited to,
+ redistribution for monetary gain
+-Utilize the Program for commercial uses without explicit permission from the Developer
+-Claim ownership or intellectual property rights for the Program under any circumstances
+
+Individual components of the Program are protected by their individual intellectual property restrictions, detailed
+in the Copyright Attribution Document, available at https://github.com/MichaelRunzler/ARKCore/blob/master/src/com/michaelRunzler/ARK/copyright.txt
+A copy of the aforementioned document is also available in the source files for this Program. Certain elements
+of the Program are licensed under the terms of the GNU General Public License Agreement. Full terms of said
+agreement are available at http://www.gnu.org/licenses/.
+
+SECTION III: USAGE AND LIABILITY
+
+Usage of the Program is governed by all local, regional, and global laws and regulations in your place of residence.
+You are responsible for being aware of all pertaining law and regulations, and using the Program
+in such a way as to not violate said laws and regulations.
+The Developer disavows all legal, monetary, and moral liability for usage of the Program, including
+usage that falls within the restrictions set forth within this Document. You are explicitly responsible
+for all direct and indirect consequences resulting from the usage, decompilation, disassembly, or
+reverse engineering of this Program and its components, including consequences resulting from the
+violation of pertinent laws and regulations. Examples of such violations include:
+
+-Illegal duplication or redistribution of copyrighted or trademarked material
+-Posession or redistribution of child pornography
+-Violation of intellectual property rights
+-Unauthorized access or duplication of sensitive or confidential material
+
+SECTION IV: SUMMARY
+
+By reading and agreeing to this Document, You agree to the terms of licensing and liability set
+forth in the Document, and accept all consequences that may arise as a result of Your agreeing
+to the terms of said Document. This Document is legally binding, and legal action that may be
+sought by the User against the Developer is restricted by the terms of this Document.
+If you disagree with the terms of this Document, please terminate Your usage of the Program
+immediately. (If You are viewing this Document in a window brought up by the Program, there 
+will be a 'Disagree' button at the bottom of the window. Selecting this button will close the 
+Program automatically.) You are not required to destroy any copies of the Program or its components,
+but redistribution or modification of the Program and its components is not permitted unless 
+You have agreed to the terms of this Document. If You agree to the terms of this Document, said
+terms become effective upon Your usage of an ARK-series program that this Document is distributed with.
+(If You are viewing this Document in a window brought up by the Program, this Document becomes effective
+upon You selecting the 'Agree' button at the bottom of the window.)
+
+SECTION V: CONTACT INFORMATION AND INQUIRIES
+
+Any inqiries pertaining to the terms of this Document, the Program, or the Developer, may be sent to the
+following email address:
+
+arkapplib@gmail.com
+
+Examples of such inquiries include:
+
+-Suggestions for Program features and fixes
+-Questions or corrections pertaining to this Document
+-Additional copies of this Document, the GNU General Public License terms,
+ the Intellectual Property Attribution Document, the Program Component
+ Redistribution Guideline Document, or other documents pertaining
+ to the Program and its usage terms
+-Requests for special redistribution and modification permission
+-Collaboration or repository access permissions from other software developers
+ interested in providing assistance in the development of this and other
+ ARK-series applications
+
+Physical contact information and other such details are available upon valid request.
+
+
+TL;DR: Don't be stupid, obey the law, respect other people and their creations, and be safe!

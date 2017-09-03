@@ -7,9 +7,9 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" exported="" name="snmp4j" level="project" />
     <orderEntry type="library" exported="" name="icmp4j" level="project" />
     <orderEntry type="library" exported="" name="jna" level="project" />
-    <orderEntry type="library" exported="" name="snmp4j" level="project" />
-    <orderEntry type="library" exported="" name="Core" level="project" />
+    <orderEntry type="module" module-name="Core" />
   </component>
 </module>
