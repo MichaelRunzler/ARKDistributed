@@ -2,6 +2,7 @@ import UI.ARKInterfaceAlert;
 import UI.ARKInterfaceDialogYN;
 import com.sun.istack.internal.NotNull;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
@@ -14,12 +15,15 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import system.ARKTransThreadTransport;
+import system.ARKTransThreadTransportHandler;
 import util.ARKArrayUtil;
 import util.RetrievalTools;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,12 +48,16 @@ public class ARKAutoupdater extends Application
     private FileChooser srcSelect;
 
     private File currentTarget;
-    private Service<Void> updateTask;
-    private static final String UPDATE_URL_INDEX = "https://github.com/MichaelRunzler/ARKDistributed/blob/master/UpdateIndex.vcsi";
+    private Service<String> updateTask;
+    private static final String UPDATE_URL_INDEX = "https://raw.githubusercontent.com/MichaelRunzler/ARKDistributed/master/UpdateIndex.vcsi";
+
+    private ARKTransThreadTransportHandler dispatcher;
 
     @Override
     public void start(Stage primaryStage) throws Exception
     {
+        dispatcher = new ARKTransThreadTransportHandler(null);
+
         window = primaryStage;
 
         window.setResizable(false);
@@ -80,12 +88,12 @@ public class ARKAutoupdater extends Application
 
         srcDisplay.setEditable(false);
         srcDisplay.setPromptText("Target JAR");
-        srcSelect.setTitle("Select JAR to update");
-        srcSelect.getExtensionFilters().add(new FileChooser.ExtensionFilter("Executable JAR file", "*.jar"));
-        srcSelect.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
 
         srcSelect = new FileChooser();
         srcSelect.setInitialDirectory(new File(System.getProperty("user.home")));
+        srcSelect.setTitle("Select JAR to update");
+        srcSelect.getExtensionFilters().add(new FileChooser.ExtensionFilter("Executable JAR file", "*.jar"));
+        srcSelect.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
 
         layout = new AnchorPane(selectSource, update, close, srcDisplay, srcDesc, desc, status);
         layout.setPadding(new Insets(15, 15, 15, 15));
@@ -119,16 +127,14 @@ public class ARKAutoupdater extends Application
         });
 
         update.setOnAction(e ->{
-            updateTask = new Service<Void>() {
+            updateTask = new Service<String>() {
                 @Override
-                protected Task<Void> createTask() {
-                    return new Task<Void>() {
+                protected Task<String> createTask() {
+                    return new Task<String>() {
                         @Override
-                        protected Void call() throws Exception {
-                            status.setText("Status: Checking for Update");
-                            runUpdate();
-                            status.setText("Status: Complete");
-                            return null;
+                        protected String call() throws Exception {
+                            updateMTStatus("Status: Checking for Update");
+                            return runUpdate();
                         }
                     };
                 }
@@ -137,22 +143,85 @@ public class ARKAutoupdater extends Application
             updateTask.restart();
 
             updateTask.setOnFailed(e1 ->{
-                updateTask.getException().printStackTrace();
-                new ARKInterfaceAlert("Warning", "Error while updating JAR file.", 100, 100).display();
+                if(updateTask.getException() instanceof ARKTransThreadTransport){
+                    ((ARKTransThreadTransport) updateTask.getException()).handleTransportPacket();
+                }else{
+                    updateTask.getException().printStackTrace();
+                    new ARKInterfaceAlert("Warning", "Error while updating JAR file.", 100, 100).display();
+                }
             });
 
-            updateTask.setOnSucceeded(e1 ->{
-                new ARKInterfaceAlert("Notice", "Update complete!", 100, 100);
+            updateTask.setOnSucceeded(e1 ->
+            {
+                // If for some reason the task finished without throwing an exception and has no value, return silently.
+                if(updateTask.getValue() == null){
+                    return;
+                }
+
+                // Check with the user to see what they would like to do with the new version.
+                File downloadTarget;
+                if(new ARKInterfaceDialogYN("Query", "Would you like to replace the existing JAR, or download " +
+                        "the new version somewhere else?", "Replace", "Elsewhere", 150, 150).display())
+                {
+                    downloadTarget = currentTarget;
+                    if (downloadTarget.exists() && !downloadTarget.delete()) {
+                        new ARKInterfaceAlert("Warning", "Couldn't delete the existing JAR! Specify another location.", 120, 120).display();
+                    }
+
+                }else{
+                    FileChooser targetChooser = new FileChooser();
+                    targetChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+                    targetChooser.setTitle("Select Destination");
+                    targetChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Executable JAR file", "*.jar"));
+                    targetChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
+
+                    File f = targetChooser.showSaveDialog(window);
+                    if (f == null) {
+                        return;
+                    } else if (!f.getParentFile().exists()) {
+                        new ARKInterfaceAlert("Notice", "Specified save location is invalid!", 100, 100).display();
+                        return;
+                    }
+
+                    if (f.exists() && !f.delete()) {
+                        new ARKInterfaceAlert("Notice", "Couldn't delete the existing JAR!", 100, 100).display();
+                        return;
+                    }
+
+                    downloadTarget = f;
+                }
+
+                updateMTStatus("Status: Downloading Update");
+
+                updateTask = new Service<String>() {
+                    @Override
+                    protected Task<String> createTask() {
+                        return new Task<String>() {
+                            @Override
+                            protected String call() throws Exception {
+                                updateMTStatus("Status: Downloading Update");
+                                RetrievalTools.getFileFromURL(updateTask.getValue(), downloadTarget, true);
+                                return null;
+                            }
+                        };
+                    }
+                };
+
+                updateTask.setOnSucceeded(e2 -> new ARKInterfaceAlert("Notice", "Update complete!", 100, 100));
+
+                updateTask.setOnFailed(e2 -> new ARKInterfaceAlert("Notice", "Error while downloading new version!", 100, 100).display());
+
+                updateMTStatus("Status: Complete");
             });
         });
     }
 
-    private void runUpdate() throws IOException
+    private String runUpdate() throws ARKTransThreadTransport
     {
         // Check to make sure that the current target is a valid JAR file.
         if(currentTarget == null || !currentTarget.exists() || !currentTarget.getName().contains(".jar")){
-            new ARKInterfaceAlert("Notice", "Select a valid target JAR file first!", 100, 100).display();
-            return;
+            dispatcher.dispatchTransThreadPacket("Select a valid target JAR file first!");
+            return null;
         }
 
         // Inventory the JAR file to see what classes it contains in its root.
@@ -161,7 +230,7 @@ public class ARKAutoupdater extends Application
         // JAR inventory function sourced from GitHub user 'sigpwned'
         try {
             classNames = new ArrayList<>();
-            ZipInputStream zip = new ZipInputStream(new FileInputStream("/path/to/jar/file.jar"));
+            ZipInputStream zip = new ZipInputStream(new FileInputStream(currentTarget));
             for (ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
                 if (!entry.isDirectory() && entry.getName().endsWith(".class")) {
                     // This ZipEntry represents a class. Now, what class does it represent?
@@ -170,8 +239,8 @@ public class ARKAutoupdater extends Application
                 }
             }
         }catch (IOException e1){
-            new ARKInterfaceAlert("Warning", "Could not load class list from JAR file!", 100, 100).display();
-            return;
+            dispatcher.dispatchTransThreadPacket("Could not load class list from JAR file!");
+            return null;
         }
 
         // Set the identifier code based on what we find in the JAR.
@@ -179,13 +248,13 @@ public class ARKAutoupdater extends Application
         for(String s : classNames)
         {
             switch (s){
-                case "R34UI.class":
+                case "R34UI":
                     appIdentifier = "R34UI";
                     break;
-                case "RPlanner.class":
+                case "RPlanner":
                     appIdentifier = "RP";
                     break;
-                case "IPSearch.class":
+                case "IPSearch":
                     appIdentifier = "IP";
                     break;
             }
@@ -197,14 +266,19 @@ public class ARKAutoupdater extends Application
 
         // If we couldn't determine what application is selected, tell the user and return.
         if(appIdentifier.isEmpty()){
-            new ARKInterfaceAlert("Warning", "Selected JAR file is not a supported ARK application!", 100, 100).display();
-            return;
+            dispatcher.dispatchTransThreadPacket("Selected JAR file is not a supported ARK application!");
+            return null;
         }
 
         // At this point, we have a valid application JAR, query GitHub for the update master index file.
         HashMap<String, String> masterIndexMap = new HashMap<>();
 
-        String indexCache = ARKArrayUtil.charArrayToString(ARKArrayUtil.byteToCharArray(RetrievalTools.getBytesFromURL(UPDATE_URL_INDEX)));
+        String indexCache = null;
+        try {
+            indexCache = ARKArrayUtil.charArrayToString(ARKArrayUtil.byteToCharArray(RetrievalTools.getBytesFromURL(UPDATE_URL_INDEX)));
+        } catch (IOException e) {
+            dispatcher.dispatchTransThreadPacket("Error while downloading master index from remote server!");
+        }
 
         // Parse the cached index to get all of its code entries and corresponding URLs.
         Scanner parser = new Scanner(indexCache);
@@ -212,60 +286,38 @@ public class ARKAutoupdater extends Application
 
         while(parser.hasNext()){
             String line = parser.next();
-            masterIndexMap.put(line.substring(0, line.indexOf(">") - 1), line.substring(line.indexOf(">"), line.length()));
+            masterIndexMap.put(line.substring(0, line.indexOf(">")), line.substring(line.indexOf(">") + 1, line.length()));
         }
 
         // If the master index does not contain an entry for the detected application JAR, tell the user and return.
         if(!masterIndexMap.containsKey(appIdentifier)){
-            new ARKInterfaceAlert("Notice", "Selected JAR is a valid ARK application, but does not support autoupdate at this time.", 150, 150).display();
-            return;
+            dispatcher.dispatchTransThreadPacket("Selected JAR is a valid ARK application, but does not support auto-update at this time.");
+            return null;
         }
 
         // Check to see if the target file and the remote copy specified by the master index are the same size (byte-level accuracy).
         // If they are, they should be the same version, tell the user such. If not, proceed to the update process.
-        if(RetrievalTools.getRemoteFileSize(new URL(masterIndexMap.get(appIdentifier))) == currentTarget.length()){
-            new ARKInterfaceAlert("Notice", "Application is up to date!", 100, 100).display();
-            return;
+        try {
+            if(RetrievalTools.getRemoteFileSize(new URL(masterIndexMap.get(appIdentifier))) == currentTarget.length()){
+                dispatcher.dispatchTransThreadPacket("Application is up to date!");
+                return null;
+            }
+        } catch (MalformedURLException e) {
+            dispatcher.dispatchTransThreadPacket("Could not check remote version!");
         }
 
-        // Check with the user to see what they would like to do with the new version.
-        File downloadTarget;
-        if(new ARKInterfaceDialogYN("Query", "Would you like to replace the existing JAR, or download " +
-                "the new version somewhere else?", "Replace", "Elsewhere", 150, 150).display())
-        {
-            downloadTarget = currentTarget;
-            if (downloadTarget.exists() && !downloadTarget.delete()) {
-                new ARKInterfaceAlert("Notice", "Couldn't delete the existing JAR! Specify another location.", 120, 120).display();
-            }
+        return masterIndexMap.get(appIdentifier);
+    }
 
-        }else{
-            FileChooser targetChooser = new FileChooser();
-            targetChooser.setInitialDirectory(new File(System.getProperty("user.home")));
-            targetChooser.setTitle("Select Destination");
-            targetChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Executable JAR file", "*.jar"));
-            targetChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("All Files", "*.*"));
-
-            File f = targetChooser.showSaveDialog(window);
-            if (f == null) {
-                return;
-            } else if (!f.getParentFile().exists()) {
-                new ARKInterfaceAlert("Notice", "Specified save location is invalid!", 100, 100).display();
-                return;
-            }
-
-            if (f.exists() && !f.delete()) {
-                new ARKInterfaceAlert("Notice", "Couldn't delete the existing JAR!", 120, 120).display();
-                return;
-            }
-
-            downloadTarget = f;
-        }
-
-        status.setText("Status: Downloading Update");
-
-        RetrievalTools.getFileFromURL(masterIndexMap.get(appIdentifier), downloadTarget, true);
-
-        new ARKInterfaceAlert("Notice", "Download complete!", 100, 100).display();
+    /**
+     * Update the status label from another thread. Avoids IllegalStateExceptions by using the JavaFX Delayed Concurrency
+     * API to delegate the operation.
+     * @param content the String to pass to the status label
+     */
+    private void updateMTStatus(String content){
+        Platform.runLater(() -> {
+            updateMTStatus(content);
+        });
     }
 
     /**
