@@ -1,0 +1,67 @@
+ARK Distributed Application System Copyright Attributions
+Version 3.0.2
+Revised 3/9/2017
+
+ARK Distributed Application System
+Copyright 2016-2018 Michael Runzler
+MichaelRunzler@users.noreply.github.com
+https://www.github.com/MichaelRunzler/
+
+
+SECTION I: GENERAL LICENSING
+
+All source code contained in this repository, excluding code contained in source libraries created by
+the Oracle Corporation ("Oracle") or unless otherwise noted, is the exclusive intellectual property of Michael Runzler.
+
+This project and all files, intellectual property, and source code contained within, excluding material licensed or
+copyrighted by external entities, is licensed under the terms of the GNU General Public License.
+
+ * TERMS AND CONDITIONS:
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Usage of this project is dictated by the terms of the ARK Open Application Library License and Release of Liability
+Agreement (LRLA), included with this software library (LRLA.txt).
+Distribution of this project is dictated by the ARK Open Application Library Program Component Redistribution
+Guideline Document, also included (distribution.txt).
+
+
+SECTION II: LIBRARIES
+
+This project uses the following libraries:
+
+ICMP4J (Internet Control Message Protocol for Java) by Information Systems Technologies Corp., licensed under LGPL.
+
+SNMP4J (Simple Network Management Protocol for Java) by SMNP4J.org, licensed under Apache Commons 2.0.
+
+JNA (Java Native Access) by The JNA Team, licensed under LGPL and Apache Commons 2.0.
+
+HTMLManipulator by Nick Frolov, licensed under GPL.
+
+
+SECTION III: MEDIA AND INTELLECTUAL PROPERTY MATERIAL
+
+Media file copyright and intellectual property attribution information is as follows:
+
+Icon files 'info.png', 'options.png', and 'warning.png' are the intellectual property of Microsoft Corporation,
+and are R34Assets included with the Windows 7 operating system, and are licensed under the Microsoft End-User License Agreement.
+
+Icon files from the 'encoder', 'database', 'SoundBoard', 'HDLS' packages are
+the intellectual property of Michael Runzler.
+
+Icon file 'r34-main-dpc.png' from the 'R34Assets' package is a derivative of copyrighted material owned by Kyoto Animation.
+Derivative is the intellectual property of Michael Runzler.
+
+Icon file 'r34-main.png' from the 'R34Assets' package is a derivative of material sourced from the Danbooru-driven site
+'Rule 34' (http://rule34.xxx). Original author information and copyright status is unknown. No additional source information
+is available. Derivative is the intellectual property of Michael Runzler.
