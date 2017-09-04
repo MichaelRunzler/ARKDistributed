@@ -1,7 +1,9 @@
 package R34;
 
+import com.sun.istack.internal.NotNull;
 import core.UI.ARKInterfaceAlert;
 import core.UI.ARKInterfaceDialogYN;
+import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -14,7 +16,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import core.system.ARKApplication;
 import core.system.ARKTransThreadTransport;
 import core.system.ARKTransThreadTransportHandler;
 import core.CoreUtil.RetrievalTools;
@@ -30,7 +31,7 @@ import core.system.ARKTransThreadTransport.TransportType;
 /**
  * The UI port of the ARK R34.Rule 34 Dynamic Image Retrieval Utility.
  */
-public class R34UI extends ARKApplication
+public class R34UI extends Application
 {
     // GLOBAL VARIABLES
     // DO NOT TOUCH UNLESS YOU KNOW WHAT YOU ARE DOING
@@ -91,18 +92,11 @@ public class R34UI extends ARKApplication
     private R34ConfigManager config;
 
     /**
-     * Required no-arg constructor for this application.
-     */
-    public R34UI(){
-        //No-arg empty constructor to allow this class to be initialized as an object.
-        //This is only used for the purposes of allowing it to be instantiated as an object by the ARK Application Launcher.
-    }
-
-    /**
      * Launches the application's core threads and initializes basic UI elements.
      * @throws Exception if the program throws an exception. Duh.
      */
-    public void launch() throws Exception
+    @Override
+    public void start(Stage primaryStage) throws Exception
     {
         // Alright, time to document this monster... oh, boy.
         // This is going to be a wild ride for anyone else reading this...
@@ -1331,6 +1325,28 @@ public class R34UI extends ARKApplication
         config.setDoSkipDLPrompt(optionsManager.getDoSkipDLPrompt());
         config.setLogFile(logFile);
         config.setDoPreview(optionsManager.getDoPreview());
+    }
+
+    /**
+     * Sets the alignment of a JavaFX Node in the layout pane. Utility method to simplify code.
+     * Set an offset number to -1 to leave that axis at default (the equivalent of not calling the
+     * method on that axis for this node).
+     * @param n the node to set positioning for
+     * @param left the left offset
+     * @param right the right offset
+     * @param top the top offset
+     * @param bottom you get the idea, right?
+     */
+    private void setNodeAlignment(@NotNull Node n, int left, int right, int top, int bottom)
+    {
+        if(left >= 0)
+            AnchorPane.setLeftAnchor(n, (double)left);
+        if(right >= 0)
+            AnchorPane.setRightAnchor(n, (double)right);
+        if(top >= 0)
+            AnchorPane.setTopAnchor(n, (double)top);
+        if(bottom >= 0)
+            AnchorPane.setBottomAnchor(n, (double)bottom);
     }
 
     /**
