@@ -1,0 +1,25 @@
+<component name="ArtifactManager">
+  <artifact type="javafx" name="ARK Updater">
+    <output-path>$PROJECT_DIR$/artifacts/Updater</output-path>
+    <properties id="javafx-properties">
+      <options>
+        <option name="appClass" value="ARKAutoupdater" />
+        <option name="description" value="" />
+        <option name="height" value="300" />
+        <option name="htmlPlaceholderId" value="" />
+        <option name="title" value="ARK Autoupdate" />
+        <option name="vendor" value="ARK Software IRC" />
+        <option name="version" value="1.1.0" />
+        <option name="width" value="300" />
+      </options>
+    </properties>
+    <root id="root">
+      <element id="archive" name="ARK Autoupdate.jar">
+        <element id="module-output" name="Core" />
+        <element id="directory" name="META-INF">
+          <element id="file-copy" path="$PROJECT_DIR$/artifacts/Updater/META-INF/MANIFEST.MF" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>
