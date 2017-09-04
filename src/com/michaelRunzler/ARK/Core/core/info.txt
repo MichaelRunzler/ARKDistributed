@@ -1,0 +1,71 @@
+ARK Distributed Application System Project Information Document
+Version 1.0.0
+Revised 3/9/2017
+
+ARK Distributed Application System
+Copyright 2016-2018 Michael Runzler
+MichaelRunzler@users.noreply.github.com
+https://www.github.com/MichaelRunzler/
+
+Welcome, fellow developer! The following information should be of some help in utilizing the source files of this project.
+Please see the Copyright Information, Distribution, and LRLA Documents before using this project or any of its compiled
+applications or source files.
+
+Project components are broken down as follows:
+
+There are three primary project modules: 'Core', 'Application', and 'Library'.
+Each module contains a specific type of project sources, as explained below.
+Each module has a subpackage, named the same as its parent module. This is due to how the module system in IntelliJ IDEA works.
+Modules in IntelliJ do not have an inherent package name, so this has been put in place to allow duplicate package names between
+modules (such as each Application submodule having an assets package). With this system, packages are referable by actual
+package name (such as R34.assets instead of just assets). Although this results in the source directory tree being redundant
+in certain places, it means that the project retains further modularity and reduces confusion during the development
+and build process.
+
+The Core module stores its classes in the com.michaelRunzler.ARK.Core package. This module includes several subpackages,
+detailed below.
+
+1. CORE:        The Core module contains all system and core library and utility classes. All classes that fall into
+                this module must meet the following guidelines:
+
+                I. The class must be either a multi-modal launcher class, a helper UI, or a utility library.
+                II. The class must NOT be an application in its own right - those are stored in the Application module.
+                III. The class must have been developed by Me (the Project Author), and not sourced from any other library
+                     or project, including code and libraries sourced from Stack Overflow and other such sources.
+
+                Subpackages:
+
+                I. assets: Stores all global asset files for the Core module. These include icons for the launcher, alert
+                           dialogs, etc.
+                II. external: Stores externally sourced individual classes. Similar to the library package, but for individual
+                              classes instead of JAR files.
+                III. system: Stores main system classes, such as system interfaces and exception classes.
+                IV. UI: Stores core UI modules, such as universal dialog windows.
+                V. util: Stores utility method classes and objects.
+
+The Application module stores its classes in the com.michaelRunzler.ARK.Application package. There is one subpackage
+for each ARK application.
+
+2. APPLICATION: The Application module contains all classes that directly relate to ARK Applications and their support
+                classes. These include all command-line applications, as well as all UI-based applications that are NOT
+                launchers or helper UIs. Classes that fall into this module must meet the following guidelines:
+
+                I. The class must be either a standalone command-line application, a standalone UI-based application,
+                   or an application run by a launcher class located in the Core module.
+                II. The class must be an application in its own right, with or without an integrated launcher class,
+                    or a helper class for such an application.
+                III. The class must have been developed by Me (the Project Author), and not sourced from any other library
+                     or project, including code and libraries sourced from Stack Overflow and other such sources.
+
+
+The Library module stores its classes in the com.michaelRunzler.ARK.Library package. There is one directory for each library JAR set.
+
+3. LIBRARY:     The Library module contains all classes sourced from external library JARs or derived classes. These include
+                all classes that come as part of a set of library classes. Single externally sourced classes are stored
+                in the Core module, under the 'external' package. All classes that fall into this module must meet
+                the following guidelines:
+
+                I. The class must have been developed by a user other than Me (the Project Author), and sourced from another
+                   library or project, including code and libraries sourced from Stack Overflow and other such sources.
+                II. The class must be a part of a larger set of classes packaged into a JAR, or a non-packaged set of classes
+                    in library format.

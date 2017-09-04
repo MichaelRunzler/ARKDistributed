@@ -1,0 +1,82 @@
+ARK Distributed Application System Component Distribution Guidelines
+Version 2.0.1
+Revised 3/9/2017
+
+ARK Distributed Application System
+Copyright 2016-2018 Michael Runzler
+MichaelRunzler@users.noreply.github.com
+https://www.github.com/MichaelRunzler/
+
+SECTION I: INTRODUCTION AND DESCRIPTION
+
+This Document is designed to offer a guideline for redistribution and usage of individual components of the ARK Open
+Application Library. For licensing information and copyright attributions relevant to the program as a whole,
+please see the Copyright Attributions document, at
+https://github.com/MichaelRunzler/ARKDistributed/blob/master/src/com/michaelRunzler/ARK/Core/core/copyright.txt,
+or in the source files for this Program. For general usage and legal documentation, see the Licensing and Release of
+Liability Agreement, at  https://github.com/MichaelRunzler/ARKDistributed/blob/master/src/com/michaelRunzler/ARK/Core/core/LRLA.txt,
+or in the source files for this Program.
+
+SECTION II: COMPONENT BREAKDOWN
+
+Project components are broken down as follows:
+
+There are three primary project modules: 'Core', 'Application', and 'Library'.
+
+The Core module stores its classes in the com.michaelRunzler.ARK.Core package. Note that for the purposes of this
+document, this EXCLUDES the 'external' subpackage located in the aforementioned package path. This contains all externally
+sourced classes that are not part of larger libraries, and as such, is governed by the individual licensing of each class
+in said package. See the Copyright Attributions document for more information on these classes.
+
+1. CORE:        The Core module contains all system and core library and utility classes. All classes that fall into
+                this module must meet the following guidelines:
+
+                I. The class must be either a multi-modal launcher class, a helper UI, or a utility library.
+                II. The class must NOT be an application in its own right - those are stored in the Application module.
+                III. The class must have been developed by Me (the Project Author), and not sourced from any other library
+                     or project, including code and libraries sourced from Stack Overflow and other such sources.
+
+                Unless stated otherwise in class documentation or the Copyright Attribution Document, any classes that fall
+                under this category are classified as SHAREWARE. This means that these classes may be distributed freely,
+                so long as the distributing entity maintains accurate attribution and reference information for the
+                distributed class and library material. Material may not be altered and/or redistributed without proper
+                attribution under any circumstances.
+
+The Application module stores its classes in the com.michaelRunzler.ARK.Application package. This includes all submodules
+inside said package. Any exceptions to the licensing set forth here are stated in the Copyright Attributions document.
+
+2. APPLICATION: The Application module contains all classes that directly relate to ARK Applications and their support
+                classes. These include all command-line applications, as well as all UI-based applications that are NOT
+                launchers or helper UIs. Classes that fall into this module must meet the following guidelines:
+
+                I. The class must be either a standalone command-line application, a standalone UI-based application,
+                   or an application run by a launcher class located in the Core module.
+                II. The class must be an application in its own right, with or without an integrated launcher class,
+                    or a helper class for such an application.
+                III. The class must have been developed by Me (the Project Author), and not sourced from any other library
+                     or project, including code and libraries sourced from Stack Overflow and other such sources.
+
+                Unless stated otherwise in class documentation or the Copyright Attribution Document, any classes that fall
+                under this category are classified as SHAREWARE. This means that these classes may be distributed freely,
+                so long as the distributing entity maintains accurate attribution and reference information for the
+                distributed class and library material. Material may not be altered and/or redistributed without proper
+                attribution under any circumstances.
+
+The Library module stores its classes in the com.michaelRunzler.ARK.Library package. This includes all JARs and subpackages
+inside said package. Any exceptions to the licensing set forth here are stated in the Copyright Attributions document.
+
+3. LIBRARY:     The Library module contains all classes sourced from external library JARs or derived classes. These include
+                all classes that come as part of a set of library classes. Single externally sourced classes are stored
+                in the Core module, under the 'external' package. All classes that fall into this module must meet
+                the following guidelines:
+
+                I. The class must have been developed by a user other than Me (the Project Author), and sourced from another
+                   library or project, including code and libraries sourced from Stack Overflow and other such sources.
+                II. The class must be a part of a larger set of classes packaged into a JAR, or a non-packaged set of classes
+                    in library format.
+
+                Classes that fall under this module are subject to their individual sets of attribution, redistribution,
+                and copyright restrictions. Library classes and JARS that do not include their own copyright and attribution
+                documents have a copy of said information listed in the Copyright Attributions document for this project,
+                under section II.
+
