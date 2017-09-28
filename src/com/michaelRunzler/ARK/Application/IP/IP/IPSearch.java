@@ -1,10 +1,10 @@
 package IP;
 
+import core.CoreUtil.ARKArrayUtil;
+import core.CoreUtil.RetrievalTools;
 import org.icmp4j.IcmpPingRequest;
 import org.icmp4j.IcmpPingResponse;
 import org.icmp4j.IcmpPingUtil;
-import core.CoreUtil.ARKArrayUtil;
-import core.CoreUtil.RetrievalTools;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -258,7 +258,7 @@ public class IPSearch
                             long startTime = System.currentTimeMillis();
                             String IP = i + "." + j + "." + k + "." + l;
                             totalIPs ++;
-                            System.out.println("Testing IP " + IP + "...");
+                            System.out.print("Testing IP " + IP + "... ");
                             for(int m = 0; m < count; m++){
                                 long startPTime = System.currentTimeMillis();
                                 try {
@@ -267,8 +267,11 @@ public class IPSearch
                                     rq.setTimeout(timeout);
                                     IcmpPingResponse response = IcmpPingUtil.executePingRequest(rq);
                                     if(response.getSuccessFlag()) {
+                                        System.out.println("responded.");
                                         results.add(IP);
                                         break;
+                                    }else{
+                                        System.out.println("no response.");
                                     }
                                 }catch(RuntimeException ignored){}
                                 pingTimeList[totalIPs - 1] = System.currentTimeMillis() - startPTime;

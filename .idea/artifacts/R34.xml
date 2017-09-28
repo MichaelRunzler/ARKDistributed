@@ -3,7 +3,7 @@
     <output-path>$PROJECT_DIR$/Artifacts/R34</output-path>
     <properties id="javafx-properties">
       <options>
-        <option name="appClass" value="R34Launcher" />
+        <option name="appClass" value="R34.R34UI" />
         <option name="description" value="" />
         <option name="height" value="600" />
         <option name="htmlPlaceholderId" value="" />

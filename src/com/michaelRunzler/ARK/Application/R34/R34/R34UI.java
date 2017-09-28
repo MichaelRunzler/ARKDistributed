@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import core.system.ARKTransThreadTransport.TransportType;
 
 /**
- * The UI port of the ARK R34.Rule 34 Dynamic Image Retrieval Utility.
+ * The UI port of the ARK Rule 34 Dynamic Image Retrieval Utility.
  */
 public class R34UI extends Application
 {
@@ -1208,7 +1208,7 @@ public class R34UI extends Application
             // Check the loaded index to see how many out of the pulled URLs are actually new.
             logger.logEvent("Querying local image index...");
             for (URL url : images) {
-                if (!loadedIndex.contains(url) && !loadedIndex.contains(new URL(url.getPath().replace("https:", "http:")))) {
+                if (!loadedIndex.contains(url) && !loadedIndex.contains(new URL(url.toString().replace("https:", "http:")))) {
                     loadedIndex.add(url);
                     indexes.add(loadedIndex.indexOf(url));
                 }
@@ -1407,5 +1407,7 @@ public class R34UI extends Application
     // P.P.S. I wish IntelliJ would allow you to collapse comment blocks...
     // EDIT: Apparently it lets you collapse end-of-line comments, but not delimited comments.
     // Who knew.
+    //
+    // P.P.P.S Shoutouts to Simpleflips
 
 }
