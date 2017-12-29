@@ -1,7 +1,7 @@
 package R34;
 
 import com.sun.istack.internal.NotNull;
-import core.CoreUtil.RetrievalTools;
+import core.CoreUtil.IOTools;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -177,7 +177,7 @@ public class R34ConnectionTestManager implements ARKManagerInterface
         boolean DNS = false;
         int timeG = -1;
         try {
-            timeG = RetrievalTools.pingTestURL("8.8.8.8");
+            timeG = IOTools.pingTestURL("8.8.8.8");
             DNS = timeG >= 0;
         } catch (IOException e) {
             e.printStackTrace();
@@ -207,7 +207,7 @@ public class R34ConnectionTestManager implements ARKManagerInterface
         boolean R34 = false;
         int timeR = -1;
         try{
-            timeR = RetrievalTools.pingTestURL("rule34.xxx");
+            timeR = IOTools.pingTestURL("rule34.xxx");
             R34 = timeR >= 0;
         } catch (IOException e){
             e.printStackTrace();
@@ -236,8 +236,8 @@ public class R34ConnectionTestManager implements ARKManagerInterface
         boolean R34PD = false;
         int timePD = -1;
         try{
-            timePP = RetrievalTools.pingTestURL("rule34.paheal.net");
-            timePD = RetrievalTools.pingTestURL("rule34-data-008.paheal.net");
+            timePP = IOTools.pingTestURL("rule34.paheal.net");
+            timePD = IOTools.pingTestURL("rule34-data-008.paheal.net");
             R34PP = timePP >= 0;
             R34PD = timePD >= 0;
         } catch (IOException e){

@@ -1,6 +1,7 @@
 package R34;
 
 import com.sun.istack.internal.NotNull;
+import core.CoreUtil.IOTools;
 import core.UI.ARKInterfaceAlert;
 import core.UI.ARKInterfaceDialogYN;
 import javafx.application.Application;
@@ -18,7 +19,6 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import core.system.ARKTransThreadTransport;
 import core.system.ARKTransThreadTransportHandler;
-import core.CoreUtil.RetrievalTools;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -363,6 +363,9 @@ public class R34UI extends Application
                 return;
             }
 
+            // Prevent download count carryover in case of a crash by force-clearing the download counter.
+            totalDLCount = 0;
+
             // Check mode and start the appropriate retrieval sequence.
             switch(mode){
                 case 1:
@@ -392,7 +395,7 @@ public class R34UI extends Application
             outputDir = f == null ? outputDir : f;
         });
 
-        // Open the R34.Rule Manager.
+        // Open the Rule Manager.
         editRule.setOnAction(e -> {
             int index = ruleView.getSelectionModel().getSelectedIndex();
             if(index >= 0){
@@ -413,7 +416,7 @@ public class R34UI extends Application
             }
         });
 
-        // Same as above, but don't pass the R34.Rule Manager an existing rule. Validation and export are the same.
+        // Same as above, but don't pass the Rule Manager an existing rule. Validation and export are the same.
         newRule.setOnAction(e ->{
             ruleManager.showNewRuleUI();
             Rule tmp = ruleManager.getCurrentRule();
@@ -941,7 +944,7 @@ public class R34UI extends Application
             int tryCounter = 0;
             do {
                 try {
-                    RetrievalTools.getFileFromURL("http://rule34.paheal.net/post/list/" + tag + "/1", DATABASE, true);
+                    IOTools.getFileFromURL("http://rule34.paheal.net/post/list/" + tag + "/1", DATABASE, true);
                 } catch(ClosedByInterruptException e){
                     return null;
                 } catch (IOException e){
@@ -962,7 +965,7 @@ public class R34UI extends Application
 
             // PAGE LOCATOR PHASE:
             // Load the downloaded file from its cache on disk.
-            String db = RetrievalTools.loadDataFromFile(DATABASE);
+            String db = IOTools.loadDataFromFile(DATABASE);
 
             int lastPageID = 1;
 
@@ -980,7 +983,7 @@ public class R34UI extends Application
                         thrown = e;
                         counter --;
                     }
-                }while(thrown != null && counter > 3);
+                }while(thrown != null && counter > 2);
                 if(thrown != null){
                     throw thrown;
                 }
@@ -1036,7 +1039,7 @@ public class R34UI extends Application
                     // Same as the initial page read.
                     do {
                         try {
-                            RetrievalTools.getFileFromURL("http://rule34.paheal.net/post/list/" + tag + "/" + i, DATABASE, true);
+                            IOTools.getFileFromURL("http://rule34.paheal.net/post/list/" + tag + "/" + i, DATABASE, true);
                         } catch(ClosedByInterruptException e){
                             return null;
                         }  catch (IOException e){
@@ -1052,7 +1055,7 @@ public class R34UI extends Application
                         tryCounter = 0;
                         thrownByRead = null;
                     }
-                    db = RetrievalTools.loadDataFromFile(DATABASE);
+                    db = IOTools.loadDataFromFile(DATABASE);
                 }
 
                 // Keep looping this code until we have gone through every page.
@@ -1113,7 +1116,7 @@ public class R34UI extends Application
             int tryCounter = 0;
             do {
                 try {
-                    RetrievalTools.getFileFromURL("https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=" + tag + "&pid=0", DATABASE, true);
+                    IOTools.getFileFromURL("https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=" + tag + "&pid=0", DATABASE, true);
                 } catch(ClosedByInterruptException e){
                     return null;
                 } catch (IOException e){
@@ -1133,10 +1136,10 @@ public class R34UI extends Application
 
             // PAGE LOCATOR PHASE:
             // Load the downloaded file from its cache on disk.
-            String db = RetrievalTools.loadDataFromFile(DATABASE);
+            String db = IOTools.loadDataFromFile(DATABASE);
 
             // Try to get the last page number from the initial page.
-            int postCount = Integer.parseInt(RetrievalTools.getFieldFromData(db, "<posts count=\"", "\" offset=", 0));
+            int postCount = Integer.parseInt(IOTools.getFieldFromData(db, "<posts count=\"", "\" offset=", 0));
             // Extrapolate the last page number by the amount of posts @ 100 per page.
             int lastPageID = (int)Math.ceil((double)postCount / 100);
             int i = 1;
@@ -1183,7 +1186,7 @@ public class R34UI extends Application
                     // Same as the initial page read.
                     do {
                         try {
-                            RetrievalTools.getFileFromURL("https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=" + tag + "&pid=" + (i - 1), DATABASE, true);
+                            IOTools.getFileFromURL("https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=" + tag + "&pid=" + (i - 1), DATABASE, true);
                         } catch(ClosedByInterruptException e){
                             return null;
                         } catch (IOException e){
@@ -1199,7 +1202,7 @@ public class R34UI extends Application
                         tryCounter = 0;
                         thrownByRead = null;
                     }
-                    db = RetrievalTools.loadDataFromFile(DATABASE);
+                    db = IOTools.loadDataFromFile(DATABASE);
                 }
 
             }while(i <= lastPageID);

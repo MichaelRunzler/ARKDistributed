@@ -1,5 +1,7 @@
 package core.CoreUtil;
 
+import com.sun.istack.internal.Nullable;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -7,13 +9,15 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
  * Provides tools for retrieving and manipulating remote resources from a server.
  * Includes utilities for loading and managing database files.
  */
-public class RetrievalTools
+public class IOTools
 {
     /**
      * Downloads a raw data file from a URL.
@@ -21,7 +25,8 @@ public class RetrievalTools
      *            If not, the page HTML or XML tree will be downloaded instead
      * @param dest the location to write the downloaded file
      * @param overwrite whether or not to overwrite an existing file in the specified download location
-     * @throws IOException if there is a problem with the download or writing process
+     * @throws IOException if there is a problem with the download or writing process, or if it takes more than 5 seconds
+     * to open the file read channel
      * @throws IllegalArgumentException if the source URL or destination file are invalid or inaccessible
      */
     public static void getFileFromURL(String src, File dest, boolean overwrite) throws IOException, IllegalArgumentException
@@ -44,13 +49,46 @@ public class RetrievalTools
             throw new IllegalArgumentException("Output file must not be null!");
         }
 
-        URL url = new URL(src);
-        ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-        FileOutputStream fos = new FileOutputStream(dest);
+        // Must be final one-element arrays for cross-thread access
+        final IOException[] thrown = new IOException[1];
+        final ReadableByteChannel[] rbc = new ReadableByteChannel[1];
 
-        fos.getChannel().transferFrom(rbc, 0, Integer.MAX_VALUE);
-        fos.flush();
-        fos.close();
+        // Dispatch retrieval operations to a thread to allow for timeout support
+        Thread t = new Thread(() -> {
+            try {
+                URL url = new URL(src);
+                rbc[0] = Channels.newChannel(url.openStream());
+            }catch (IOException e){
+                thrown[0] = e;
+            }
+        });
+
+        t.start();
+
+        // Default is 10 seconds (10,000 ms)
+        final long MAX_WAIT_TIME = 5000;
+        long time = System.currentTimeMillis();
+
+        // Wait at most MAX_WAIT_TIME milliseconds for the retrieval thread to finish
+        try {
+            t.join(MAX_WAIT_TIME);
+        } catch (InterruptedException ignored) {}
+
+        // Check if the thread actually finished before it joined
+        if(System.currentTimeMillis() - time >= MAX_WAIT_TIME){
+            // If it didn't (it timed out), throw an exception.
+            throw new IOException("Remote file read timed out");
+        }else{
+            // Throw any exceptions that occurred during execution
+            if(thrown[0] != null) throw thrown[0];
+
+            // If no exceptions occurred, begin the file transfer
+            FileOutputStream fos = new FileOutputStream(dest);
+
+            fos.getChannel().transferFrom(rbc[0], 0, Integer.MAX_VALUE);
+            fos.flush();
+            fos.close();
+        }
     }
 
     /**
@@ -297,5 +335,101 @@ public class RetrievalTools
         } finally {
             conn.disconnect();
         }
+    }
+
+    /**
+     * Gets the complete list of files and directories (collectively, 'children') in a given directory. This includes the
+     * children of all subdirectories. Will run until the entire directory structure has been inventoried, or an error has occurred.
+     * Note that the nature of this method may result in excessively long processing times on directories with complex substructures,
+     * such as OS directories or caches. The tool will track its own recursion, and will stop searching sublevels when it
+     * has recurred 255 times to avoid infinite recursion scenarios (such as subdirectories which are symlinks to parent
+     * directories). This method returns noncritical status in the last file in the returned array, which corresponds to an exception
+     * (critical errors will be thrown as normal exceptions instead. Critical errors are problems which prevent further progress).
+     * This exception can be recovered by passing the File object through the recoverFileTreeErrorState() method, which will
+     * throw the original exception.
+     * @param src the directory to use as the root for the search
+     * @return an array of File objects corresponding to the children of the searched directory. The last entry in the file
+     * list will correspond to the noncritical error status of the search process, and will be null if no errors occurred.
+     * @throws IOException if an unrecoverable error is encountered while searching the directory
+     */
+    public static File[] getFileTree(File src) throws IOException
+    {
+        // Check access, existence, and directory validity.
+        if(src == null || !src.exists() || !src.isDirectory() || !src.canRead()) throw new IllegalArgumentException("Supplied file must be a valid directory");
+
+        ArrayList<File> list = new ArrayList<>();
+
+        // Stores the current directory level. The higher this number is, the deeper we are in the directory tree.
+        // If this value exceeds 255, we assume that we have run into an infinite recursion problem, and terminate the
+        // loop, marking the error as such.
+        int cycle = 0;
+        // Stores the current list of files at (level -1)
+        ArrayList<File> currentList = new ArrayList<>();
+        // Stores the current list of searchable directories at (level -1).
+        ArrayList<File> currentDirList = new ArrayList<>();
+        // Start the cycle by adding the source directory to the search list.
+        currentDirList.add(src);
+
+        // Run the cycle, checking each directory level for subdirectories, and searching them if present.
+        while(cycle < 256)
+        {
+            // Search the current list of directories.
+            for(File f : currentDirList) {
+                File[] curr = f.listFiles();
+                // If there were any files under that directory, add them to the list.
+                if(curr != null && curr.length > 0) currentList.addAll(Arrays.asList(curr));
+            }
+
+            // Reset the directory list cache to prepare for refilling.
+            currentDirList.clear();
+
+            // If the queried list is empty, we're done.
+            if(currentList.size() == 0) break;
+
+            // Add all subdirectories to the directory cache, and all files and directories to the main list.
+            for(File f : currentList){
+                if(f.isDirectory()) currentDirList.add(f);
+                // We WOULD normally check to see if the file already exists in the list, and avoid adding it (raising a flag
+                // in the process). However, this is EXTREMELY resource-intensive for larger file lists (> 10,000 entries).
+                list.add(f);
+            }
+
+            // If there were no directories in the list, we're done, since the files have already been tracked.
+            if(currentDirList.size() == 0) break;
+
+            // Reset the file list cache for the next run.
+            currentList.clear();
+            cycle ++;
+        }
+
+        // Add noncritical error condition information to the end of the list.
+        if(cycle >= 256){
+            list.add(new File("invalid://><%Warning while parsing: possible infinite recursion detected."));
+        }else{
+            list.add(null);
+        }
+
+        File[] output = new File[1];
+        return list.toArray(output);
+    }
+
+    /**
+     * Recovers an error report from the result of a call to the getFileTree() method.
+     * Will throw the relevant exception if there is one found. If no valid exception is found, or the input is null,
+     * no action will be taken.
+     * @param f the 'exception report' to check
+     * @throws Exception if the report is valid, this will be the original exception from the method call
+     */
+    public static void recoverFileTreeErrorState(@Nullable File f) throws Exception
+    {
+        final String IDENTIFIER = "invalid://";
+        final String DELIMITER = "><%";
+
+        if(f == null || !f.getAbsolutePath().startsWith(IDENTIFIER)) return;
+
+        String ex = f.getAbsolutePath();
+        ex = ex.substring(ex.indexOf(DELIMITER) + DELIMITER.length(), ex.length());
+
+        throw new Exception(ex);
     }
 }

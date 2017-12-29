@@ -1,0 +1,21 @@
+<component name="ArtifactManager">
+  <artifact type="javafx" name="Bin2PixUI">
+    <output-path>$PROJECT_DIR$/artifacts/B2PUI</output-path>
+    <properties id="javafx-properties">
+      <options>
+        <option name="appClass" value="Bin2Pix.B2PGUI" />
+        <option name="description" value="" />
+        <option name="htmlPlaceholderId" value="" />
+        <option name="title" value="" />
+        <option name="vendor" value="ARK Software IRC" />
+        <option name="version" value="" />
+        <option name="width" value="400" />
+      </options>
+    </properties>
+    <root id="root">
+      <element id="archive" name="Bin2PixUI.jar">
+        <element id="module-output" name="Bin2Pix" />
+      </element>
+    </root>
+  </artifact>
+</component>

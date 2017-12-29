@@ -4,7 +4,7 @@ import Iris.util.AP;
 import Iris.util.APStats;
 import Iris.util.CPEStats;
 import Iris.util.IPV4Address;
-import core.CoreUtil.RetrievalTools;
+import core.CoreUtil.IOTools;
 import core.system.ARKTransThreadTransport;
 import core.system.ARKTransThreadTransportHandler;
 
@@ -82,14 +82,14 @@ public class UniFi
             params.put("password", password);
             params.put("username", user);
 
-            data = RetrievalTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
+            data = IOTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while logging into AP");
         }
 
         //TODO TEMPORARY
         try {
-            data = RetrievalTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
+            data = IOTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while writing database file.");
         }
@@ -119,20 +119,20 @@ public class UniFi
             params.put("password", password);
             params.put("username", user);
 
-            data = RetrievalTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
+            data = IOTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while logging into AP");
         }
 
         //TODO TEMPORARY
         try {
-            data = RetrievalTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
+            data = IOTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while writing database file.");
         }
 
         //trim everything before the table itself off
-        data = RetrievalTools.getFieldFromData(data, "<tbody>", "</tbody>", data.indexOf("table id=\"sta_list\""));
+        data = IOTools.getFieldFromData(data, "<tbody>", "</tbody>", data.indexOf("table id=\"sta_list\""));
 
         //while we still have more rows to parse:
         while(data.contains("<tr role=\"row\""))
@@ -144,43 +144,43 @@ public class UniFi
 
             //get the fields from the table
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("Name", RetrievalTools.getFieldFromData(data, "<td>", "</td>", 0));
+            rowStats.put("Name", IOTools.getFieldFromData(data, "<td>", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("TX Signal", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("TX Signal", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("RX Signal", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("RX Signal", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("Noise", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("Noise", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("Latency", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("Latency", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("Distance", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("Distance", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("TX/RX", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("TX/RX", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("CCQ", RetrievalTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
+            rowStats.put("CCQ", IOTools.getFieldFromData(data, "<td class=\" centered\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("Uptime", RetrievalTools.getFieldFromData(data, "<td class=\" uptime\">", "</td>", 0));
+            rowStats.put("Uptime", IOTools.getFieldFromData(data, "<td class=\" uptime\">", "</td>", 0));
             data = data.substring(nextValue, data.length());
 
             nextValue = data.indexOf("</td>") + "</td>".length();
-            rowStats.put("IP", RetrievalTools.getFieldFromData(data, "<a href=\"http://", "/\" target=\"", 0));
+            rowStats.put("IP", IOTools.getFieldFromData(data, "<a href=\"http://", "/\" target=\"", 0));
             data = data.substring(nextValue, data.length());
 
             //trim the rest of this row off in preparation for the next row
@@ -213,14 +213,14 @@ public class UniFi
             params.put("password", password);
             params.put("username", user);
 
-            data = RetrievalTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
+            data = IOTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while logging into AP");
         }
 
         //TODO TEMPORARY
         try {
-            data = RetrievalTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
+            data = IOTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while writing database file.");
         }
@@ -250,14 +250,14 @@ public class UniFi
             params.put("password", password);
             params.put("username", user);
 
-            data = RetrievalTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
+            data = IOTools.getDataFromSubmittedHttpForm("https://" + IP.toString() + "/login.cgi?uri=/stalist.cgi", params);
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while logging into AP");
         }
 
         //TODO TEMPORARY
         try {
-            data = RetrievalTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
+            data = IOTools.loadDataFromFile(new File(System.getProperty("user.home") + "\\Desktop\\ARK", "Associated Stations.html"));
         } catch (IOException e) {
             handler.dispatchTransThreadPacket("IO error while writing database file.");
         }

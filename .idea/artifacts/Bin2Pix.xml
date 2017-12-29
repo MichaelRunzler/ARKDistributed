@@ -1,0 +1,12 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Bin2Pix">
+    <output-path>$PROJECT_DIR$/artifacts/B2P</output-path>
+    <root id="archive" name="Bin2Pix.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/artifacts/B2P/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="Bin2Pix" />
+      <element id="module-output" name="Core" />
+    </root>
+  </artifact>
+</component>

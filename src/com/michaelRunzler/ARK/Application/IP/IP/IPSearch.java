@@ -1,7 +1,7 @@
 package IP;
 
 import core.CoreUtil.ARKArrayUtil;
-import core.CoreUtil.RetrievalTools;
+import core.CoreUtil.IOTools;
 import org.icmp4j.IcmpPingRequest;
 import org.icmp4j.IcmpPingResponse;
 import org.icmp4j.IcmpPingUtil;
@@ -43,6 +43,7 @@ public class IPSearch
     private static BufferedWriter logWriter;
     private static int totalIPs = 0;
     private static long benchmarkTimeStorage = 0;
+    private static IPSearchThreadExecutor executor;
 
     private static long[] pingTimeList;
     private static long[] processTimeList;
@@ -101,6 +102,8 @@ public class IPSearch
 
         try{threadCount = Integer.parseInt(getArgument("threads"));}catch (NumberFormatException e){threadCount = 4;}
 
+        executor = new IPSearchThreadExecutor(threadCount);
+
         benchmarkTime("Init took ", " ms");
 
         //validate IP
@@ -117,7 +120,7 @@ public class IPSearch
         //test IPs
         ArrayList<String> result = null;
         try {
-            result = testIPBlock(block, testCount, timeout, delay, threadCount);
+            result = testIPBlock(block, testCount, timeout, delay);
         } catch (IOException e) {
             System.out.println("Error while testing address in block!");
             System.out.println(e.getMessage() == null ? e.toString() : e.getMessage());
@@ -136,7 +139,7 @@ public class IPSearch
             }
         }
 
-        long avgPingTime = 0;
+        long avgPingTime;
         long tempT = 0;
         for(long l : pingTimeList){
             tempT += l;
@@ -144,7 +147,7 @@ public class IPSearch
 
         avgPingTime = (tempT / pingTimeList.length);
 
-        long avgProcTime = 0;
+        long avgProcTime;
         long tempP = 0;
         for(long l : processTimeList){
             tempP += l;
@@ -153,7 +156,8 @@ public class IPSearch
         avgProcTime = (tempP / processTimeList.length);
 
         //report results
-        if(result != null) {
+        if(result != null)
+        {
             logResult("Test time (UET+): " + System.currentTimeMillis());
             logResult("Test results are as follows:");
             logResult("");
@@ -193,10 +197,9 @@ public class IPSearch
      * @param count the number of ICMP packets to send to each IP on the block
      * @param timeout the time in milliseconds to wait for a response from each tested IP
      * @param delay the delay between testing each IP block
-     * @param threadCount the number of SMP threads to use for testing
      * @return an ArrayList containing the IPs on the block that responded to the test, or an empty ArrayList if none responded
      */
-    private static ArrayList<String> testIPBlock(String block, int count, int timeout, int delay, int threadCount) throws IOException
+    private static ArrayList<String> testIPBlock(String block, int count, int timeout, int delay) throws IOException
     {
         ArrayList<String> results = new ArrayList<>();
         String[] SrcSegments = getAddressSegmentsFromBlock(block);
@@ -246,7 +249,7 @@ public class IPSearch
 
         //todo multithread
         if(noWC){
-            if(RetrievalTools.pingTestURL(block) >= 0){
+            if(IOTools.pingTestURL(block) >= 0){
                 results.add(block);
                 return results;
             }
@@ -254,34 +257,41 @@ public class IPSearch
             for(int i = segments[0]; i <= limit1; i++){
                 for(int j = segments[1]; j <= limit2; j++){
                     for(int k = segments[2]; k <= limit3; k++){
-                        for(int l = segments[3]; l <= limit4; l++){
-                            long startTime = System.currentTimeMillis();
+                        for(int l = segments[3]; l <= limit4; l++)
+                        {
                             String IP = i + "." + j + "." + k + "." + l;
-                            totalIPs ++;
-                            System.out.print("Testing IP " + IP + "... ");
-                            for(int m = 0; m < count; m++){
-                                long startPTime = System.currentTimeMillis();
-                                try {
-                                    IcmpPingRequest rq = IcmpPingUtil.createIcmpPingRequest();
-                                    rq.setHost(IP);
-                                    rq.setTimeout(timeout);
-                                    IcmpPingResponse response = IcmpPingUtil.executePingRequest(rq);
-                                    if(response.getSuccessFlag()) {
-                                        System.out.println("responded.");
-                                        results.add(IP);
-                                        break;
-                                    }else{
-                                        System.out.println("no response.");
-                                    }
-                                }catch(RuntimeException ignored){}
-                                pingTimeList[totalIPs - 1] = System.currentTimeMillis() - startPTime;
-                            }
-                            if(delay > 0) try{System.out.println("Waiting " + delay + "ms...");Thread.sleep(delay);}catch(Exception ignored){}
-                            processTimeList[totalIPs - 1] = System.currentTimeMillis() - startTime;
+                            executor.addThreadToStack(() -> {
+                                long startTime = System.currentTimeMillis();
+                                totalIPs ++;
+                                System.out.print("Testing IP " + IP + "... ");
+                                for(int m = 0; m < count; m++)
+                                {
+                                    long startPTime = System.currentTimeMillis();
+                                    try {
+                                        IcmpPingRequest rq = IcmpPingUtil.createIcmpPingRequest();
+                                        rq.setHost(IP);
+                                        rq.setTimeout(timeout);
+                                        IcmpPingResponse response = IcmpPingUtil.executePingRequest(rq);
+                                        if(response.getSuccessFlag()) {
+                                            System.out.print("IP " + IP + " responded.\n");
+                                            results.add(IP);
+                                            break;
+                                        }else{
+                                            System.out.print("IP " + IP + " did not respond.\n");
+                                        }
+                                    }catch(RuntimeException ignored){}
+                                    pingTimeList[totalIPs - 1] = System.currentTimeMillis() - startPTime;
+                                }
+                                if(delay > 0) try{System.out.println("Waiting " + delay + "ms...");Thread.sleep(delay);}catch(Exception ignored){}
+                                processTimeList[totalIPs - 1] = System.currentTimeMillis() - startTime;
+                            });
                         }
                     }
                 }
             }
+            executor.startStackExecution();
+            // Wait for completion of stack execution before returning.
+            executor.waitForStackCompletion(100);
         }
         return results;
     }

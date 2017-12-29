@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ARK Distributed Application System.iml" filepath="$PROJECT_DIR$/ARK Distributed Application System.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Bin2Pix/Bin2Pix.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Bin2Pix/Bin2Pix.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Core/Core.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Core/Core.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/IP/IP.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/IP/IP.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Iris/Iris.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Iris/Iris.iml" />

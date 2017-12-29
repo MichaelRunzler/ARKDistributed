@@ -100,7 +100,7 @@ public class R34ConfigManager
             configA.createNewFile();
             log.logEvent("Created new auto mode config file!");
         }else {
-            //byte[] bufA = ARKArrayUtil.charToByteArray(RetrievalTools.loadDataFromFile(configA).replace("com.michaelRunzler.ARK.retrieval.R34.R34.R34.Rule", "com.michaelRunzler.ARK.application.retrieval.R34.R34.R34.Rule").toCharArray());
+            //byte[] bufA = ARKArrayUtil.charToByteArray(IOTools.loadDataFromFile(configA).replace("com.michaelRunzler.ARK.retrieval.R34.R34.R34.Rule", "com.michaelRunzler.ARK.application.retrieval.R34.R34.R34.Rule").toCharArray());
 
             log.logEvent("Loading auto mode config...");
             ruleList = readLegacyAutoConfig(configA);

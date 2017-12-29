@@ -1,7 +1,7 @@
 package core;
 
 import core.CoreUtil.ARKArrayUtil;
-import core.CoreUtil.RetrievalTools;
+import core.CoreUtil.IOTools;
 import core.UI.ARKInterfaceAlert;
 import core.UI.ARKInterfaceDialogYN;
 import com.sun.istack.internal.NotNull;
@@ -216,7 +216,7 @@ public class ARKAutoupdater extends Application
                             @Override
                             protected Void call() throws Exception {
                                 updateMTStatus("Status: Downloading Update");
-                                RetrievalTools.getFileFromURL(source, downloadTargetFN, true);
+                                IOTools.getFileFromURL(source, downloadTargetFN, true);
                                 return null;
                             }
                         };
@@ -310,7 +310,7 @@ public class ARKAutoupdater extends Application
 
         String indexCache = null;
         try {
-            indexCache = ARKArrayUtil.charArrayToString(ARKArrayUtil.byteToCharArray(RetrievalTools.getBytesFromURL(UPDATE_URL_INDEX)));
+            indexCache = ARKArrayUtil.charArrayToString(ARKArrayUtil.byteToCharArray(IOTools.getBytesFromURL(UPDATE_URL_INDEX)));
         } catch (IOException e) {
             dispatcher.dispatchTransThreadPacket("Error while downloading master index from remote server!");
         }
@@ -333,7 +333,7 @@ public class ARKAutoupdater extends Application
         // Check to see if the target file and the remote copy specified by the master index are the same size (byte-level accuracy).
         // If they are, they should be the same version, tell the user such. If not, proceed to the update process.
         try {
-            if(RetrievalTools.getRemoteFileSize(new URL(masterIndexMap.get(appIdentifier))) == currentTarget.length()){
+            if(IOTools.getRemoteFileSize(new URL(masterIndexMap.get(appIdentifier))) == currentTarget.length()){
                 dispatcher.dispatchTransThreadPacket("Application is up to date!");
                 return null;
             }

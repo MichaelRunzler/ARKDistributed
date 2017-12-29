@@ -3,7 +3,7 @@ package Iris;
 import Iris.util.AP;
 import Iris.util.IPV4Address;
 import com.sun.istack.internal.NotNull;
-import core.CoreUtil.RetrievalTools;
+import core.CoreUtil.IOTools;
 import core.system.ARKTransThreadTransportHandler;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -83,7 +83,7 @@ public class Iris
         }
 
         try {
-            String listData = RetrievalTools.loadDataFromFile(listFile);
+            String listData = IOTools.loadDataFromFile(listFile);
             listData = listData.replace("\r", "");
 
             do{
