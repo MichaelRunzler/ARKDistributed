@@ -15,6 +15,7 @@
     <root id="root">
       <element id="archive" name="Bin2PixUI.jar">
         <element id="module-output" name="Bin2Pix" />
+        <element id="module-output" name="Core" />
       </element>
     </root>
   </artifact>

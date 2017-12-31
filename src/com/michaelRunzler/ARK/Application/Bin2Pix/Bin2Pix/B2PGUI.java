@@ -313,6 +313,9 @@ public class B2PGUI extends Application
                                 B2PCore.B2PFile2File(f, dest, new EncodingSchema(msr, len, aspectX, aspectY, adapter));
                             } catch (IOException | ConversionException e) {
                                 errors.add(e);
+                            } finally {
+                                // garbage collect, because apparently Java can't automatically reclaim the memory used by the old arrays
+                                System.gc();
                             }
                             updateProgress(i + 1, sources.size());
                         }
@@ -409,6 +412,7 @@ public class B2PGUI extends Application
                     i++;
                 }
             }
+            System.gc();
         }
     }
 
@@ -420,10 +424,14 @@ public class B2PGUI extends Application
         destSelect.setTooltip(new Tooltip("Select the output directory for the results from the conversion process."));
         aspectRatioNum.setTooltip(new Tooltip("The horizontal component of the desired aspect ratio. Leave blank to default this setting."));
         aspectRatioDenom.setTooltip(new Tooltip("The vertical component of the desired aspect ratio. Leave blank to default this setting."));
-        MSRPref.setTooltip(new Tooltip("Pull spacing, also known as MSR (mark-space ratio), is the spacing between each set of bytes that are used for pixel color data. Bigger numbers will result in less pixels per byte."));
-        lengthPref.setTooltip(new Tooltip("Pull length is the number of bytes in the source file used for each color value in each pixel of the output image (R, G, and B). Bigger numbers will result in less pixels per byte, but smoother color transitions."));
-        format.setTooltip(new Tooltip("Select the format for the output image(s). The output image(s) will be the same for any given format, only the filesize and actual file format will differ."));
-        overwrite.setTooltip(new Tooltip("If this is checked, any existing files that have the same names as any output image(s) will be overwritten if the program has the proper permissions."));
+        MSRPref.setTooltip(new Tooltip("Pull spacing, also known as MSR (mark-space ratio), is the spacing between each set of bytes that \n " +
+                "are used for pixel color data. Bigger numbers will result in less pixels per byte."));
+        lengthPref.setTooltip(new Tooltip("Pull length is the number of bytes in the source file used for each color value in each pixel of \n " +
+                "the output image (R, G, and B). Bigger numbers will result in less pixels per byte, but smoother color transitions."));
+        format.setTooltip(new Tooltip("Select the format for the output image(s). The output image(s) will be the same for any given format, \n " +
+                "only the filesize and actual file format will differ."));
+        overwrite.setTooltip(new Tooltip("If this is checked, any existing files that have the same names as any output image(s) will be \n " +
+                "overwritten if the program has the proper permissions."));
         advanced.setTooltip(new Tooltip("Show some of the conversion engine's more advanced options."));
     }
 
