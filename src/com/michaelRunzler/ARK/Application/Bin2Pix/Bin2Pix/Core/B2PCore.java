@@ -10,6 +10,9 @@ import java.io.IOException;
  */
 public class B2PCore
 {
+    // 300 MB in bytes
+    public static final long MAX_DATA_LENGTH = 314572800L;
+
     public static byte[] B2PFromFile(File src, EncodingSchema method) throws IOException, ConversionException
     {
         if(src == null || !src.exists() || !src.canRead()){
@@ -32,6 +35,8 @@ public class B2PCore
             throw new IllegalArgumentException("Provided schema is invalid");
         }else if(data == null || data.length <= method.length){
             throw new IllegalArgumentException("Provided data array is invalid");
+        }else if(data.length > MAX_DATA_LENGTH){
+            throw new IllegalArgumentException("Input data is larger than allowed length");
         }
         
         int perPixelBytes = (method.length * 3) + method.MSR;

@@ -113,7 +113,7 @@ public class B2PGUI extends Application
         adapters.put("PNG", new PNGAdapter());
 
         preInit();
-        run();
+        setElementActions();
     }
 
     private void preInit()
@@ -210,7 +210,7 @@ public class B2PGUI extends Application
         setElementPosition(lengthPrefLabel, -1, lengthPref.getPrefWidth(), -1, -1);
     }
 
-    private void run()
+    private void setElementActions()
     {
         exit.setOnAction(e -> exitSystem());
         convert.setOnAction(e -> convert());
@@ -222,6 +222,14 @@ public class B2PGUI extends Application
             src.setTitle("Select Source File");
 
             List<File> f = src.showOpenMultipleDialog(window);
+
+            for(File x : f){
+                if(x.length() > B2PCore.MAX_DATA_LENGTH){
+                    new ARKInterfaceAlert("Warning", "One or more files exceed the maximum allowed file size of " + (B2PCore.MAX_DATA_LENGTH / 1048576L/*1 MB*/) + " MB.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * 1.50 * SCALE)).display();
+                    return;
+                }
+            }
+
             if(f != null && f.size() > 0){
                 if(sources == null || sources.size() == 0){
                     sources = new ArrayList<>();
@@ -275,7 +283,7 @@ public class B2PGUI extends Application
         }else if(format.getSelectionModel().getSelectedIndex() == 0){
             new ARKInterfaceAlert("Notice", "Select a format to continue.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * SCALE)).display();
             return;
-        }else if(!hasSeenWarning && !new ARKInterfaceDialogYN("Notice", "Running this conversion will write a new image file to the target directory for each source file. The new file will be named in the format {(original filename)(.[format extension])}."
+        }else if(!hasSeenWarning && !new ARKInterfaceDialogYN("Notice", "Running this conversion will write a new image file to the target directory for each source file. The new files will be named in the format {(original filename)(.[format extension])}."
         + (overwrite.isSelected() ? " If any files with those names exist, they will be OVERWRITTEN." : "") + " Proceed?", "Yes", "No", (int)(DEFAULT_DIALOG_SIZE * 2.5 * SCALE), (int)(DEFAULT_DIALOG_SIZE * 2.25 * SCALE)).display()){
             return;
         }

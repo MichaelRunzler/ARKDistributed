@@ -1165,7 +1165,7 @@ public class R34UI extends Application
                     lastChar = lastChar + 10;
                     lc2 = db.indexOf("\" parent_id=", lc2) + 12;
                     if(parityCheck > -1){
-                        images.add(new URL("http:" + db.substring(lastChar, lc2 - 12)));
+                        images.add(new URL(db.substring(lastChar, lc2 - 12)));
                         newCount ++;
                     }
                 }
