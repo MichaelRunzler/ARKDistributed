@@ -1,5 +1,6 @@
 package Bin2Pix;
 
+// JESUS THIS IMPORT LIST IS A BIT TOO LONG
 import Bin2Pix.Adapters.BMPAdapter;
 import Bin2Pix.Adapters.JPEGAdapter;
 import Bin2Pix.Adapters.PNGAdapter;
@@ -65,6 +66,7 @@ public class B2PGUI extends Application
     private ProgressBar progress;
     private ProgressIndicator progressActiveIndicator;
 
+    // Global variables and constants
     private HashMap<String, ImageAdapter> adapters;
 
     private final double BASE_SCALE_SIZE = 16.0;
@@ -80,7 +82,7 @@ public class B2PGUI extends Application
     private boolean hasSeenWarning = false;
 
     @Override
-    public void start(Stage primaryStage) throws Exception
+    public void start(Stage primaryStage)
     {
         // INITIALIZE JAVAFX WINDOW
         window = new Stage();
@@ -112,14 +114,18 @@ public class B2PGUI extends Application
         adapters.put("JPEG", new JPEGAdapter());
         adapters.put("PNG", new PNGAdapter());
 
+        // run init methods
         preInit();
         setElementActions();
     }
 
     private void preInit()
     {
+        // Init the file list viewer with some arbitrary window sizes, scaled to the user's global UI scale.
+        // Size doesn't really matter too much here (insert dong joke), since the user can resize it anyway.
         fileListViewer = new FileListViewer((int) (150 * SCALE), (int) (250 * SCALE));
 
+        // Initialize nodes
         exit = new Button("Exit");
         convert = new Button("Convert");
         sourceSelect = new Button("Select Source");
@@ -142,6 +148,8 @@ public class B2PGUI extends Application
         MSRPrefLabel = new Label("Pull Spacing (bytes): ");
 
         progress = new ProgressBar();
+
+        // Set node properties
         progress.setPrefWidth(110 * SCALE);
         progress.setPrefHeight(20 * SCALE);
         progressActiveIndicator = new ProgressIndicator(-1);
@@ -151,6 +159,7 @@ public class B2PGUI extends Application
         aspectRatioColon.setPrefWidth(10 * SCALE);
         aspectRatioNum.setPromptText("1");
         aspectRatioDenom.setPromptText("1");
+        // Scale the separator colon to match the global UI scale
         aspectRatioColon.setFont(new Font(aspectRatioColon.getFont().getName(), aspectRatioColon.getFont().getSize() * SCALE));
 
         limitTextFieldToNumerical(aspectRatioNum, 2);
@@ -179,6 +188,8 @@ public class B2PGUI extends Application
 
     private void setElementPositions()
     {
+        // Some of these are called twice because one sets the position relative to the grid in some coordinates,
+        // and the other sets the position as a non-grid number in other coordinates.
         setElementPositionInGrid(exit, 0, -1, -1, 0);
         setElementPositionInGrid(convert, -1, 0, -1, 0);
         setElementPositionInGrid(fileList, -1, 1, -1, 0);
@@ -223,6 +234,9 @@ public class B2PGUI extends Application
 
             List<File> f = src.showOpenMultipleDialog(window);
 
+            if(f == null) return;
+
+            // Check individual file size. We don't really care about TOTAL size, just individual size, so that we don't run out of memory.
             for(File x : f){
                 if(x.length() > B2PCore.MAX_DATA_LENGTH){
                     new ARKInterfaceAlert("Warning", "One or more files exceed the maximum allowed file size of " + (B2PCore.MAX_DATA_LENGTH / 1048576L/*1 MB*/) + " MB.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * 1.50 * SCALE)).display();
@@ -230,12 +244,12 @@ public class B2PGUI extends Application
                 }
             }
 
-            if(f != null && f.size() > 0){
+            if(f.size() > 0){
                 if(sources == null || sources.size() == 0){
                     sources = new ArrayList<>();
                     sources.addAll(f);
                 }else{
-                    if(new ARKInterfaceDialogYN("Query", "Replace current file list, or add these files to it?",
+                    if(new ARKInterfaceDialogYN("Query", "Replace current file list, or add these file(s) to it?",
                             "Add", "Replace", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * 1.5 * SCALE)).display()) {
                         sources.addAll(f);
                     }else{
@@ -274,6 +288,7 @@ public class B2PGUI extends Application
 
     private void convert()
     {
+        // UI confirmation and state checking
         if(sources == null || sources.size() == 0){
             new ARKInterfaceAlert("Notice", "Select one or more source files to continue.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * 1.25 * SCALE)).display();
             return;
@@ -290,6 +305,7 @@ public class B2PGUI extends Application
 
         hasSeenWarning = true;
 
+        // Get necessary values from the input fields, or default if there are none
         int aspectX = aspectRatioNum.getText().length() == 0 ? 1 : Integer.parseInt(aspectRatioNum.getText()) == 0 ? 1 : Integer.parseInt(aspectRatioNum.getText());
         int aspectY = aspectRatioDenom.getText().length() == 0 ? 1 : Integer.parseInt(aspectRatioDenom.getText()) == 0 ? 1 : Integer.parseInt(aspectRatioDenom.getText());
         int msr = MSRPref.getText().length() == 0 ? 0 : Integer.parseInt(MSRPref.getText());
@@ -306,6 +322,7 @@ public class B2PGUI extends Application
                     {
                         ArrayList<Exception> errors = new ArrayList<>();
 
+                        // Iterate through the list of source files, and convert each one after checking the source and dest
                         for(int i = 0; i < sources.size(); i++)
                         {
                             File f = sources.get(i);
@@ -333,6 +350,7 @@ public class B2PGUI extends Application
             }
         };
 
+        // Link the progress property of the service to allow for async progress updates
         conversionSvc.progressProperty().addListener((observable, oldValue, newValue) -> progress.setProgress(newValue.doubleValue()));
 
         conversionSvc.setOnSucceeded(e ->{
@@ -358,6 +376,7 @@ public class B2PGUI extends Application
         conversionSvc.start();
     }
 
+    // Pushed into a method because it would otherwise involve a lot of copied code and headaches later down the line.
     private void handleResultFromConversion(ArrayList<Exception> result)
     {
         progress.setProgress(0.0);
@@ -373,6 +392,7 @@ public class B2PGUI extends Application
                 if(f.exists()) f.delete();
                 f.createNewFile();
 
+                // Write exceptions to logfile if there are any.
                 BufferedWriter wr = new BufferedWriter(new FileWriter(f));
                 int i = 1;
                 for(Exception e : result)
@@ -397,7 +417,8 @@ public class B2PGUI extends Application
                 wr.flush();
                 wr.close();
             } catch (IOException e) {
-                new ARKInterfaceAlert("Warning", "Error log write failed.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * SCALE)).display();
+                // If we can't even write the exceptions to the logfile, print them to the console instead.
+                new ARKInterfaceAlert("Warning", "Error log write failed. Errors logged to console.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * SCALE)).display();
                 e.printStackTrace();
 
                 System.out.println("Error stack from conversion is as follows:");

@@ -9,6 +9,7 @@
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Iris/Iris.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Iris/Iris.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/R34/R34.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/R34/R34.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/RPlanner/RPlanner.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/RPlanner/RPlanner.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/X34/X34.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/X34/X34.iml" />
     </modules>
   </component>
 </project>
