@@ -9,6 +9,8 @@ import Bin2Pix.Core.ConversionException;
 import Bin2Pix.Core.EncodingSchema;
 import Bin2Pix.Core.ImageAdapter;
 import com.sun.istack.internal.NotNull;
+import core.AUNIL.LogEventLevel;
+import core.AUNIL.XLoggerInterpreter;
 import core.UI.ARKInterfaceAlert;
 import core.UI.ARKInterfaceDialogYN;
 import javafx.application.Application;
@@ -27,10 +29,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,9 +80,15 @@ public class B2PGUI extends Application
     private ArrayList<File> sources = null;
     private boolean hasSeenWarning = false;
 
+    private XLoggerInterpreter log;
+
     @Override
     public void start(Stage primaryStage)
     {
+        log = new XLoggerInterpreter("Bin2Pix UI");
+
+        log.logEvent("Initializing JFX...");
+
         // INITIALIZE JAVAFX WINDOW
         window = new Stage();
 
@@ -107,12 +112,16 @@ public class B2PGUI extends Application
         window.setScene(menu);
         window.show();
 
+        log.logEvent("JFX init complete, adding adapters...");
+
         adapters = new HashMap<>();
 
         // add new adapters here
         adapters.put("BMP", new BMPAdapter());
         adapters.put("JPEG", new JPEGAdapter());
         adapters.put("PNG", new PNGAdapter());
+
+        log.logEvent("Pre-init complete.");
 
         // run init methods
         preInit();
@@ -121,6 +130,9 @@ public class B2PGUI extends Application
 
     private void preInit()
     {
+        log.logEvent("Starting JFX element configuration...");
+        log.logEvent(LogEventLevel.DEBUG, "Scale factor: " + SCALE);
+
         // Init the file list viewer with some arbitrary window sizes, scaled to the user's global UI scale.
         // Size doesn't really matter too much here (insert dong joke), since the user can resize it anyway.
         fileListViewer = new FileListViewer((int) (150 * SCALE), (int) (250 * SCALE));
@@ -182,12 +194,16 @@ public class B2PGUI extends Application
         progressActiveIndicator.setVisible(false);
         progress.setProgress(0.0);
 
+        log.logEvent("Element config complete in " + log.getTimeSinceLastEvent() + "ms.");
+
         setElementPositions();
         setTooltips();
     }
 
     private void setElementPositions()
     {
+        log.logEvent("Setting element positions...");
+
         // Some of these are called twice because one sets the position relative to the grid in some coordinates,
         // and the other sets the position as a non-grid number in other coordinates.
         setElementPositionInGrid(exit, 0, -1, -1, 0);
@@ -219,6 +235,8 @@ public class B2PGUI extends Application
         setElementPositionInGrid(lengthPrefLabel, -1, -1, 4, -1);
         setElementPosition(MSRPrefLabel, -1, MSRPref.getPrefWidth(), -1, -1);
         setElementPosition(lengthPrefLabel, -1, lengthPref.getPrefWidth(), -1, -1);
+
+        log.logEvent("Position setup complete.");
     }
 
     private void setElementActions()
@@ -284,6 +302,8 @@ public class B2PGUI extends Application
             fileListViewer.updateFileList(sources == null ? new ArrayList<>() : sources);
             fileListViewer.display();
         });
+        
+        log.logEvent("Initialization complete. Program ready.");
     }
 
     private void convert()
@@ -305,6 +325,12 @@ public class B2PGUI extends Application
 
         hasSeenWarning = true;
 
+        log.logEvent("Starting conversion.");
+        log.logEvent(LogEventLevel.DEBUG, "Source count: " + sources.size());
+        log.logEvent(LogEventLevel.DEBUG, "Destination directory: " + lastDest);
+        log.logEvent(LogEventLevel.DEBUG, "Format: " + format.getSelectionModel().getSelectedItem());
+        log.logEvent(LogEventLevel.DEBUG, "Overwrite: " + (overwrite.isSelected() ? "ENABLED" : "DISABLED"));
+
         // Get necessary values from the input fields, or default if there are none
         int aspectX = aspectRatioNum.getText().length() == 0 ? 1 : Integer.parseInt(aspectRatioNum.getText()) == 0 ? 1 : Integer.parseInt(aspectRatioNum.getText());
         int aspectY = aspectRatioDenom.getText().length() == 0 ? 1 : Integer.parseInt(aspectRatioDenom.getText()) == 0 ? 1 : Integer.parseInt(aspectRatioDenom.getText());
@@ -312,6 +338,10 @@ public class B2PGUI extends Application
         int len = lengthPref.getText().length() == 0 ? 1 : Integer.parseInt(lengthPref.getText()) == 0 ? 1 : Integer.parseInt(lengthPref.getText());
         ImageAdapter adapter = adapters.get(format.getSelectionModel().getSelectedItem());
         String extension = adapter.getHandledExtensions()[0].substring(1, adapter.getHandledExtensions()[0].length());
+        
+        log.logEvent(LogEventLevel.DEBUG, "Aspect ratio: " + aspectX + ":" + aspectY);
+        log.logEvent(LogEventLevel.DEBUG, "Mark-space ratio: " + msr);
+        log.logEvent(LogEventLevel.DEBUG, "Sample length: " + len);
 
         Service conversionSvc = new Service() {
             @Override
@@ -320,11 +350,14 @@ public class B2PGUI extends Application
                     @Override
                     protected Object call() throws Exception
                     {
+                        XLoggerInterpreter xl = new XLoggerInterpreter("Bin2Pix Conversion Worker");
                         ArrayList<Exception> errors = new ArrayList<>();
 
                         // Iterate through the list of source files, and convert each one after checking the source and dest
                         for(int i = 0; i < sources.size(); i++)
                         {
+                            xl.logEvent("Processing file " + (i + 1) + " of " + sources.size() + "...");
+                            
                             File f = sources.get(i);
                             try {
                                 File dest = new File(lastDest, f.getName() + extension);
@@ -336,14 +369,19 @@ public class B2PGUI extends Application
                                 }
 
                                 B2PCore.B2PFile2File(f, dest, new EncodingSchema(msr, len, aspectX, aspectY, adapter));
+                                xl.logEvent("Done processing with no errors.");
                             } catch (IOException | ConversionException e) {
                                 errors.add(e);
+                                xl.logEvent(LogEventLevel.ERROR, "Encountered non-fatal error, see below for details.");
+                                xl.logEvent(LogEventLevel.ERROR, e);
                             } finally {
                                 // garbage collect, because apparently Java can't automatically reclaim the memory used by the old arrays
                                 System.gc();
                             }
                             updateProgress(i + 1, sources.size());
                         }
+                        xl.logEvent("Batch complete with " + errors.size() + " errors.");
+                        xl.disassociate();
                         return errors;
                     }
                 };
@@ -372,6 +410,8 @@ public class B2PGUI extends Application
         });
 
         progressActiveIndicator.setVisible(true);
+        
+        log.logEvent("Starting conversion service...");
 
         conversionSvc.start();
     }
@@ -388,6 +428,7 @@ public class B2PGUI extends Application
             new ARKInterfaceAlert("Notice", "Conversion completed with errors, written to errors.txt in your user documents directory.", (int)(DEFAULT_DIALOG_SIZE * SCALE * 2), (int)(DEFAULT_DIALOG_SIZE * SCALE * 2)).display();
 
             try {
+                log.logEvent("Writing error report...");
                 File f = new File(System.getProperty("user.home") + "\\Documents", "errors.txt");
                 if(f.exists()) f.delete();
                 f.createNewFile();
@@ -400,15 +441,11 @@ public class B2PGUI extends Application
                     wr.write("Exception #" + i + ":");
                     wr.newLine();
                     wr.newLine();
-                    wr.write(e.getMessage() == null ? "No message available" : e.getMessage());
-                    wr.newLine();
 
-                    Throwable th = e.getCause();
-                    while (th != null){
-                        wr.write(th.getMessage());
-                        wr.newLine();
-                        th = th.getCause();
-                    }
+                    String str = "";
+                    e.printStackTrace(new PrintStream(str));
+
+                    wr.write(str);
 
                     wr.newLine();
                     i++;
@@ -421,22 +458,16 @@ public class B2PGUI extends Application
                 new ARKInterfaceAlert("Warning", "Error log write failed. Errors logged to console.", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * SCALE)).display();
                 e.printStackTrace();
 
-                System.out.println("Error stack from conversion is as follows:");
-                System.out.println("----------------------------");
-                System.out.println();
+                log.logEvent(LogEventLevel.CRITICAL, "Error stack from conversion is as follows:");
+                log.logEvent(LogEventLevel.CRITICAL, "----------------------------");
+                log.logEvent(LogEventLevel.CRITICAL, "");
 
                 int i = 1;
                 for(Exception e1 : result)
                 {
-                    System.out.println("Exception #" + i + ":");
-                    System.out.println();
-                    System.out.println(e1.getMessage() == null ? "No message available" : e1.getMessage());
-
-                    Throwable th = e1.getCause();
-                    while (th != null){
-                        System.out.println(th.getMessage());
-                        th = th.getCause();
-                    }
+                    log.logEvent(LogEventLevel.CRITICAL, "Exception #" + i + ":");
+                    log.logEvent(LogEventLevel.CRITICAL, "");
+                    log.logEvent(LogEventLevel.CRITICAL, e1);
 
                     i++;
                 }
@@ -465,6 +496,8 @@ public class B2PGUI extends Application
     }
 
     private void exitSystem(){
+        log.logEvent("Shutting down...");
+        log.disassociate();
         System.exit(0);
     }
 

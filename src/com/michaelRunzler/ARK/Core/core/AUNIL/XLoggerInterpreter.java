@@ -18,19 +18,21 @@ public class XLoggerInterpreter
     String friendlyName;
     String classID;
     private LogEventLevel implicitLevel;
+    private long lastLogTime;
 
     /**
      * Internal use only. Used by the {@link XLoggerCore XLoggerCore} to register its own internal logger interpreter.
+     * Does not auto-associate, must be associated manually.
      * @param assoc the {@link XLoggerCore XLoggerCore} object to associate with this object
      * @param friendlyName an optional 'friendly name' to use for this object. Providing null will set the friendly name to the class ID.
      */
     XLoggerInterpreter(XLoggerCore assoc, String friendlyName)
     {
+        lastLogTime = System.currentTimeMillis();
         this.executor = assoc;
         this.classID = getCallerClass();
         this.friendlyName = friendlyName == null ? classID : friendlyName;
         this.implicitLevel = LogEventLevel.INFO;
-        executor.associateInterpreter(this);
     }
 
     /**
@@ -39,6 +41,7 @@ public class XLoggerInterpreter
      */
     public XLoggerInterpreter()
     {
+        lastLogTime = System.currentTimeMillis();
         this.executor = XLoggerDelegator.getMainInstance();
         this.classID = getCallerClass();
         this.friendlyName = classID;
@@ -53,6 +56,7 @@ public class XLoggerInterpreter
      */
     public XLoggerInterpreter(String friendlyName)
     {
+        lastLogTime = System.currentTimeMillis();
         this.executor = XLoggerDelegator.getMainInstance();
         this.classID = getCallerClass();
         this.friendlyName = friendlyName;
@@ -68,6 +72,7 @@ public class XLoggerInterpreter
      */
     public XLoggerInterpreter(short instanceID)
     {
+        lastLogTime = System.currentTimeMillis();
         this.executor = instanceID < 0 ? XLoggerDelegator.getMainInstance() : XLoggerDelegator.getDynamicInstance(instanceID);
         this.classID = getCallerClass();
         this.friendlyName = classID;
@@ -85,26 +90,11 @@ public class XLoggerInterpreter
      */
     public XLoggerInterpreter(String friendlyName, short instanceID)
     {
+        lastLogTime = System.currentTimeMillis();
         this.executor = instanceID < 0 ? XLoggerDelegator.getMainInstance() : XLoggerDelegator.getDynamicInstance(instanceID);
         this.classID = getCallerClass();
         this.friendlyName = friendlyName;
         this.implicitLevel = LogEventLevel.INFO;
-        executor.associateInterpreter(this);
-    }
-
-    /**
-     * Internal use only. Provides access to all internal fields during construction, allowing full control of parameters.
-     * @see XLoggerInterpreter#XLoggerInterpreter(XLoggerCore, String)
-     * @param classID the class ID to assign to this object
-     * @param friendlyName the 'friendly name' to assign to this object
-     * @param executor the {@link XLoggerCore Logger Core} object to assign to this object
-     * @param level the implicit log event level to assign to this object
-     */
-    XLoggerInterpreter(String classID, String friendlyName, XLoggerCore executor, LogEventLevel level){
-        this.executor = executor;
-        this.classID = classID;
-        this.friendlyName = friendlyName;
-        this.implicitLevel = level;
         executor.associateInterpreter(this);
     }
 
@@ -143,6 +133,7 @@ public class XLoggerInterpreter
      * @param message the message to pass to the logger core
      */
     public void logEvent(LogEventLevel level, String message) {
+        lastLogTime = System.currentTimeMillis();
         executor.logEvent(this, level, message);
     }
 
@@ -152,7 +143,7 @@ public class XLoggerInterpreter
      * @param message the message to pass to the logger core
      */
     public void logEvent(String message){
-        executor.logEvent(this, implicitLevel, message);
+        this.logEvent(implicitLevel, message);
     }
 
     /**
@@ -170,7 +161,7 @@ public class XLoggerInterpreter
         else
             try {e.printStackTrace(new PrintStream(str));} catch(FileNotFoundException ignored) {}
 
-        executor.logEvent(this, level, str);
+        this.logEvent(level, str);
     }
 
     /**
@@ -179,7 +170,7 @@ public class XLoggerInterpreter
      * @param e the Exception to pass to the logger core
      */
     public void logEvent(Exception e) {
-        logEvent(implicitLevel, e);
+        this.logEvent(implicitLevel, e);
     }
 
     /**
@@ -203,6 +194,17 @@ public class XLoggerInterpreter
      */
     public File getLogDirectory() {
         return executor.getParent();
+    }
+
+    /**
+     * Gets the time in milliseconds since the last call to {@link XLoggerInterpreter#logEvent(LogEventLevel, String) logEvent()} or any of its overloaded
+     * variants. A <i>successful</i> event log is not required, simply a call to it. If no calls to these methods
+     * have been made yet, returns the time since the constructor was called.
+     * Time values are obtained via {@link System#currentTimeMillis()}. Calling this method does not reset the timer.
+     * @return the time in milliseconds since the last event log call or constructor init call
+     */
+    public long getTimeSinceLastEvent() {
+        return System.currentTimeMillis() - lastLogTime;
     }
 
     /**

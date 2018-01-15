@@ -19,7 +19,7 @@ import java.util.HashMap;
  */
 public class XLoggerCore
 {
-    final String LOG_FILE_EXTENSION = ".x34l";
+    public final String LOG_FILE_EXTENSION = ".x34l";
 
     private File parent;
     private boolean fileWrite;
@@ -29,34 +29,30 @@ public class XLoggerCore
     private static HashMap<XLoggerInterpreter, XLoggerFileWriteEntry> bridges;
 
     private boolean lockLogWrites;
-    private boolean queuedLogEntries;
     private ArrayList<XLoggerLogEntry> queue;
     private XLoggerInterpreter internal;
     private DateFormat dateFormat;
-    private Date date;
 
     /**
      * Constructs a new instance of this object. Sets its parent directory to a subdirectory of
      * {@link ARKGlobalConstants#DESKTOP_DATA_ROOT}, named 'AUNIL'.
      * Disk write is defaulted to 'on'.
      */
-    public XLoggerCore()
+    XLoggerCore()
     {
         parent = new File(ARKGlobalConstants.DESKTOP_CACHE_ROOT.getAbsolutePath() + "\\AUNIL");
         fileWrite = true;
         lockLogWrites = false;
-        queuedLogEntries = false;
         queue = new ArrayList<>();
         bridges = new HashMap<>();
         internal = new XLoggerInterpreter(this, "Logger Core");
         dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
-        date = new Date();
+        internal.associate();
 
         internal.logEvent("Initialization finished.");
         internal.logEvent("File write enabled: " + fileWrite);
         internal.logEvent("Parent directory: " + parent.getAbsolutePath());
         internal.logEvent("Ready.");
-        internal.logEvent("");
     }
 
     /**
@@ -79,9 +75,11 @@ public class XLoggerCore
             internal.associate();
         }
 
+        internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " is requesting association.");
+
         // If file write is disabled, add to registry with 'null' as the file write entry and return.
         if(!fileWrite){
-            internal.logEvent("Interpreter \"" + caller.toString() + "\" with parent name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
+            internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
             bridges.put(caller, null);
             return;
         }
@@ -93,9 +91,11 @@ public class XLoggerCore
         File f = new File(parent, caller.friendlyName + LOG_FILE_EXTENSION);
 
         try {
-            if(!checkChildFile(f, caller.friendlyName)) throw new IOException("File creation failed");
+            int value = checkChildFile(f, caller.friendlyName);
+            if(value >= 10) throw new IOException("File creation failed");
+            f = new File(parent, caller.friendlyName + (value == 0 ? "" : value) + LOG_FILE_EXTENSION);
         } catch (IOException e) {
-            internal.logEvent("Interpreter \"" + caller.toString() + "\" with parent name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
+            internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
             bridges.put(caller, null);
         }
@@ -103,9 +103,10 @@ public class XLoggerCore
         try {
             bridges.put(caller, new XLoggerFileWriteEntry(new BufferedWriter(new FileWriter(f)), f));
         } catch (IOException e) {
-            internal.logEvent("Interpreter \"" + caller.toString() + "\" with parent name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
+            internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
         }
+        internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
     }
 
     /**
@@ -169,15 +170,15 @@ public class XLoggerCore
         if(newParent.getAbsolutePath().equals(parent.getAbsolutePath())) return;
 
         // Try to make the directory structure leading to the new parent. If it fails, throw an IOException.
-        if(!newParent.mkdirs()){
+        if(!newParent.exists() && !newParent.mkdirs()){
             throw new IOException("New parent directory creation failed");
         }else{
             // If the new parent created successfully, lock the log stack and start re-initializing the registry.
-            lockLogWrites = true;
             internal.logEvent("Interpreter \"" + caller.friendlyName + "\" initiated directory change.");
             internal.logEvent(LogEventLevel.DEBUG, "Old directory: " + parent.getAbsolutePath());
             internal.logEvent(LogEventLevel.DEBUG, "New directory: " + newParent.getAbsolutePath());
             internal.logEvent(LogEventLevel.DEBUG, "Write stack LOCKED!");
+            lockLogWrites = true;
         }
 
         this.parent = newParent;
@@ -188,18 +189,35 @@ public class XLoggerCore
         internal.logEvent("Re-registering writers...");
 
         // Reset each writer's file writer entry to the new parent dir, and check its file. If the file check fails,
-        // remove it from the registry and re-add it with 'null' as its file write entry.
+        // set its file writer entry's contents to null.
         for(XLoggerInterpreter xl : bridges.keySet())
         {
             internal.logEvent("Re-associating interpreter \"" + xl.friendlyName + "\"...");
             XLoggerFileWriteEntry xf = bridges.get(xl);
-            xf.target = new File(parent, xf.target.getName());
-            xf.writer = new BufferedWriter(new FileWriter(xf.target));
-            if(!checkChildFile(xf.target, xl.friendlyName)){
-                bridges.remove(xl);
-                bridges.put(xl, null);
+
+            // Check if the specified writer has file write enabled. If it doesn't, skip it.
+            if(xf == null || xf.writer == null){
+                internal.logEvent("Interpreter " + xl.friendlyName + " has writing disabled, skipping.");
+                continue;
+            }
+
+            // If file write is enabled, close the writer before changing file.
+            if(fileWrite) xf.writer.close();
+
+            // Change file target.
+            File f = new File(parent, xf.target.getName());
+
+            // If file write is enabled, check the child file. If not, use the default filename for this Interpreter and continue.
+            int value = fileWrite ? checkChildFile(f, xl.friendlyName) : 0;
+            if(value >= 10){
+                // If the file check fails, set writer and target to null to signify write-disable for this Interpreter and continue.
+                bridges.get(xl).writer = null;
+                bridges.get(xl).target = null;
                 internal.logEvent(LogEventLevel.WARNING, "Re-association complete, but an IO error is preventing file writing from enabling for this interpreter.");
             }else{
+                // If the check succeeds or file write is disabled, set the new filename and writer and continue.
+                bridges.get(xl).target = new File(parent, xl.friendlyName + (value == 0 ? "" : value) + LOG_FILE_EXTENSION);
+                bridges.get(xl).writer = new BufferedWriter(new FileWriter(bridges.get(xl).target));
                 internal.logEvent("Re-association successful, file logging online.");
             }
         }
@@ -207,6 +225,7 @@ public class XLoggerCore
         // Unlock the log stack.
         lockLogWrites = false;
         internal.logEvent(LogEventLevel.DEBUG, "Write stack UNLOCKED!");
+        internal.logEvent("Directory change complete.");
     }
 
     /**
@@ -219,7 +238,7 @@ public class XLoggerCore
     synchronized void logEvent(XLoggerInterpreter caller, LogEventLevel level, String message)
     {
         // Check that the caller is associated. If it is not, log it and return without doing anything else.
-        if(!checkCallerPermissions(caller)){
+        if(!checkCallerPermissions(caller) && caller != internal){
             if(internal != null) internal.logEvent("Interpreter \"" + caller.friendlyName + "\" attempted event log while disassociated.");
             return;
         }
@@ -231,13 +250,12 @@ public class XLoggerCore
             return;
         }else if(!lockLogWrites && message != null){
             // If it's not, check the queue to see if it has been emptied yet.
-            if(queuedLogEntries){
+            if(queue.size() > 0){
                 // If it has, write all of the stored messages to the log, empty the queue, and flag it as such.
                 for(XLoggerLogEntry l : queue){
                     logEventInternal(l.caller, l.level, l.message);
                 }
                 queue.clear();
-                queuedLogEntries = false;
                 // Once done clearing the log, continue.
             }
         }else{
@@ -262,7 +280,7 @@ public class XLoggerCore
     private synchronized void logEventInternal(XLoggerInterpreter caller, LogEventLevel level, String message)
     {
         // Compile the output data.
-        String compiled = "(" + dateFormat.format(date) + ") <" + level.name() + "> [" + caller.friendlyName + "]: " + message;
+        String compiled = "(" + dateFormat.format(System.currentTimeMillis()) + ") <" + level.name() + "> [" + caller.friendlyName + "]: " + message;
 
         // Check file write status.
         if(fileWrite) {
@@ -272,6 +290,7 @@ public class XLoggerCore
                 if(bridges.get(caller) != null && bridges.get(caller).writer != null) {
                     BufferedWriter br = bridges.get(caller).writer;
                     br.write(compiled);
+                    br.newLine();
                     br.flush();
                 }
             } catch (IOException e) {
@@ -294,12 +313,12 @@ public class XLoggerCore
 
     /**
      * Checks if the provided Interpreter object has permission to execute operations on this Core object, in other words,
-     * is it currently valid and registered? The internal Interpreter will always pass this check as long as it is not null.
+     * is it currently valid and registered?
      * @param caller the Interpreter object to check permissions for
      * @return true if the provided Interpreter is valid and registered, false otherwise
      */
     private boolean checkCallerPermissions(XLoggerInterpreter caller) {
-        return caller != null && (caller == internal || (caller.classID != null && bridges.containsKey(caller)));
+        return caller != null && (caller.classID != null && bridges.containsKey(caller));
     }
 
     /**
@@ -324,19 +343,21 @@ public class XLoggerCore
      * Checks a specified child file for validity.
      * @param f the file to check
      * @param name the name of the original caller that requested the check
-     * @return true if the check succeeded, false otherwise
+     * @return an integer value. If the value is 0, creation succeeded with the original filename. If the value is more than 0,
+     * but less than 10, creation succeeded with a modified filename appended with the number returned. If the value is 10 or more,
+     * creation failed.
      * @throws IOException if the system encountered an IO error while creating the new file (if one did not already exist)
      */
-    private boolean checkChildFile(File f, String name) throws IOException
+    private int checkChildFile(File f, String name) throws IOException
     {
-        if(f.exists()){
+        if(f.exists() && !f.delete()){
             int tries = 0;
-            while (!f.delete() && tries < 10){
+            while (!f.createNewFile() && tries < 10){
                 f = new File(parent, name + tries + LOG_FILE_EXTENSION);
                 tries ++;
             }
-            return tries < 10;
+            return tries;
         }
-        return f.createNewFile();
+        return f.createNewFile() ? 0 : 10;
     }
 }
