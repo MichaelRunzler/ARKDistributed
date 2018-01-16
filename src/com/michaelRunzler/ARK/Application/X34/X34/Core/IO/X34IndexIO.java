@@ -53,6 +53,7 @@ public class X34IndexIO
         // ALL THE INTEGRITY CHECKS
         if(parent == null) throw new IllegalArgumentException("Index parent directory cannot be null");
         if(!parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create index parent directory");
+        if(index == null || index.id == null) throw new IllegalArgumentException("Index is invalid or null");
 
         File target = new File(parent, index.id + INDEX_FILE_EXTENSION);
 
@@ -62,13 +63,19 @@ public class X34IndexIO
 
         // now that we're done with that, on to the ACTUAL index write, which is most likely shorter than the integrity checks above
         ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(target));
-        // skip writing the index if its internal array is empty
-        if(index != null && index.entries != null && index.id != null) os.writeObject(index);
+        if(index.entries == null || index.entries.size() == 0) os.write(7);
+        else os.writeObject(index);
         os.flush();
         os.close();
     }
 
     public X34Index getIndex() {
         return index;
+    }
+
+    public void setIndex(X34Index index)
+    {
+        if(index == null || index.id == null) throw new IllegalArgumentException("Provided index is invalid or null");
+        this.index = index;
     }
 }

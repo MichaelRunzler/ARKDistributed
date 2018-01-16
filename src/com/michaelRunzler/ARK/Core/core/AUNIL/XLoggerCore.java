@@ -91,9 +91,9 @@ public class XLoggerCore
         File f = new File(parent, caller.friendlyName + LOG_FILE_EXTENSION);
 
         try {
-            int value = checkChildFile(f, caller.friendlyName);
-            if(value >= 10) throw new IOException("File creation failed");
-            f = new File(parent, caller.friendlyName + (value == 0 ? "" : value) + LOG_FILE_EXTENSION);
+            String value = checkChildFile(f, caller.friendlyName);
+            if(value == null) throw new IOException("File creation failed");
+            f = new File(parent, value);
         } catch (IOException e) {
             internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
@@ -208,15 +208,15 @@ public class XLoggerCore
             File f = new File(parent, xf.target.getName());
 
             // If file write is enabled, check the child file. If not, use the default filename for this Interpreter and continue.
-            int value = fileWrite ? checkChildFile(f, xl.friendlyName) : 0;
-            if(value >= 10){
+            String value = fileWrite ? checkChildFile(f, xl.friendlyName) : caller.friendlyName;
+            if(value == null){
                 // If the file check fails, set writer and target to null to signify write-disable for this Interpreter and continue.
                 bridges.get(xl).writer = null;
                 bridges.get(xl).target = null;
                 internal.logEvent(LogEventLevel.WARNING, "Re-association complete, but an IO error is preventing file writing from enabling for this interpreter.");
             }else{
                 // If the check succeeds or file write is disabled, set the new filename and writer and continue.
-                bridges.get(xl).target = new File(parent, xl.friendlyName + (value == 0 ? "" : value) + LOG_FILE_EXTENSION);
+                bridges.get(xl).target = new File(parent, value);
                 bridges.get(xl).writer = new BufferedWriter(new FileWriter(bridges.get(xl).target));
                 internal.logEvent("Re-association successful, file logging online.");
             }
@@ -340,24 +340,24 @@ public class XLoggerCore
     }
 
     /**
-     * Checks a specified child file for validity.
+     * Checks a specified child file for validity. Cyclically changes the name of the file up to 10 times if there is an
+     * existing file with the same name that cannot be deleted.
      * @param f the file to check
-     * @param name the name of the original caller that requested the check
-     * @return an integer value. If the value is 0, creation succeeded with the original filename. If the value is more than 0,
-     * but less than 10, creation succeeded with a modified filename appended with the number returned. If the value is 10 or more,
-     * creation failed.
-     * @throws IOException if the system encountered an IO error while creating the new file (if one did not already exist)
+     * @param name the name of the original file, minus extension
+     * @return the name of the new file. If the creation failed, the result will be null.
+     * @throws IOException if the system encountered an IO error while creating the new file
      */
-    private int checkChildFile(File f, String name) throws IOException
+    private String checkChildFile(File f, String name) throws IOException
     {
         if(f.exists() && !f.delete()){
             int tries = 0;
             while (!f.createNewFile() && tries < 10){
-                f = new File(parent, name + tries + LOG_FILE_EXTENSION);
+                f = new File(parent, name + "_" + tries + LOG_FILE_EXTENSION);
                 tries ++;
             }
-            return tries;
+            if(tries < 10) return f.getName();
+            else return null;
         }
-        return f.createNewFile() ? 0 : 10;
+        return f.createNewFile() ? f.getName() : null;
     }
 }
