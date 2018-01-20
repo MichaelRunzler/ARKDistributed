@@ -1,5 +1,6 @@
 package core.CoreUtil;
 
+import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 
 import java.io.*;
@@ -9,9 +10,7 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
+import java.util.*;
 
 /**
  * Provides tools for retrieving and manipulating remote resources from a server.
@@ -350,9 +349,8 @@ public class IOTools
      * @param src the directory to use as the root for the search
      * @return an array of File objects corresponding to the children of the searched directory. The last entry in the file
      * list will correspond to the noncritical error status of the search process, and will be null if no errors occurred.
-     * @throws IOException if an unrecoverable error is encountered while searching the directory
      */
-    public static File[] getFileTree(File src) throws IOException
+    public static File[] getFileTree(File src)
     {
         // Check access, existence, and directory validity.
         if(src == null || !src.exists() || !src.isDirectory() || !src.canRead()) throw new IllegalArgumentException("Supplied file must be a valid directory");
@@ -431,5 +429,49 @@ public class IOTools
         ex = ex.substring(ex.indexOf(DELIMITER) + DELIMITER.length(), ex.length());
 
         throw new Exception(ex);
+    }
+
+    /**
+     * Writes a specified {@link Map Map<Object,Object[]>} to a file in CSV format.
+     * {@code ','}, (COMMA) is used as the column separator, and {@code '\n'} (NEWLINE) is used as the row separator.
+     * The first entry contains field names, as optionally specified by the {@code fieldNames} argument.
+     * @param out the {@link BufferedWriter} to output data to
+     * @param array the {@link Map} to source data from. If the provided Map is null, the method will return without writing any data.
+     *              If the Map is non-null, but empty, the method will write field names only and return.
+     * @param fieldNames specifies field names for the first entry in the completed CSV. Field names should be specified in
+     *                   standard nonspaced comma-separated format, in the form {@code "Name,Name,Name,etc."}. There is no limit to how
+     *                   many field names may be specified. If a null or invalid value is provided, the default value of
+     *                   {@code "Key,Values..."} will be used.
+     * @throws IOException if a critical error is encountered during the write process
+     */
+    public static void writeMapToCSV(@NotNull BufferedWriter out, @Nullable Map<Object, Object[]> array, @Nullable String fieldNames) throws IOException
+    {
+        String fns;
+        fns = fieldNames == null || fieldNames.length() == 0 || !fieldNames.contains(",") ? "Key,Values...," : fieldNames;
+
+        if(array == null) return;
+
+        out.write(fns);
+        out.write('\n');
+        out.flush();
+
+        if(array.size() == 0) return;
+
+        Object[] keys = array.keySet().toArray();
+        for(int i = 0; i < array.size(); i++)
+        {
+            Object key = keys[i];
+            out.write(key.toString() + ",");
+
+            for(Object s : array.get(key)){
+                out.write(s.toString() + ",");
+            }
+
+            if(i < array.size() - 1) {
+                out.write('\n');
+            }
+        }
+
+        out.flush();
     }
 }
