@@ -746,7 +746,7 @@ public class R34UI extends Application
     {
         // Called from the runRetrieval method, checks the supplied tag and calls the appropriate method for its type.
         if(tag.length() > 0){
-            if(outputDir.exists())
+            if(modeSelect.getSelectionModel().getSelectedIndex() != 1 || outputDir.exists())
             {
                 // Replace any unwanted characters in the tag with properly formatted underscores.
                 tag = tag.replace(' ', '_');
@@ -1005,22 +1005,21 @@ public class R34UI extends Application
                 logger.logEvent("Pulling image URLs \nfrom page " + i + " of " + lastPageID + "...");
                 pushMTUpdateToStatusField("Pulling: page " + i + " of " + lastPageID + "...");
 
-                // here there be dragons:
-                int lastChar = 0;
-                int parityCheck = 0;
-                int lc2 = 0;
                 int newCount = 0;
 
-                // Load the list of image URLs from the downloaded page.
-                while(parityCheck > -1){
-                    lastChar = db.indexOf("/_images/", lastChar);
-                    parityCheck = lastChar;
-                    lastChar = lastChar + 9;
-                    lc2 = db.indexOf(">Image Only", lc2) + 11;
-                    if(parityCheck > -1){
-                        images.add(new URL("http://rule34-data-" + db.substring(lastChar - 23, lc2 - 12)));
-                        newCount ++;
+                int sectionStart = db.indexOf("<section id='imagelist'>");
+                int parity = 0;
+
+                while (parity > -1){
+                    int start = db.indexOf("<a href=\"", sectionStart) + "<a href=\"".length();
+                    int end = db.indexOf("\">Image Only", start);
+                    if(end < 0){
+                        parity = -1;
+                        continue;
                     }
+                    sectionStart = end + "\">Image Only".length();
+                    images.add(new URL(db.substring(start, end)));
+                    newCount ++;
                 }
 
                 logger.logEvent("Pull complete! Pulled " + newCount + " images.");

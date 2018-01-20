@@ -155,4 +155,28 @@ public class ARKArrayUtil
         }
         return null;
     }
+
+    /**
+     * Compares multiple byte arrays to see if they match.
+     * All provided arrays must be of the same length and contain exactly the same byte sequence to pass the check.
+     * @param arrays two or more byte arrays to compare
+     * @return true if all provided arrays match, false if otherwise
+     */
+    public static boolean compareByteArrays(byte[]... arrays)
+    {
+        if(arrays == null) return false;
+        if(arrays.length <= 1) return true;
+
+        byte[] original = arrays[0];
+        for(int i = 1; i < arrays.length; i++)
+        {
+            byte[] compare = arrays[i];
+            if(compare.length != original.length) return false;
+            else for(int j = 0; j < original.length; j++){
+                    if(compare[j] != original[j]) return false;
+                }
+        }
+
+        return true;
+    }
 }
