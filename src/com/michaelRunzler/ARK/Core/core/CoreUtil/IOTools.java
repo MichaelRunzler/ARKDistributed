@@ -3,6 +3,7 @@ package core.CoreUtil;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -26,9 +27,8 @@ public class IOTools
      * @param overwrite whether or not to overwrite an existing file in the specified download location
      * @throws IOException if there is a problem with the download or writing process, or if it takes more than 5 seconds
      * to open the file read channel
-     * @throws IllegalArgumentException if the source URL or destination file are invalid or inaccessible
      */
-    public static void getFileFromURL(String src, File dest, boolean overwrite) throws IOException, IllegalArgumentException
+    public static void getFileFromURL(@NotNull String src, @NotNull File dest, boolean overwrite) throws IOException
     {
         if(src == null || src.length() <= 0) {
             throw new IllegalArgumentException("Input URL must not be null or zero-length!");
@@ -64,7 +64,7 @@ public class IOTools
 
         t.start();
 
-        // Default is 10 seconds (10,000 ms)
+        // Default is 5 seconds (5,000 ms)
         final long MAX_WAIT_TIME = 5000;
         long time = System.currentTimeMillis();
 
@@ -96,7 +96,7 @@ public class IOTools
      * @return the results of the ping test
      * whoa whoa whoa, what do you mean, ping test?
      */
-    public static int pingTestURL(String src) throws IOException, IllegalArgumentException
+    public static int pingTestURL(@NotNull String src) throws IOException
     {
         if(src == null || src.length() <= 0) {
             throw new IllegalArgumentException("Input URL must not be null or zero-length!");
@@ -134,20 +134,46 @@ public class IOTools
     }
 
     /**
-     * Simplification method. Downloads a file from a URL using getFileFromURL, then reads the file to a buffer using
-     * loadDataBytesFromFile and deletes the file.
-     * @param src the URL to download the file from
+     * Downloads bytes from a URL by opening a stream and reading raw bytes in chunks of 8192 bytes each.
+     * @param src the URL to download bytes from
      * @return the contents of the specified URL as a byte array
-     * @throws IOException if there is an error writing the file or reading the URL
-     * @throws IllegalArgumentException if the provided URL is zero-length or invalid
+     * @throws IOException if there is an error reading from the URL
      */
-    public static byte[] getBytesFromURL(String src) throws IOException, IllegalArgumentException
+    public static byte[] getBytesFromURL(@NotNull String src) throws IOException
     {
-        File dest = new File(System.getenv("AppData") + "\\KAI\\com.michaelRunzler.ARK\\", "temp.xml");
-        getFileFromURL(src, dest, true);
-        byte[] buffer = loadDataBytesFromFile(dest);
-        dest.delete();
-        return buffer;
+        URL srv = new URL(src);
+        //if(getRemoteFileSize(srv) <= 0) return new byte[0];
+
+        InputStream in = srv.openStream();
+        ByteArrayOutputStream bs = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[8192];
+
+        int read;
+        do{
+            read = in.read(buffer);
+            if(read > 0) bs.write(buffer, 0, read);
+        }while (read > 0);
+
+        return bs.toByteArray();
+    }
+
+    /**
+     * Gets a string representation of the bytes at a URL. Uses {@link IOTools#getBytesFromURL(String)} to download data.
+     * @param src the URL to download data from
+     * @return the contents of the specified URL as a String
+     * @throws IOException if there is an error reading from the URL
+     */
+    public static String getStringFromURL(@NotNull String src) throws IOException
+    {
+        char[] buffer = ARKArrayUtil.byteToCharArray(getBytesFromURL(src));
+
+        StringBuilder st = new StringBuilder();
+        for(char c : buffer){
+            st.append(c);
+        }
+
+        return st.toString();
     }
 
     /**
@@ -157,7 +183,7 @@ public class IOTools
      * @throws IOException if the file is invalid or too large to load
      * @throws IllegalArgumentException if the file does not exist or is null
      */
-    public static String loadDataFromFile(File src) throws IOException, IllegalArgumentException
+    public static String loadDataFromFile(@NotNull File src) throws IOException, IllegalArgumentException
     {
         if(src == null || !src.exists()){
             throw new IllegalArgumentException("Target file must exist!");
@@ -179,7 +205,7 @@ public class IOTools
      * @throws IOException if the file is invalid or too large to load
      * @throws IllegalArgumentException if the file does not exist or is null
      */
-    public static char[] loadDataCharsFromFile(File src) throws IOException, IllegalArgumentException
+    public static char[] loadDataCharsFromFile(@NotNull File src) throws IOException, IllegalArgumentException
     {
         if(src == null || !src.exists()){
             throw new IllegalArgumentException("Target file must exist!");
@@ -201,7 +227,7 @@ public class IOTools
      * @throws IOException if the file is invalid or too large to load
      * @throws IllegalArgumentException if the file does not exist or is null
      */
-    public static byte[] loadDataBytesFromFile(File src) throws IOException, IllegalArgumentException
+    public static byte[] loadDataBytesFromFile(@NotNull File src) throws IOException, IllegalArgumentException
     {
         if(src == null || !src.exists()){
             throw new IllegalArgumentException("Target file must exist!");
@@ -225,7 +251,7 @@ public class IOTools
      * @return the data between the starting and ending marks, or null if none was found
      * @throws IllegalArgumentException if any arguments are invalid or null
      */
-    public static String getFieldFromData(String data, String startMark, String endMark, int pos) throws IllegalArgumentException
+    public static String getFieldFromData(@NotNull String data, @NotNull String startMark, @NotNull String endMark, int pos) throws IllegalArgumentException
     {
         if(data == null || startMark == null || endMark == null){
             throw new IllegalArgumentException("All input data must not be null!");
@@ -238,7 +264,7 @@ public class IOTools
         int initialIDX = data.indexOf(startMark, pos) + startMark.length();
         int endIDX = data.indexOf(endMark, initialIDX);
 
-        if(endIDX == -1)
+        if(endIDX == -1 || initialIDX == startMark.length() - 1)
             return null;
 
         return data.substring(initialIDX, endIDX);
@@ -252,7 +278,7 @@ public class IOTools
      * @return the data between the starting and ending marks, or null if none was found
      * @throws IllegalArgumentException if any arguments are invalid or null
      */
-    public static String getFieldFromData(String data, String startMark, int pos) throws IllegalArgumentException
+    public static String getFieldFromData(@NotNull String data, @NotNull String startMark, int pos) throws IllegalArgumentException
     {
         if(data == null || startMark == null){
             throw new IllegalArgumentException("All input data must not be null!");
@@ -279,7 +305,7 @@ public class IOTools
      * @return the page that results from submitting the form
      * @throws IOException if an IO error is encountered while submitting the form or getting the result
      */
-    public static String getDataFromSubmittedHttpForm(String url, final HashMap<String, String> params) throws IOException
+    public static String getDataFromSubmittedHttpForm(@NotNull String url, final HashMap<String, String> params) throws IOException
     {
         if(url.length() == 0){
             throw new IllegalArgumentException("URL is zero-length!");
@@ -322,17 +348,19 @@ public class IOTools
      * @param url the URL to check
      * @return the size of the URL's content in bytes
      */
-    public static int getRemoteFileSize(URL url) {
+    public static int getRemoteFileSize(@NotNull URL url) throws IOException
+    {
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("HEAD");
-            conn.getInputStream();
-            return conn.getContentLength();
-        } catch (IOException e) {
-            return -1;
+            if ("http".equals(url.getProtocol())) conn = (HttpURLConnection) url.openConnection();
+            else if ("https".equals(url.getProtocol())) conn = (HttpsURLConnection) url.openConnection();
+            else return -1;
+
+            int len = conn.getContentLength();
+            if(len < 0) throw new IOException("File size unknown; server returned HTTP code: " + conn.getResponseCode());
+            else return len;
         } finally {
-            conn.disconnect();
+            if(conn != null) conn.disconnect();
         }
     }
 
@@ -350,7 +378,7 @@ public class IOTools
      * @return an array of File objects corresponding to the children of the searched directory. The last entry in the file
      * list will correspond to the noncritical error status of the search process, and will be null if no errors occurred.
      */
-    public static File[] getFileTree(File src)
+    public static File[] getFileTree(@NotNull File src)
     {
         // Check access, existence, and directory validity.
         if(src == null || !src.exists() || !src.isDirectory() || !src.canRead()) throw new IllegalArgumentException("Supplied file must be a valid directory");

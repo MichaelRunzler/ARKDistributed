@@ -21,18 +21,9 @@ public abstract class X34RetrievalProcessor
      * @param index the index to write new image data to
      * @param schema the schema from which to pull config information and metadata
      * @return the list of new images that were written to the index
-     * @throws IOException if a non-recoverable I/O error was encountered during operation
      * @throws ValidationException if a provided element fails to pass validation
      */
-    public abstract ArrayList<X34Image> process(@NotNull X34Index index, @NotNull X34Schema schema) throws IOException, ValidationException;
-
-    /**
-     * Gets the partial or complete new-image list from the most recent processing session. This method is typically used
-     * to get the partially complete list of new images from the processor after a critical error has cause the {@link X34RetrievalProcessor#process(X34Index, X34Schema) process} method
-     * to exit unexpectedly. Said method does not have to complete for this list to be populated.
-     * @return the list of new images from the most recent process operation. May be null or zero-length.
-     */
-    public abstract ArrayList<X34Image> getNewImageList();
+    public abstract ArrayList<X34Image> process(@NotNull X34Index index, @NotNull X34Schema schema) throws ValidationException;
 
     /**
      * Checks that the provided {@link X34Index Index} has correct hash and URI data, and corrects it if necessary.

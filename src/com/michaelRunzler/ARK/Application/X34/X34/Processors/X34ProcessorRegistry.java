@@ -7,34 +7,30 @@ import java.io.IOException;
 
 public class X34ProcessorRegistry
 {
-    // Local cache of results from the getAvailableProcessors method. Since it is not possible for the class configuration
-    // to change after compilation, we can safely assume that the result from said method will be the same every single time
-    // it is run, so we can sacrifice a small amount of memory for much faster run times and lower disk access rates.
+    // Local cache of results from getAvailableProcessors and sub-methods. Since it is not possible for the class configuration
+    // to change after compilation, we can safely assume that the result from said methods will be the same every single time
+    // it is run, so we can sacrifice a small amount of memory for much faster run times and fewer disk accesses.
     private static Class[] available = null;
+    private static X34RetrievalProcessor[] availableObjects = null;
 
     /**
      * Gets the identifiers of all available {@link X34RetrievalProcessor Processor} classes as listed by {@link X34ProcessorRegistry#getAvailableProcessors()}.
-     * The returned list is guaranteed to be in the same order as the list of classes returned by {@link X34ProcessorRegistry#getAvailableProcessors()},
+     * The returned list is guaranteed to be in the same order as the list of classes returned by {@link X34ProcessorRegistry#getAvailableProcessorObjects()},
      * making direct array-to-array association possible.
      * @return the list of processor identifiers in hierarchical order
-     * @see X34ProcessorRegistry#getAvailableProcessors()
+     * @see X34ProcessorRegistry#getAvailableProcessors() for more information on processor indexing
+     * @see X34ProcessorRegistry#getAvailableProcessorObjects() for more information on processor object retrieval
      */
     public static String[] getAvailableProcessorIDs() throws ClassNotFoundException, IOException
     {
-        Class[] clss = getAvailableProcessors();
+        X34RetrievalProcessor[] clss = getAvailableProcessorObjects();
 
         if(clss.length == 0) return new String[0];
 
         String[] ids = new String[clss.length];
 
         for(int i = 0; i < clss.length; i++){
-            Class cls = clss[i];
-
-            try {
-                ids[i] = ((X34RetrievalProcessor)cls.newInstance()).getID();
-            } catch (InstantiationException | IllegalAccessException | ClassCastException e) {
-                ids[i] = null;
-            }
+            ids[i] = clss[i].getID();
         }
 
         return ids;
@@ -43,30 +39,25 @@ public class X34ProcessorRegistry
     /**
      * Gets the informal name identifiers of all available {@link X34RetrievalProcessor Processor} classes as listed
      * by {@link X34ProcessorRegistry#getAvailableProcessors()}.
-     * The returned list is guaranteed to be in the same order as the list of classes returned by {@link X34ProcessorRegistry#getAvailableProcessors()},
+     * The returned list is guaranteed to be in the same order as the list of classes returned by {@link X34ProcessorRegistry#getAvailableProcessorObjects()},
      * making direct array-to-array association possible.
      * @return the list of processor informal identifiers in hierarchical order
-     * @see X34ProcessorRegistry#getAvailableProcessors()
+     * @see X34ProcessorRegistry#getAvailableProcessors() for more information on processor indexing
+     * @see X34ProcessorRegistry#getAvailableProcessorObjects() for more information on processor object retrieval
      */
     public static String[] getAvailableProcessorNames() throws ClassNotFoundException, IOException
     {
-        Class[] clss = getAvailableProcessors();
+        X34RetrievalProcessor[] clss = getAvailableProcessorObjects();
 
         if(clss.length == 0) return new String[0];
 
-        String[] infs = new String[clss.length];
+        String[] ids = new String[clss.length];
 
         for(int i = 0; i < clss.length; i++){
-            Class cls = clss[i];
-
-            try {
-                infs[i] = ((X34RetrievalProcessor)cls.newInstance()).getInformalName();
-            } catch (InstantiationException | IllegalAccessException | ClassCastException e) {
-                infs[i] = null;
-            }
+            ids[i] = clss[i].getInformalName();
         }
 
-        return infs;
+        return ids;
     }
 
     /**
@@ -79,6 +70,9 @@ public class X34ProcessorRegistry
      */
     public static X34RetrievalProcessor[] getAvailableProcessorObjects() throws ClassNotFoundException, IOException
     {
+        // Shortcut the entire method if there is already a cached version of results available.
+        if(availableObjects != null) return availableObjects;
+
         Class[] clss = getAvailableProcessors();
 
         if(clss.length == 0) return new X34RetrievalProcessor[0];
@@ -95,6 +89,8 @@ public class X34ProcessorRegistry
             }
         }
 
+        // Store result in internal cache array for future use.
+        availableObjects = infs;
         return infs;
     }
 
@@ -136,7 +132,7 @@ public class X34ProcessorRegistry
     public static Class[] getAvailableProcessors() throws ClassNotFoundException, IOException
     {
         // Shortcut the entire method if there is already a cached version of results available.
-        if(available != null && available.length > 0) return available;
+        if(available != null) return available;
 
         // Store result in internal cache array for future use.
         available = ClassUtils.getClasses(X34RetrievalProcessor.class.getPackage(), X34RetrievalProcessor.class);

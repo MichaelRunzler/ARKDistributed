@@ -1,5 +1,8 @@
 package core.CoreUtil;
 
+import com.sun.istack.internal.NotNull;
+
+import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -178,5 +181,70 @@ public class ARKArrayUtil
         }
 
         return true;
+    }
+
+    /**
+     * Converts a String into a byte array by parsing it two characters at a time and converting the found characters
+     * into a byte value equivalent to the hex value (<i>NOT</i> the character ID) of the parsed characters.
+     * For example, the string {@code "ff1002fe"} would be parsed into the byte values {@code 127,-112,-126,126}, which
+     * are equivalent to the hex value {@code FF1002FE}.
+     * @param input the string to parse for values
+     * @return a byte array containing the hex equivalents of the parsed characters. The array's length will be equivalent
+     * to {@code (int)Math.ceil(input.length / 2)}. If the input String is an odd number of characters long, the last
+     * character will be padded with a leading zero.
+     * If the input is null or zero-length, the result will be null.
+     * @see ARKArrayUtil#byteArrayToHexString(byte[]) for information about the reverse of this conversion
+     */
+    public static byte[] hexStringToBytes(@NotNull String input)
+    {
+        if(input == null || input.length() == 0) return null;
+
+        String hex = input.trim().toLowerCase();
+
+        ByteBuffer buffer = ByteBuffer.allocate((int)Math.ceil(hex.length() / 2));
+        try{
+            boolean done = false;
+
+            if(hex.length() <= 2) {
+                buffer.putInt(Integer.parseInt(hex, 16));
+                done = true;
+            }
+
+            int last = 0;
+            int interval = 2;
+            while (!done){
+                buffer.put((byte)(Integer.parseInt(hex.substring(last, last + interval), 16) - 128));
+                if(last + interval >= hex.length()) done = true;
+                else if(last + interval + 1 >= hex.length()){
+                    last += 1;
+                    interval = 1;
+                }else last += 2;
+            }
+        } catch (NumberFormatException e){
+            return null;
+        }
+
+        return buffer.array();
+    }
+
+    /**
+     * Converts a byte array into a String by parsing each byte in the array and converting it to a two-character hex value.
+     * The resultant string will be a concatenation of all of the two-character values produced in this way. Note that the
+     * result is not produced by <i>totalling</i> the bytes in the array, but rather by reading each value separately and
+     * concatenating them once they have been converted to Strings.
+     * @param input the byte array to parse into a String
+     * @return the hex equivalent of each byte in the array in String form. If the input is zero-length or null, the result
+     * will be null.
+     * @see ARKArrayUtil#hexStringToBytes(String) for information about the reverse of this conversion
+     */
+    public static String byteArrayToHexString(@NotNull byte[] input)
+    {
+        if(input == null || input.length == 0) return null;
+
+        StringBuilder st = new StringBuilder();
+        for(byte b : input ){
+            st.append(String.format("%02x", b + 128));
+        }
+        return st.toString();
     }
 }

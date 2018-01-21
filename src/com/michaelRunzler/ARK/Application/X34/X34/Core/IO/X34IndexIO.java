@@ -23,7 +23,7 @@ public class X34IndexIO
      */
     public X34IndexIO()
     {
-        this.parent = new File(ARKGlobalConstants.DESKTOP_CACHE_ROOT.getAbsolutePath() + "\\X34Indexes");
+        this.parent = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34Indexes");
         this.index = null;
     }
 
@@ -72,6 +72,8 @@ public class X34IndexIO
             }catch (ClassNotFoundException | ClassCastException ignored){}
         }
 
+        is.close();
+
         // If nothing else worked, default to this.
         this.index = new X34Index(id);
         return index;
@@ -92,9 +94,9 @@ public class X34IndexIO
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
         File target = new File(parent, index.id + (index.metadata.get("processor") == null ? "" : "%" + index.metadata.get("processor")) + INDEX_FILE_EXTENSION);
 
-        if(!target.canWrite()) throw new IOException("Unable to obtain write lock for specified index file");
         if(target.exists() && !target.delete()) throw new IOException("Unable to delete existing index file");
         if(!target.createNewFile()) throw new IOException("Unable to create new index file");
+        if(!target.canWrite()) throw new IOException("Unable to obtain write lock for specified index file");
 
         // now that we're done with that, on to the ACTUAL index write, which is most likely shorter than the integrity checks above
         ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(target));

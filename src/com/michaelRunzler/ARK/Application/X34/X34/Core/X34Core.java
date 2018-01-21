@@ -1,13 +1,11 @@
 package X34.Core;
 
-import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.IO.X34ConfigIO;
 import X34.Core.IO.X34IndexDelegator;
 import X34.Core.IO.X34IndexIO;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import com.sun.istack.internal.NotNull;
-import core.AUNIL.LogEventLevel;
 import core.AUNIL.XLoggerInterpreter;
 
 import javax.xml.bind.ValidationException;
@@ -21,7 +19,6 @@ public class X34Core
 {
     private XLoggerInterpreter log;
     private X34IndexIO loader;
-    private X34ConfigIO settings;
 
     /**
      * Default constructor. Uses the main instance from the {@link X34IndexDelegator}
@@ -31,7 +28,6 @@ public class X34Core
     {
         log = new XLoggerInterpreter();
         loader = X34IndexDelegator.getMainInstance();
-        settings = X34ConfigDelegator.getMainInstance();
         log.logEvent("Initialization complete.");
     }
 
@@ -44,7 +40,6 @@ public class X34Core
     {
         log = new XLoggerInterpreter();
         loader = X34IndexDelegator.getDynamicInstance(IID);
-        settings = X34ConfigDelegator.getDynamicInstance(IID);
         log.logEvent("Initialization complete.");
     }
 
@@ -81,15 +76,9 @@ public class X34Core
             log.logEvent("No index available. New index created.");
         }
 
-        // Try retrieving. If it fails with an I/O error, try to get the incomplete list of new images.
+        // Run retrieval
         log.logEvent("Retrieving...");
-        ArrayList<X34Image> newImages;
-        try{
-            newImages = processor.process(index, config);
-        } catch (IOException e){
-            log.logEvent(LogEventLevel.ERROR, "Processor encountered an error, recovering new-image list...");
-            newImages = processor.getNewImageList();
-        }
+        ArrayList<X34Image> newImages = processor.process(index, config);
 
         // If the index doesn't have a meta tag indicating processor origin, add it.
         if(!index.metadata.containsKey("processor")) index.metadata.put("processor", processor.getID());
