@@ -14,7 +14,6 @@ public class X34IndexIO
 {
     public final String INDEX_FILE_EXTENSION = ".x34i";
 
-    private X34Index index;
     private File parent;
 
     /**
@@ -24,7 +23,6 @@ public class X34IndexIO
     public X34IndexIO()
     {
         this.parent = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34Indexes");
-        this.index = null;
     }
 
     /**
@@ -34,7 +32,6 @@ public class X34IndexIO
     public X34IndexIO(File parent)
     {
         this.parent = parent;
-        this.index = null;
     }
 
     /**
@@ -52,38 +49,38 @@ public class X34IndexIO
         if(id == null || id.length() == 0) throw new IllegalArgumentException("ID cannot be null or zero-length");
         if(parent == null) throw new IllegalArgumentException("Index parent directory cannot be null");
 
-        // Check if the internally stored index is already a loaded copy of the current on-disk index.
-        if(this.index != null && this.index.id.equals(id)) return this.index;
-
         // Generate filename. Filename is comprised of the ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
         File target = new File(parent, id + (processor == null || processor.isEmpty() ? "" : "%" + processor) + INDEX_FILE_EXTENSION);
+
+        X34Index index;
 
         if(!target.exists()) throw new IOException("Unable to locate index file for specified ID");
         if(!target.canRead()) throw new IOException("Unable to obtain read lock for specified index file");
 
         ObjectInputStream is = new ObjectInputStream(new FileInputStream(target));
 
-        // If we have 1 or less bytes to work with, assume that there is no valid index in the file and create a new one instead
+        // If we have more than 1 byte in the file, assume that the index is indeed valid and try to load it.
         if(is.available() > 1){
             try{
-                this.index = (X34Index)is.readObject();
-                // catch block is ignored because if an exception is thrown, we want the default block to be called instead of returning
-            }catch (ClassNotFoundException | ClassCastException ignored){}
+                index = (X34Index)is.readObject();
+            }catch (ClassNotFoundException | ClassCastException e){
+                index = new X34Index(id);
+            }
+        }else{
+            index = new X34Index(id);
         }
 
         is.close();
 
-        // If nothing else worked, default to this.
-        this.index = new X34Index(id);
         return index;
     }
 
     /**
-     * Saves the currently cached index to disk.
+     * Saves the specified index to disk.
      * @throws IOException if the parent directory is invalid, or the index cannot be written
      */
-    public synchronized void saveIndex() throws IOException
+    public synchronized void saveIndex(@NotNull X34Index index) throws IOException
     {
         // ALL THE INTEGRITY CHECKS
         if(parent == null) throw new IllegalArgumentException("Index parent directory cannot be null");
@@ -107,30 +104,12 @@ public class X34IndexIO
     }
 
     /**
-     * Saves the specified index to disk. Replaces the currently cached index in the process, as if the provided index had
-     * been read from disk using {@link X34IndexIO#loadIndex(String, String)}.
-     * @param index the index to save
-     * @throws IOException if the parent directory is invalid, or the index cannot be written
-     * @see X34IndexIO#loadIndex(String, String)  for further information on index caching.
-     */
-    public synchronized void saveIndex(@NotNull X34Index index) throws IOException {
-        this.setIndex(index);
-        this.saveIndex();
-    }
-
-    /**
      * Sets the parent directory to the specified value. The directory will be validated the next time the
-     * {@link X34IndexIO#saveIndex()} or {@link X34IndexIO#saveIndex(X34Index)} methods are called.
+     *  {@link X34IndexIO#saveIndex(X34Index)} method is called.
      * @param newParent the directory to load and save indices in
      */
     public synchronized void setParent(@NotNull File newParent){
         if(newParent == null) throw new IllegalArgumentException("Provided parent file cannot be null");
         this.parent = newParent;
-    }
-
-    private void setIndex(X34Index index)
-    {
-        if(index == null || index.id == null) throw new IllegalArgumentException("Provided index is invalid or null");
-        this.index = index;
     }
 }
