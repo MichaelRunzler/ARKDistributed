@@ -337,7 +337,7 @@ public class ARKAutoupdater extends Application
                 dispatcher.dispatchTransThreadPacket("Application is up to date!");
                 return null;
             }
-        } catch (MalformedURLException e) {
+        } catch (IOException e) {
             dispatcher.dispatchTransThreadPacket("Could not check remote version!");
         }
 

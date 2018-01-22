@@ -61,7 +61,7 @@ public class X34IndexIO
         ObjectInputStream is = new ObjectInputStream(new FileInputStream(target));
 
         // If we have more than 1 byte in the file, assume that the index is indeed valid and try to load it.
-        if(is.available() > 1){
+        if(target.length() > 1){
             try{
                 index = (X34Index)is.readObject();
             }catch (ClassNotFoundException | ClassCastException e){

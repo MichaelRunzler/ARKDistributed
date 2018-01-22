@@ -1,16 +1,13 @@
 package X34.Core;
 
+import X34.Processors.X34RetrievalProcessor;
 import com.sun.istack.internal.NotNull;
-import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.IOTools;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
 
 /**
  * Stores hash and source data for images stored in the {@link X34Index} class.
@@ -36,18 +33,19 @@ public class X34Image implements Serializable
      * Writes the remote image data represented by this object to a file on the local drive.
      * @param parent the directory in which to place the new file
      * @param overwriteExisting set this to true if an attempt should be made to overwrite existing files with the same name as the remote file
+     * @param processor the {@link X34RetrievalProcessor} that this image was sourced from
      * @return true if the file write was successful, false if otherwise
      * @throws IOException if a critical error was encountered during the I/O process
      */
-    public boolean writeToFile(@NotNull File parent, boolean overwriteExisting) throws IOException
+    public boolean writeToFile(@NotNull File parent, boolean overwriteExisting, X34RetrievalProcessor processor) throws IOException
     {
-        if(parent == null || (parent.exists() && !overwriteExisting)) throw new IllegalArgumentException("Destination file is invalid or already exists");
+        if(parent == null) throw new IllegalArgumentException("Parent directory cannot be null");
         if(source == null) throw new IOException("Source URI is invalid");
 
-        File f = new File(parent, this.source.getFile());
+        File f = new File(parent, processor.getFilenameFromURL(this.source));
 
         IOTools.getFileFromURL(this.source.toString(), f, overwriteExisting);
-        return f.exists() && f.getName().equals(this.source.getFile());
+        return f.exists() && f.getName().equals(processor.getFilenameFromURL(this.source));
     }
 
     /**
@@ -57,12 +55,9 @@ public class X34Image implements Serializable
      */
     public boolean verifyIntegrity()
     {
-        if(hash == null || hash.length != 16 || source == null) throw new IllegalArgumentException("Invalid hash data or source URI");
+        if(hash == null || hash.length == 0 || source == null) throw new IllegalArgumentException("Invalid hash data or source URI");
 
-        try {
-            return ARKArrayUtil.compareByteArrays(MessageDigest.getInstance("MD5").digest(IOTools.getBytesFromURL(this.source.toString())), this.hash);
-        } catch (NoSuchAlgorithmException | IOException e) {
-            return false;
-        }
+        //todo finish
+        return false;
     }
 }

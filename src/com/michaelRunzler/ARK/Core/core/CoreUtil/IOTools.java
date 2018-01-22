@@ -21,7 +21,7 @@ public class IOTools
 {
     /**
      * Downloads a raw data file from a URL.
-     * @param src the URL to load the file from. If it is a file, the file itself will be downloaded.
+     * @param src the String representation of the URL to load the file from. If it is a file, the file itself will be downloaded.
      *            If not, the page HTML or XML tree will be downloaded instead
      * @param dest the location to write the downloaded file
      * @param overwrite whether or not to overwrite an existing file in the specified download location
@@ -36,13 +36,9 @@ public class IOTools
 
         if(dest != null) {
             if(!dest.exists()){
-                dest.getParentFile().mkdirs();
-                dest.createNewFile();
+                if(!dest.createNewFile()) throw new IOException("Unable to create new file");
             }else{
-                if(overwrite){
-                    dest.delete();
-                    dest.createNewFile();
-                }
+                if(overwrite && (!dest.delete() || !dest.createNewFile())) throw new IOException("Unable to create new file");
             }
         }else{
             throw new IllegalArgumentException("Output file must not be null!");
@@ -88,6 +84,20 @@ public class IOTools
             fos.flush();
             fos.close();
         }
+    }
+
+    /**
+     * Downloads a raw data file from a URL.
+     * @param src the URL to load the file from. If it is a file, the file itself will be downloaded.
+     *            If not, the page HTML or XML tree will be downloaded instead
+     * @param dest the location to write the downloaded file
+     * @param overwrite whether or not to overwrite an existing file in the specified download location
+     * @throws IOException if there is a problem with the download or writing process, or if it takes more than 5 seconds
+     * to open the file read channel
+     */
+    public static void getFileFromURL(@NotNull URL src, @NotNull File dest, boolean overwrite) throws IOException
+    {
+        getFileFromURL(src.toString(), dest, overwrite);
     }
 
     /**

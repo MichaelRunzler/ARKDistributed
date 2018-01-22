@@ -7,9 +7,12 @@ import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import com.sun.istack.internal.NotNull;
 import core.AUNIL.XLoggerInterpreter;
+import core.CoreUtil.ARKArrayUtil;
 
 import javax.xml.bind.ValidationException;
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 
 /**
@@ -95,5 +98,40 @@ public class X34Core
             log.logEvent("Index save successful.");
             return newImages;
         }
+    }
+
+    /**
+     * Writes a series of {@link X34Image images} to disk. Names files according to the result of calling
+     * {@link X34RetrievalProcessor#getFilenameFromURL(URL)} on the Image's URL.
+     * @param images the list of images to write to disk
+     * @param parent the parent directory to write image file to
+     * @param processorID the ID of the processor to use while obtaining filenames from the images' URLs
+     * @param overwriteExisting set this to true if you wish to attempt to overwrite existing files with the same names if
+     *                          they exist
+     * @param createDirs set this to true if directory creation should be attempted for the provided parent directory
+     * @throws IOException if a non-recoverable I/O error is encountered during file write or deletion
+     */
+    public void writeImagesToFile(ArrayList<X34Image> images, File parent, String processorID, boolean overwriteExisting, boolean createDirs) throws IOException
+    {
+        if(parent == null || (!parent.exists() && !createDirs)) throw new IllegalArgumentException("Destination directory is invalid or does not exist");
+        if(processorID == null || processorID.isEmpty()) throw new IllegalArgumentException("Processor ID is invalid");
+        if(images == null || images.size() == 0) return;
+        if(createDirs && !parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create parent directory");
+
+        X34RetrievalProcessor xpr = X34ProcessorRegistry.getProcessorForID(processorID);
+        if(xpr == null) throw new IOException("Cannot get reference to provided processor");
+
+        log.logEvent("Attempting to write " + images.size() + " image" + (images.size() == 1 ? "" : "s" ) + " to disk...");
+
+        int count = 0;
+        for(X34Image x : images){
+            if(x.writeToFile(parent, overwriteExisting, xpr)){
+                log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " written successfully.");
+                count ++;
+            }
+            else log.logEvent("Failed to write image " + ARKArrayUtil.byteArrayToHexString(x.hash) + ".");
+        }
+
+        log.logEvent(count + " of " + images.size() + " image" + (images.size() == 1 ? "" : "s") + " written successfully.");
     }
 }

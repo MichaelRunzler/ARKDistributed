@@ -1,9 +1,6 @@
 package core.AUNIL;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 
 /**
  * Part of the ARK Unified Logging System, this object provides the primary interface between the {@link XLoggerCore XLoggerCore} class and
@@ -158,8 +155,12 @@ public class XLoggerInterpreter
 
         if(e == null)
             str += "Null exception";
-        else
-            try {e.printStackTrace(new PrintStream(str));} catch(FileNotFoundException ignored) {}
+        else{
+            StringWriter st = new StringWriter();
+            PrintWriter pt = new PrintWriter(st);
+            e.printStackTrace(pt);
+            str = st.toString();
+        }
 
         this.logEvent(level, str);
     }

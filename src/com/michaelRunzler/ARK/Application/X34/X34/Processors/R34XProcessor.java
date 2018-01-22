@@ -22,8 +22,6 @@ public class R34XProcessor extends X34RetrievalProcessor
     private final String ID = "R34X";
     private final String INF = "Rule 34";
 
-    private XLoggerInterpreter log;
-
     final String PAGESRV_ROOT       = "https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=";
     final String PAGESRV_PID_PREFIX = "&pid=";
     final String IMG_LINK_START     = "file_url=\"";
@@ -37,15 +35,13 @@ public class R34XProcessor extends X34RetrievalProcessor
      */
     public R34XProcessor()
     {
-        log = new XLoggerInterpreter(this.INF + " RT Module");
-        log.disassociate();
     }
 
     @Override
     public ArrayList<X34Image> process(X34Index index, X34Schema schema) throws ValidationException
     {
         if(!schema.validate()) throw new ValidationException("Schema failed to pass validation");
-        log.associate();
+        XLoggerInterpreter log = new XLoggerInterpreter(this.INF + " RT Module");
 
         log.logEvent("Starting retrieval...");
         log.logEvent(LogEventLevel.DEBUG, "----DEBUG INFO DUMP----");
@@ -59,9 +55,17 @@ public class R34XProcessor extends X34RetrievalProcessor
         ArrayList<X34Image> images = new ArrayList<>();
 
         int currentPage = 0;
+        int failed = 0;
 
         // Loop until we run out of pages.
         do{
+            // If we have failed more than 10 pages in a row, assume some kind of critical network error and break loop.
+            if(failed > 10){
+                log.logEvent(LogEventLevel.CRITICAL, "Failed 10 pages in a row, assuming critical network error and aborting.");
+                currentPage = -1;
+                continue;
+            }
+
             // Get pagedata from URL. Skip page if the read fails.
             try{
                 page = ProcessorUtils.tryDataTransfer(URLBase + (currentPage + 1), 5);
@@ -69,6 +73,7 @@ public class R34XProcessor extends X34RetrievalProcessor
                 log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
                 log.logEvent(e);
                 currentPage ++;
+                failed ++;
                 continue;
             }
 
@@ -78,6 +83,7 @@ public class R34XProcessor extends X34RetrievalProcessor
             if(page.length() == 0){
                 log.logEvent(LogEventLevel.ERROR, "Pulled data with length of 0, assuming I/O error and skipping page.");
                 currentPage ++;
+                failed ++;
                 continue;
             }else if(!page.contains(IMG_LINK_START)){
                 if(currentPage > 1) log.logEvent("End of valid entries.");
@@ -164,5 +170,11 @@ public class R34XProcessor extends X34RetrievalProcessor
     @Override
     public String getInformalName() {
         return INF;
+    }
+
+    @Override
+    public String getFilenameFromURL(URL source) {
+        String res = source.toString();
+        return res.substring(res.lastIndexOf('/') + 1, res.length());
     }
 }

@@ -1,6 +1,7 @@
 package core.AUNIL;
 
 import core.system.ARKGlobalConstants;
+import sun.misc.SharedSecrets;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -9,7 +10,6 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 /**
@@ -48,6 +48,7 @@ public class XLoggerCore
         internal = new XLoggerInterpreter(this, "Logger Core");
         dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
         internal.associate();
+        SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
 
         internal.logEvent("Initialization finished.");
         internal.logEvent("File write enabled: " + fileWrite);
@@ -159,7 +160,7 @@ public class XLoggerCore
      * @param newParent the new parent file
      * @throws IOException if the system encounters an unrecoverable error while attempting to change the parent directory
      */
-    synchronized void requestParentDirectoryChange(XLoggerInterpreter caller, File newParent) throws IOException
+    void requestParentDirectoryChange(XLoggerInterpreter caller, File newParent) throws IOException
     {
         // Check permissions and argument validity.
         if(!checkCallerPermissions(caller)) throw new IOException("Interpreter is not registered with this Core");
@@ -309,6 +310,25 @@ public class XLoggerCore
      */
     File getParent() {
         return new File(parent.getAbsolutePath());
+    }
+
+    /**
+     * Forces a shutdown of this logger core object and all associated writers and interpreters. Acts as though all remaining
+     * interpreters disassociated simultaneously. Locks write access while running, so that any remaining threads that may
+     * be attempting to log during this period will stall until the shutdown completes. Called when the JVM shuts down with
+     * an exit code of 0.
+     */
+    private synchronized void shutDown()
+    {
+        internal.logEvent(LogEventLevel.WARNING, "Forced shutdown initiated by core.");
+        // Lock the write stack.
+        lockLogWrites = true;
+
+        // Force disassociation on all associated interpreters.
+        // This will also cause the core writers to shut down through the disassociate method's internal hooks.
+        for(XLoggerInterpreter x : bridges.keySet()){
+            x.disassociate();
+        }
     }
 
     /**
