@@ -123,7 +123,7 @@ public class R34PProcessor extends X34RetrievalProcessor
                 byte[] hash = ARKArrayUtil.hexStringToBytes(IOTools.getFieldFromData(link, LINK_HASH_START, LINK_HASH_END, 0));
 
                 try{
-                    images.add(new X34Image(new URL(link), schema.query, hash));
+                    images.add(new X34Image(new URL(link), schema.query, hash, this.getID()));
                 }catch (MalformedURLException e){
                     log.logEvent("Image link #" + (count + 1) + " is invalid, skipping.");
                 }

@@ -54,7 +54,7 @@ public class R34XProcessor extends X34RetrievalProcessor
         String URLBase = PAGESRV_ROOT + schema.query.replace(' ', '_').toLowerCase().trim() + PAGESRV_PID_PREFIX;
         ArrayList<X34Image> images = new ArrayList<>();
 
-        int currentPage = 0;
+        int currentPage = 1;
         int failed = 0;
 
         // Loop until we run out of pages.
@@ -68,7 +68,7 @@ public class R34XProcessor extends X34RetrievalProcessor
 
             // Get pagedata from URL. Skip page if the read fails.
             try{
-                page = ProcessorUtils.tryDataTransfer(URLBase + (currentPage + 1), 5);
+                page = ProcessorUtils.tryDataTransfer(URLBase + (currentPage - 1), 5);
             }catch (IOException e){
                 log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
                 log.logEvent(e);
@@ -113,7 +113,7 @@ public class R34XProcessor extends X34RetrievalProcessor
                 byte[] hash = ARKArrayUtil.hexStringToBytes(IOTools.getFieldFromData(link, LINK_HASH_SEPARATOR, LINK_HASH_END, link.indexOf(LINK_HASH_START) + LINK_HASH_START.length()));
 
                 try{
-                    images.add(new X34Image(new URL(link), schema.query, hash));
+                    images.add(new X34Image(new URL(link), schema.query, hash, this.getID()));
                 }catch (MalformedURLException e){
                     log.logEvent("Image link #" + (count + 1) + " is invalid, skipping.");
                 }

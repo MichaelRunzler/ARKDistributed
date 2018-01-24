@@ -320,6 +320,8 @@ public class XLoggerCore
      */
     private synchronized void shutDown()
     {
+        if(bridges.isEmpty()) return;
+
         internal.logEvent(LogEventLevel.WARNING, "Forced shutdown initiated by core.");
         // Lock the write stack.
         lockLogWrites = true;

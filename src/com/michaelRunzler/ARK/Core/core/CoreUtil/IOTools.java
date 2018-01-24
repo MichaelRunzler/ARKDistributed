@@ -39,6 +39,7 @@ public class IOTools
                 if(!dest.createNewFile()) throw new IOException("Unable to create new file");
             }else{
                 if(overwrite && (!dest.delete() || !dest.createNewFile())) throw new IOException("Unable to create new file");
+                else if(!overwrite) throw new IOException("Destination file already exists");
             }
         }else{
             throw new IllegalArgumentException("Output file must not be null!");
