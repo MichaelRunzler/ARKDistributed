@@ -143,22 +143,10 @@ public class R34PProcessor extends X34RetrievalProcessor
 
         // Loop through the new-image index if it has any entries, and see if each one is present in the index by checking
         // its hash ID against existing entries.
-        ArrayList<X34Image> newImages = new ArrayList<>();
-        for(int i = 0; i < images.size(); i++)
-        {
-            X34Image x = images.get(i);
-            // See if any images with an identical hash exist in the index already.
-            int hashID = index.getEntryByHash(x.hash);
-            if(hashID > -1){
-                // If we found an existing image with a hash match, make sure its URL is current.
-                X34Image curr = index.entries.get(hashID);
-                if(!(curr.source == x.source) && x.hash != null) curr.source = x.source;
-            }else{
-                // If we didn't find a hash match, mark the image as new.
-                log.logEvent("No hash match found for image " + (i + 1) + " of " + images.size() + " with hash " + ARKArrayUtil.byteArrayToHexString(x.hash) + ", marked as new.");
-                index.entries.add(x);
-                newImages.add(x);
-            }
+        ArrayList<X34Image> newImages = ProcessorUtils.checkIndex(index, images);
+
+        for(X34Image i : newImages){
+            log.logEvent("No hash match found for image " + ARKArrayUtil.byteArrayToHexString(i.hash) + ", marked as new.");
         }
 
         log.logEvent("Index check complete. " + newImages.size() + " image" + (newImages.size() == 1 ? "" : "s") + " found.");
