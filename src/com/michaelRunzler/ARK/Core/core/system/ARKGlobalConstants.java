@@ -33,4 +33,23 @@ public class ARKGlobalConstants
         else if(os.contains("unix") || os.contains("nix") || os.contains("sun")) return OS.UNIX;
         else return OS.OTHER;
     }
+
+    public static File getOSSpecficDesktopRoot()
+    {
+        OS os = getOSType();
+        switch (os){
+            case WINDOWS:
+                return new File(System.getProperty("user.home") + "\\Desktop");
+            case MAC:
+                return new File(System.getProperty("user.home") + "\\Desktop");
+            case LINUX:
+                return new File(System.getProperty("user.home") + "\\Desktop");
+            case ANDROID:
+                return new File(System.getProperty("user.home") + "\\Download");
+            case UNIX:
+                return new File(System.getProperty("user.home") + "\\");
+            default:
+                return new File(System.getProperty("user.home"));
+        }
+    }
 }

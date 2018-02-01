@@ -49,9 +49,12 @@ public class X34IndexIO
         if(id == null || id.length() == 0) throw new IllegalArgumentException("ID cannot be null or zero-length");
         if(parent == null) throw new IllegalArgumentException("Index parent directory cannot be null");
 
-        // Generate filename. Filename is comprised of the ID of the index, followed by its processor ID if it has one, and then the file extension.
+        // neutralize the ID to ensure correct file name searching
+        String nid = X34Index.getNeutralSpacedID(id);
+
+        // Generate filename. Filename is comprised of the neutralized ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
-        File target = new File(parent, id + (processor == null || processor.isEmpty() ? "" : "%" + processor) + INDEX_FILE_EXTENSION);
+        File target = new File(parent, nid + (processor == null || processor.isEmpty() ? "" : "%" + processor) + INDEX_FILE_EXTENSION);
 
         X34Index index;
 
@@ -65,10 +68,10 @@ public class X34IndexIO
             try{
                 index = (X34Index)is.readObject();
             }catch (ClassNotFoundException | ClassCastException e){
-                index = new X34Index(id);
+                index = new X34Index(nid);
             }
         }else{
-            index = new X34Index(id);
+            index = new X34Index(nid);
         }
 
         is.close();
@@ -87,7 +90,10 @@ public class X34IndexIO
         if(!parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create index parent directory");
         if(index == null || index.id == null) throw new IllegalArgumentException("Index is invalid or null");
 
-        // Generate filename. Filename is comprised of the ID of the index, followed by its processor ID if it has one, and then the file extension.
+        // correct the internal index ID to match the correctly neutralized version if it doesn't already
+        index.id = X34Index.getNeutralSpacedID(index.id);
+
+        // Generate filename. Filename is comprised of the neutralized ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
         File target = new File(parent, index.id + (index.metadata.get("processor") == null ? "" : "%" + index.metadata.get("processor")) + INDEX_FILE_EXTENSION);
 

@@ -47,7 +47,12 @@ public class ProcessorUtils
     static ArrayList<X34Image> checkIndex(X34Index index, ArrayList<X34Image> imageList)
     {
         if(imageList == null || imageList.size() == 0) return new ArrayList<>();
-        if(index == null || index.entries == null || index.entries.size() == 0) return new ArrayList<>(imageList);
+        if(index == null || index.entries == null || index.entries.size() == 0){
+            if(index != null)
+                if(index.entries == null) index.entries = new ArrayList<>(imageList);
+                else index.entries.addAll(imageList);
+            return new ArrayList<>(imageList);
+        }
 
         ArrayList<X34Image> newImages = new ArrayList<>();
         for (X34Image x : imageList)

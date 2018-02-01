@@ -34,7 +34,7 @@ public class XLoggerInterpreter
 
     /**
      * Instantiates a new copy of this object. Uses the caller's class ID as the friendly name, and uses the primary instance
-     * of the globally accessible Core object from the Delegator.
+     * of the globally accessible {@link XLoggerCore} object from the {@link XLoggerDelegator}.
      */
     public XLoggerInterpreter()
     {
@@ -47,7 +47,7 @@ public class XLoggerInterpreter
     }
 
     /**
-     * Instantiates a new copy of this object. Uses the primary instance of the globally accessible Core object from the Delegator.
+     * Instantiates a new copy of this object. Uses the primary instance of the globally accessible {@link XLoggerCore} object from the {@link XLoggerDelegator}.
      * @param friendlyName the 'friendly name' that the logger system should use instead of the class's actual class ID when
      *                     writing log entries
      */
@@ -63,7 +63,7 @@ public class XLoggerInterpreter
 
     /**
      * Instantiates a new copy of this object. Uses the caller's class ID as the friendly name.
-     * @param instanceID the global instance ID of the Core object that this object should use from the Delegator class.
+     * @param instanceID the global instance ID of the Core object that this object should use from the {@link XLoggerDelegator} class.
      *                   Useful if you have a large number (e.g > 20) threads running with logger objects; using multiple
      *                   instance IDs helps prevent slowdown and excessive memory usage by the logger objects.
      */
@@ -81,7 +81,7 @@ public class XLoggerInterpreter
      * Instantiates a new copy of this object.
      * @param friendlyName the 'friendly name' that the logger system should use instead of the class's actual class ID when
      *                     writing log entries
-     * @param instanceID the global instance ID of the Core object that this object should use from the Delegator class.
+     * @param instanceID the global instance ID of the Core object that this object should use from the {@link XLoggerDelegator} class.
      *                   Useful if you have a large number (e.g > 20) threads running with logger objects; using multiple
      *                   instance IDs helps prevent slowdown and excessive memory usage by the logger objects.
      */
@@ -96,11 +96,11 @@ public class XLoggerInterpreter
     }
 
     /**
-     * Sets the implicit log event level of logged events from this Interpreter.
+     * Sets the implicit log event level of logged events from this object.
      * Avoid calling this every time you wish to use a different event level - instead, use
      * {@link #logEvent(LogEventLevel, String)} - this allows overriding of the implicit event level.
      * The default implicit event level for any given Interpreter object is {@link LogEventLevel#INFO}.
-     * @param level the new implicit log event level for this Intepreter object
+     * @param level the new implicit log event level for this object
      */
     public void setImplicitEventLevel(LogEventLevel level) {
         this.implicitLevel = level;
@@ -108,8 +108,9 @@ public class XLoggerInterpreter
 
     /**
      * De-registers this object from the {@link XLoggerCore Core} instance that it is associated with. Any successive calls to any logging functions
-     * will be rejected until {@link XLoggerInterpreter#associate()} is called. It is recommended to call this method on all
-     * registered Interpreters before shutting down your application to preclude log data loss.
+     * will be rejected until {@link XLoggerInterpreter#associate()} is called. It is recommended, although not required, to call this method on all
+     * registered Interpreters before shutting down your application. The core will manually disassociate all associated interpreters
+     * on application shutdown if they have not already disassociated.
      */
     public void disassociate() {
         executor.disassociateInterpreter(this);
@@ -124,10 +125,11 @@ public class XLoggerInterpreter
     }
 
     /**
-     * Logs the specified event to this Interpreter's associated Logger Core object.
+     * Logs the specified event to this object's associated {@link XLoggerCore} object.
      * Uses the specified event level instead of this object's implicit event level.
      * @param level the overridden log event level for this event
      * @param message the message to pass to the logger core
+     * @see XLoggerInterpreter#logEvent(String) for the alternate version of this method
      */
     public void logEvent(LogEventLevel level, String message) {
         lastLogTime = System.currentTimeMillis();
@@ -135,19 +137,21 @@ public class XLoggerInterpreter
     }
 
     /**
-     * Logs the specified event to this Interpreter's associated Logger Core object.
+     * Logs the specified event to this object's associated {@link XLoggerCore} object.
      * Log event level is set to this object's implicit event level.
      * @param message the message to pass to the logger core
+     * @see XLoggerInterpreter#logEvent(LogEventLevel, Exception) for the alternate version of this method
      */
     public void logEvent(String message){
         this.logEvent(implicitLevel, message);
     }
 
     /**
-     * Logs the provided Exception to this Interpreter's associated Logger Core object.
+     * Logs the provided Exception to this object's associated {@link XLoggerCore} object.
      * Uses the specified event level instead of this object's implicit event level.
      * @param level the overridden log event level for this event
-     * @param e the Exception to pass to the logger core
+     * @param e the {@link Exception} to pass to the logger core
+     * @see XLoggerInterpreter#logEvent(Exception) for the alternate version of this method
      */
     public void logEvent(LogEventLevel level, Exception e)
     {
@@ -166,21 +170,22 @@ public class XLoggerInterpreter
     }
 
     /**
-     * Logs the provided Exception to this Interpreter's associated Logger Core object.
-     * Log event level is set to this object's implicit event level.
-     * @param e the Exception to pass to the logger core
+     * Logs the provided Exception to this object's associated {@link XLoggerCore} object.
+     * Log event level is set to {@link LogEventLevel#ERROR}.
+     * @param e the {@link Exception} to pass to the logger core
+     * @see XLoggerInterpreter#logEvent(LogEventLevel, Exception) for the alternate version of this method
      */
     public void logEvent(Exception e) {
-        this.logEvent(implicitLevel, e);
+        this.logEvent(LogEventLevel.ERROR, e);
     }
 
     /**
-     * Requests to change the parent log directory of this Interpreter's associated Core object.
-     * @param newParent
+     * Requests to change the parent log directory of this object's associated {@link XLoggerCore} object.
+     * @param newParent the new parent directory to attempt to switch to
      * @throws java.io.IOException if the change was denied for any reason. Possible reasons for denial include:
      * <ul>
-     *     <li>This Interpreter has been deassociated with the Core in question</li>
-     *     <li>The Core is unable to finalize ongoing write operations from this or other Interpreters in a timely manner</li>
+     *     <li>This Interpreter has been disassociated with the {@link XLoggerCore Core} in question</li>
+     *     <li>The {@link XLoggerCore Core} is unable to finalize ongoing write operations from this or other Interpreters in a timely manner</li>
      *     <li>The new directory provided is invalid, or cannot be created properly</li>
      * </ul>
      */

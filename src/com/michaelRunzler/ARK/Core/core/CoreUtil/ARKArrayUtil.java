@@ -247,4 +247,25 @@ public class ARKArrayUtil
         }
         return st.toString();
     }
+
+    /**
+     * Gets the index of a partial or complete {@link String} in a provided {@link String} array.
+     * The search is conducted by calling {@link String#contains(CharSequence)} on each entry in the array and returning
+     * the index of the first array entry that returns {@code true}, if any. Will return {@code -1} if no matching entries
+     * are found, or if the input array or query are invalid.
+     * @param array the array to search
+     * @param search a {@link String} to be used as the search criteria
+     * @return the index of the first matching {@link String} in the provided array, or -1 if none are found
+     */
+    public static int containsString(String[] array, String search)
+    {
+        if(array == null || array.length == 0 || search == null) return -1;
+        if(search.isEmpty()) return 0;
+
+        for(int i = 0; i < array.length; i++){
+            if(array[i].contains(search)) return i;
+        }
+
+        return -1;
+    }
 }

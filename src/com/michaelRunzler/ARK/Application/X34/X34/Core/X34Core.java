@@ -123,7 +123,10 @@ public class X34Core
         for(X34Image x : images){
             try {
                 if(x.writeToFile(parent, overwriteExisting)) log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " already exists.");
-                else log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " written successfully.");
+                else{
+                    log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " written successfully.");
+                    count ++;
+                }
             }catch (IOException e){
                 log.logEvent(LogEventLevel.ERROR, "Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " encountered critical write error, see below for details.");
                 log.logEvent(e);

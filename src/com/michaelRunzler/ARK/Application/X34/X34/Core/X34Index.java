@@ -18,7 +18,7 @@ public class X34Index implements Serializable
 
     public X34Index(String id)
     {
-        this.id = id;
+        this.id = getNeutralSpacedID(id);
         this.entries = new ArrayList<>();
         this.metadata = new HashMap<>();
     }
@@ -56,4 +56,16 @@ public class X34Index implements Serializable
 
         return -1;
     }
+
+    /**
+     * Eliminates separator characters and replace them with spaces to ensure consistent index naming.
+     * @param id the ID string to neutralize
+     * @return the neutralized equivalent of the input ID
+     */
+    public static String getNeutralSpacedID(String id)
+    {
+        if(id != null && !id.isEmpty()) return id.replace('_', ' ').replace('+', ' ');
+        else return id;
+    }
+    
 }
