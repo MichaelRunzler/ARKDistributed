@@ -143,7 +143,7 @@ public class X34CML
             log.logEvent(e);
         }
 
-        if(retrieved != null && retrieved.size() == 0) {
+        if(retrieved != null && retrieved.size() > 0) {
             try {
                 xCore.writeImagesToFile(retrieved, root, overwrite, mkdirs);
                 log.logEvent("Download complete.");

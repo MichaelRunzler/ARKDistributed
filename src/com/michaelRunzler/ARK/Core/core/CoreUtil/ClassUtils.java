@@ -5,12 +5,15 @@ import com.sun.istack.internal.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Provides utilities for manipulating classes in the local filesystem.
@@ -44,6 +47,9 @@ public class ClassUtils
                 dirs.add(new File(resource.toURI()));
             } catch (URISyntaxException e) {
                 dirs.add(new File(resource.getFile()));
+            } catch (IllegalArgumentException e){ // URI is not hierarchical, probably a JARfile, use JAR search instead
+                List<Class> clss = findClassesInJar(resource, packageName, superclass, interfaces);
+                return clss.toArray(new Class[clss.size()]);
             }
         }
 
@@ -82,6 +88,43 @@ public class ClassUtils
             else if (file.getName().endsWith(".class")) {
                 // Get class reference and check for super and interface filters
                 Class cls = Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6));
+                if((superclass == null || cls.getSuperclass().equals(superclass)) && verifyInterfaces(cls, interfaces)) classes.add(cls);
+            }
+        }
+
+        return classes;
+    }
+
+    /**
+     * Finds all classes in a given package and its subpackages inside a JAR-file.
+     * Heavily modified from Stack Overflow user Dave Dopson's code in <a href=https://stackoverflow.com/questions/176527/how-can-i-enumerate-all-classes-in-a-package-and-add-them-to-a-list>this post</a>.
+     * @param jarURL the fully-qualified URL of the JAR to search as given by {@link ClassLoader#getResources(String)} with the package name as the argument
+     * @param packageName The package name for classes found inside the base directory
+     * @param superclass an optional additional filter requirement. If this argument is non-null, classes will be required to
+     *                   have this class as a superclass in order to qualify for addition to the list.
+     * @param interfaces an optional additional filter requirement. If this argument is present and non-null, classes will
+     *                   be required to implement all of these interfaces in order to qualify for addition to the list.
+     * @return The classes found by the search
+     * @throws ClassNotFoundException if a class file found in the search is not registered with the classloader
+     * @throws IOException if an I/O error is encountered while finding or parsing the JAR in question
+     */
+    private static List<Class> findClassesInJar(@NotNull URL jarURL, @NotNull String packageName, @Nullable Class superclass, @Nullable Class... interfaces) throws ClassNotFoundException, IOException
+    {
+        File f;
+        try {
+            URI ju = new URI(jarURL.getFile().replaceFirst("[.]jar[!].*", ".jar"));
+            f = new File(ju);
+        } catch (URISyntaxException e) {
+            throw new IOException(e.getMessage());
+        }
+
+        Enumeration<JarEntry> entries = new JarFile(f).entries();
+        String pkgName = packageName.replace('.', '/');
+        List<Class> classes = new ArrayList<>();
+        while (entries.hasMoreElements()){
+            String className = entries.nextElement().getName();
+            if(className.startsWith(pkgName) && className.contains(".class")){
+                Class cls = Class.forName(className.replace('/', '.').replace('\\', '.').replace(".class", ""));
                 if((superclass == null || cls.getSuperclass().equals(superclass)) && verifyInterfaces(cls, interfaces)) classes.add(cls);
             }
         }
