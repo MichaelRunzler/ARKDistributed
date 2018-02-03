@@ -10,9 +10,11 @@ class XLoggerFileWriteEntry
 {
     BufferedWriter writer;
     File target;
+    boolean writeToMaster;
 
-    XLoggerFileWriteEntry(BufferedWriter br, File target){
+    XLoggerFileWriteEntry(BufferedWriter br, File target, boolean writeToMaster){
         this.writer = br;
         this.target = target;
+        this.writeToMaster = writeToMaster;
     }
 }

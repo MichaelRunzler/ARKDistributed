@@ -31,6 +31,7 @@ public class XLoggerCore
     private boolean lockLogWrites;
     private ArrayList<XLoggerLogEntry> queue;
     private XLoggerInterpreter internal;
+    private XLoggerInterpreter master;
     private DateFormat dateFormat;
 
     /**
@@ -46,8 +47,10 @@ public class XLoggerCore
         queue = new ArrayList<>();
         bridges = new HashMap<>();
         internal = new XLoggerInterpreter(this, "Logger Core");
+        master = new XLoggerInterpreter(this, "Master Logfile " + this.toString().substring(this.toString().lastIndexOf('@'), this.toString().length()));
         dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
         internal.associate();
+        master.associate();
         SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
 
         internal.logEvent("Initialization finished.");
@@ -60,6 +63,9 @@ public class XLoggerCore
      * Associates an {@link XLoggerInterpreter Interpreter} object with this logger core.
      * During association, the current parent directory is checked for integrity, and (if file write is enabled), the provided
      * Interpreter's target file is checked as well.
+     * If file write is enabled, the core keeps a master logfile that is a combination of all other logfiles. Interpreters
+     * can 'opt-out' of being logged to this file, but they must do this manually, and their preference will be lost if they
+     * re-associate at any point.
      * @param caller the Interpreter object to associate with this object
      */
     synchronized void associateInterpreter(XLoggerInterpreter caller)
@@ -71,9 +77,11 @@ public class XLoggerCore
          * Either that, or the caller IS the internal Interpreter, and it's registering as part of the Core's startup.
          * If that's the case, register it as normal.
          * Otherwise, re-add it to the registry and bring it online before adding the new Interpreter.
+         * Also associate the master interpreter and bring it online after adding the internal one.
          */
-        if(bridges.keySet().size() == 0 && caller != internal){
+        if(bridges.keySet().size() == 0 && caller != internal) {
             internal.associate();
+            master.disassociate();
         }
 
         internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " is requesting association.");
@@ -86,6 +94,7 @@ public class XLoggerCore
         }
 
         // The internal Interpreter is the first one to associate, so have the system check the parent directory if that's what we're dealing with.
+        // Also initialize the master writer.
         if(caller == internal) checkParentDir();
 
         // Create the File reference and check it.
@@ -102,7 +111,7 @@ public class XLoggerCore
         }
 
         try {
-            bridges.put(caller, new XLoggerFileWriteEntry(new BufferedWriter(new FileWriter(f)), f));
+            bridges.put(caller, new XLoggerFileWriteEntry(new BufferedWriter(new FileWriter(f)), f, true));
         } catch (IOException e) {
             internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
@@ -144,9 +153,10 @@ public class XLoggerCore
         internal.logEvent("Interpreter \"" + caller.friendlyName + "\" disassociated.");
 
         // If the registry only contains the internal Interpreter, it means that all others have disassociated.
-        // In that case, log this and disassociate the internal Interpreter as well.
+        // In that case, log this and disassociate the internal and master Interpreters as well.
         if(bridges.keySet().size() == 1 && bridges.keySet().contains(internal)){
             internal.logEvent("No registered Interpreters remain. Shutting down logger core until further notice.");
+            master.disassociate();
             internal.disassociate();
         }else if(bridges.keySet().size() == 0){
             // If the registry is empty, it means that the internal interpreter has just disassociated. Log as such.
@@ -230,6 +240,26 @@ public class XLoggerCore
     }
 
     /**
+     * Tells the core to stop logging data from the provided {@link XLoggerInterpreter interpreter} to the master log. Standard data logging to the console
+     * and the interpreter's own logfile will not change.
+     * @param caller the {@link XLoggerInterpreter} that is requesting the opt-out operation
+     */
+    void optOutOfMasterLog(XLoggerInterpreter caller)
+    {
+        if(!checkCallerPermissions(caller)){
+            internal.logEvent("Interpreter \"" + caller.friendlyName + "\" attempted master write opt-out while disassociated.");
+            return;
+        }
+
+        // Turn master log write off if it is not already.
+        XLoggerFileWriteEntry fw = bridges.get(caller);
+        if(fw != null && fw.writer != null && fw.writeToMaster){
+            internal.logEvent("Interpreter \"" + caller.friendlyName + "\" opted-out of master logging.");
+            fw.writeToMaster = false;
+        }
+    }
+
+    /**
      * Logs an event to the system console, and, if file logging is enabled, to its own event log file inside the parent
      * directory set by this object. Checks its file before logging anything to it.
      * @param caller the {@link XLoggerInterpreter Interpreter} that is requesting the logging operation
@@ -293,6 +323,14 @@ public class XLoggerCore
                     br.write(compiled);
                     br.newLine();
                     br.flush();
+
+                    // If the master-write flag is set on this caller, write a copy of the compiled data to the master logfile.
+                    if(bridges.get(caller).writeToMaster && bridges.get(master) != null && bridges.get(master).writer != null){
+                        BufferedWriter mr = bridges.get(master).writer;
+                        mr.write(compiled);
+                        mr.newLine();
+                        mr.flush();
+                    }
                 }
             } catch (IOException e) {
                 internal.logEvent(LogEventLevel.ERROR, "Interpreter \"" + caller.friendlyName + "\" encountered an IO error, detailed below");
