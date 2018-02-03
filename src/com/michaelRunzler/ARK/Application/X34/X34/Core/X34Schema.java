@@ -1,11 +1,12 @@
 package X34.Core;
 
+import java.io.Serializable;
 import java.util.HashMap;
 
 /**
  * Encapsulates configuration information and metadata for retrieval routines executed by the X34Core.
  */
-public class X34Schema
+public class X34Schema implements Serializable
 {
     public String query;
     public String type;

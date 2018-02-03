@@ -125,6 +125,15 @@ public class XLoggerInterpreter
     }
 
     /**
+     * 'Opts-out' of the {@link XLoggerCore core}'s master logfile. The master log file is a combination of all other active
+     * logfiles, excluding those that have opted out. To reactivate master logging, call {@link XLoggerInterpreter#disassociate()},
+     * followed by {@link XLoggerInterpreter#associate()}.
+     */
+    public void deactivateMasterLogging() {
+        executor.optOutOfMasterLog(this);
+    }
+
+    /**
      * Logs the specified event to this object's associated {@link XLoggerCore} object.
      * Uses the specified event level instead of this object's implicit event level.
      * @param level the overridden log event level for this event

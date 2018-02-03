@@ -268,4 +268,17 @@ public class ARKArrayUtil
 
         return -1;
     }
+
+    /**
+     * Checks the contents of any array to see if they are all equivalent to null.
+     * @param array the array to check
+     * @return {@code true} if the array itself or all of its entries are null, {@code false} otherwise
+     */
+    public static boolean allNull(Object[] array)
+    {
+        if(array == null || array.length == 0) return true;
+
+        for(Object o : array) if (o != null) return false;
+        return true;
+    }
 }
