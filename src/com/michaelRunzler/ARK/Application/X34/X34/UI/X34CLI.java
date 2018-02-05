@@ -28,6 +28,7 @@ public class X34CLI
             "*             Incomplete file paths (such as '\\images\\download' will be appended to said desktop directory.\n" +
             "* (optional)[void]overwrite: if present, any existing files in the download directory\n" +
             "* (optional)[void]mkdirs: if present, the path to the download directory will be created if it does not exist.\n" +
+            "* (optional)[void]confirmdl: if present, user confirmation will be required before downloading any found images.\n"+
             "* \n" +
             "* \n" +
             "* Debug/info commands:\n" +
@@ -58,6 +59,7 @@ public class X34CLI
      *         <li>[File]dest: the destination folder to write downloaded images to.</li>
      *         <li>(optional)[void]overwrite: if present, any existing files in the download directory</li>
      *         <li>(optional)[void]mkdirs: if present, the path to the download directory will be created if it does not exist.</li>
+     *         <li>(optional)[void]confirmdl: if present, user confirmation will be required before downloading any found images.</li>
      *         </ul>
      *     </li>
      *     <li>
@@ -136,6 +138,7 @@ public class X34CLI
         // set directory creation and overwrite flags
         boolean overwrite = CMLUtils.getArgument(args, "overwrite") != null;
         boolean mkdirs = CMLUtils.getArgument(args, "mkdirs") != null;
+        boolean confirmDownload = CMLUtils.getArgument(args, "confirmdl") != null;
 
         //
         // init core and initiate retrieval
@@ -158,12 +161,14 @@ public class X34CLI
         }
 
         if(retrieved != null && retrieved.size() > 0) {
-            try {
-                xCore.writeImagesToFile(retrieved, root, overwrite, mkdirs);
-                log.logEvent("Download complete.");
-            } catch (IOException e) {
-                log.logEvent("Image download failed with the following exception:");
-                log.logEvent(e);
+            if(!confirmDownload || getBooleanFromScanner(new Scanner(System.in), System.out, "y", "n", "Enter y for yes or n for no.")) {
+                try {
+                    xCore.writeImagesToFile(retrieved, root, overwrite, mkdirs);
+                    log.logEvent("Download complete.");
+                } catch (IOException e) {
+                    log.logEvent("Image download failed with the following exception:");
+                    log.logEvent(e);
+                }
             }
         }
     }
@@ -602,8 +607,11 @@ public class X34CLI
         try{
             ObjectInputStream is = new ObjectInputStream(new FileInputStream(source));
             String[] temp = (String[])is.readObject();
+            String[] temp2 = new String[temp.length];
+            System.arraycopy(temp, 0, temp2, 0, temp.length);
+            temp2[temp2.length - 1] = "confirmdl";
             is.close();
-            return temp;
+            return temp2;
         } catch (IOException | ClassCastException e) {
             e.printStackTrace();
             return null;

@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Runs repository queries and retrieval operations.
@@ -99,6 +100,57 @@ public class X34Core
             log.logEvent("Index save successful.");
             return newImages;
         }
+    }
+
+    /**
+     * Runs a retrieval operation with the {@link X34Schema Schema(s)} contained within the supplied {@link X34Rule}.
+     * After validating all arguments and their subcomponents, calls {@link #retrieve(X34Schema)} for each valid contained {@link X34Schema},
+     * and adds its results to a master {@link ArrayList}, which is then returned.
+     * @param configList the {@link X34Rule} to pull the list of {@link X34Schema Schemas} from
+     * @return the complete list of {@link X34Image Images} from each retrieval process, compounded into a single {@link ArrayList}
+     * @throws ValidationException if the provided {@link X34Rule} or all of its contained {@link X34Schema Schemas} fail validation
+     */
+    public ArrayList<X34Image> retrieve(@NotNull X34Rule configList) throws ValidationException
+    {
+        // Check Rule validity
+        if(configList == null) throw new ValidationException("Rule failed to pass validation.");
+        ArrayList<X34Schema> schemas = new ArrayList<>(Arrays.asList(configList.getSchemas()));
+
+        log.logEvent("Validating schema" + (schemas.size() == 1 ? "" : "s") + "...");
+
+        // Validate Schemas one by one, adding their indexes to the buffer array if they fail validation
+        ArrayList<Integer> failed = new ArrayList<>();
+        for(int i = 0; i < schemas.size(); i++){
+            if(!schemas.get(i).validate()) failed.add(i);
+        }
+
+        // If the size of the buffer is the same as the Schema array, we know all of them failed validation
+        if(failed.size() == schemas.size()) throw new ValidationException("All Schemas failed to validate.");
+
+        // Otherwise, print the indices of the schema(s) that failed validation (if there are any) and remove them
+        if(failed.size() > 0){
+            log.logEvent("The following schema" + (failed.size() == 1 ? "" : "s") + " failed to validate:");
+            for(int i : failed){
+                log.logEvent(schemas.get(i).type + " : " + schemas.get(i).query + " @ index " + i);
+                schemas.remove(schemas.get(i));
+            }
+        }
+
+        // Iterate through the remaining schemas (guaranteed not to be 0, since we already checked that) and run retrieval for all of them,
+        // adding their results to the master array as we do so.
+        ArrayList<X34Image> returned = new ArrayList<>();
+        for(int i = 0; i < schemas.size(); i++){
+            log.logEvent("Running retrieval operation " + (i + 1) + " of " + schemas.size());
+            try {
+                returned.addAll(retrieve(schemas.get(i)));
+                log.logEvent("Retrieval " + (i + 1) + " of " + schemas.size() + " completed with no errors.");
+            } catch (IOException | ValidationException e) {
+                log.logEvent("Retrieval operation returned exception with partial results, see below.");
+                log.logEvent(e);
+            }
+        }
+
+        return returned;
     }
 
     /**
