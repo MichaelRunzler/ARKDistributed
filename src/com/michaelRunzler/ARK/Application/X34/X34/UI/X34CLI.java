@@ -2,6 +2,7 @@ package X34.UI;
 
 import X34.Core.X34Core;
 import X34.Core.X34Image;
+import X34.Core.X34Rule;
 import X34.Core.X34Schema;
 import X34.Processors.X34ProcessorRegistry;
 import core.AUNIL.XLoggerInterpreter;
@@ -44,7 +45,7 @@ public class X34CLI
     private static final File autoConfig = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLAutoCfg.x34c");
     private static final File generalConfig = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLGeneralCfg.x34c");
 
-    private static X34Schema[] autoSchemaList = null;
+    private static X34Rule[] autoRuleList = null;
     private static String[] generalArgList = null;
 
     /**
@@ -102,8 +103,8 @@ public class X34CLI
         // delegate to submethod based on whether batch job keys are in place
         if(CMLUtils.getArgument(args, "tag") == null && CMLUtils.getArgument(args, "repo") == null) CLI();
         else{
-            X34Schema schema = new X34Schema(CMLUtils.getArgument(args, "tag"), CMLUtils.getArgument(args, "repo"), null);
-            batch(args, schema);
+            X34Rule rule = new X34Rule(CMLUtils.getArgument(args, "tag"), null, CMLUtils.getArgument(args, "repo"));
+            batch(args, rule);
         }
 
         log.disassociate();
@@ -115,15 +116,15 @@ public class X34CLI
      * Typically called if any of the command-line arguments are in place.
      * Also called from the CLI for its retrieval branch.
      * @param args the argument list form {@link X34CLI#main(String[])}
-     * @param schema a valid {@link X34Schema} to be used for query and processor data, as well as metadata tags
+     * @param rule a valid {@link X34Schema} to be used for query and processor data, as well as metadata tags
      */
-    private static void batch(String[] args, X34Schema schema)
+    private static void batch(String[] args, X34Rule rule)
     {
         //
         // check main args
         //
 
-        if(!schema.validate()){
+        if(!rule.validate()){
             System.out.println("One or more arguments are missing!");
             return;
         }
@@ -153,14 +154,17 @@ public class X34CLI
 
         ArrayList<X34Image> retrieved = null;
         try {
-            retrieved = xCore.retrieve(schema);
-            log.logEvent("Retrieval successful" + (retrieved.size() == 0 ? "." : ", downloading..."));
-        } catch (ValidationException | IOException e) {
+            retrieved = xCore.retrieve(rule);
+            log.logEvent("Retrieval successful.");
+        } catch (ValidationException e) {
             log.logEvent("Retrieval failed with the following exception:");
             log.logEvent(e);
         }
 
-        if(retrieved != null && retrieved.size() > 0) {
+        if(retrieved != null && retrieved.size() > 0)
+        {
+            if(confirmDownload) System.out.println("Download " + retrieved.size() + " new image" + (retrieved.size() == 1 ? "" : "s") + "?");
+
             if(!confirmDownload || getBooleanFromScanner(new Scanner(System.in), System.out, "y", "n", "Enter y for yes or n for no.")) {
                 try {
                     xCore.writeImagesToFile(retrieved, root, overwrite, mkdirs);
@@ -182,16 +186,19 @@ public class X34CLI
         CLIMenuOption[] autoOptions = new CLIMenuOption[]{
                 new CLIMenuOption("List Current Schemas", ()->{
                     // self-explanatory
-                    if(autoSchemaList == null) autoSchemaList = getAutoModeSchemas(autoConfig);
-                    if(autoSchemaList == null || autoSchemaList.length == 0){
+                    if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
+                    if(autoRuleList == null || autoRuleList.length == 0){
                         System.out.println("Schema list is empty. Add some, you perv~!");
                     }else{
                         System.out.println("Current auto schema list is as follows:");
                         System.out.println();
                         System.out.println("#. PUID : Query/Tag");
                         System.out.println();
-                        for(int i = 0; i < autoSchemaList.length; i++){
-                            System.out.println((i + 1) + ". " + autoSchemaList[i].type + " : " + autoSchemaList[i].query);
+                        for(X34Rule r : autoRuleList) {
+                            X34Schema[] schemas = r.getSchemas();
+                            for (int i = 0; i < schemas.length; i++) {
+                                System.out.println((i + 1) + ". " + schemas[i].type + " : " + schemas[i].query);
+                            }
                         }
                     }
 
@@ -203,43 +210,43 @@ public class X34CLI
                 }),
 
                 new CLIMenuOption("Add New Schema", ()->{
-                    if(autoSchemaList == null) autoSchemaList = getAutoModeSchemas(autoConfig);
-                    if(autoSchemaList != null) {
+                    if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
+                    if(autoRuleList != null) {
                         // if the list is not null, lengthen it by one
-                        X34Schema[] temp = new X34Schema[autoSchemaList.length + 1];
-                        System.arraycopy(autoSchemaList, 0, temp, 0, autoSchemaList.length);
-                        autoSchemaList = temp;
+                        X34Rule[] temp = new X34Rule[autoRuleList.length + 1];
+                        System.arraycopy(autoRuleList, 0, temp, 0, autoRuleList.length);
+                        autoRuleList = temp;
                     }else{
                         // otherwise, initialize it to a length of one
-                        autoSchemaList = new X34Schema[1];
+                        autoRuleList = new X34Rule[1];
                     }
                     // get and add the new schema
-                    autoSchemaList[autoSchemaList.length - 1] = getSchemaDetails(System.in, System.out);
+                    autoRuleList[autoRuleList.length - 1] = getRuleDetails(System.in, System.out);
                     System.out.println("Schema added!");
                     return true;
                 }),
 
                 new CLIMenuOption("Remove Schema", ()->{
-                    if(autoSchemaList == null) autoSchemaList = getAutoModeSchemas(autoConfig);
-                    if(autoSchemaList == null || autoSchemaList.length == 0){
+                    if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
+                    if(autoRuleList == null || autoRuleList.length == 0){
                         System.out.println("Schema list is empty! Add some, you perv~!");
                         return true;
                     }
 
                     System.out.print("Enter the index of the entry to be removed:");
-                    int removed = getIntFromScanner(new Scanner(System.in), System.out, "Invalid index! Please try again.", autoSchemaList.length);
+                    int removed = getIntFromScanner(new Scanner(System.in), System.out, "Invalid index! Please try again.", autoRuleList.length);
                     System.out.println();
 
-                    if(autoSchemaList.length == 1){
-                        autoSchemaList = new X34Schema[0];
+                    if(autoRuleList.length == 1){
+                        autoRuleList = new X34Rule[0];
                     }else {
                         // bisect the array at the entry to be removed, and copy the two halves (not including the removed index) to the new array
                         int before = removed - 1;
-                        int after = autoSchemaList.length - removed;
-                        X34Schema[] temp = new X34Schema[autoSchemaList.length - 1];
-                        if(before > 0) System.arraycopy(autoSchemaList, 0, temp, 0, before);
-                        if(after > 0) System.arraycopy(autoSchemaList, removed, temp, removed - 1, after);
-                        autoSchemaList = temp;
+                        int after = autoRuleList.length - removed;
+                        X34Rule[] temp = new X34Rule[autoRuleList.length - 1];
+                        if(before > 0) System.arraycopy(autoRuleList, 0, temp, 0, before);
+                        if(after > 0) System.arraycopy(autoRuleList, removed, temp, removed - 1, after);
+                        autoRuleList = temp;
                     }
 
                     System.out.println("Schema removed!");
@@ -247,15 +254,15 @@ public class X34CLI
                 }),
 
                 new CLIMenuOption("Clear Schema List", ()->{
-                    if(autoSchemaList == null) autoSchemaList = getAutoModeSchemas(autoConfig);
-                    if(autoSchemaList == null || autoSchemaList.length == 0){
+                    if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
+                    if(autoRuleList == null || autoRuleList.length == 0){
                         System.out.println("Schema list is already empty!");
                         return true;
                     }
 
                     System.out.print("Really clear schema list completely (y/n)?");
                     if(getBooleanFromScanner(new Scanner(System.in), System.out, "y", "n", "Please enter y for yes or n for no.")){
-                        autoSchemaList = new X34Schema[0];
+                        autoRuleList = new X34Rule[0];
                         System.out.println("Schema list cleared.");
                     }else{
                         System.out.println("Clear operation aborted.");
@@ -264,19 +271,19 @@ public class X34CLI
                 }),
 
                 new CLIMenuOption("Return to Main Menu", () ->{
-                    if(autoSchemaList != null){
+                    if(autoRuleList != null){
                         System.out.print("Save changes? (y/n)");
 
                         if(getBooleanFromScanner(new Scanner(System.in), System.out, "y", "n", "Please enter y for yes or n for no.")){
-                            if(saveAutoModeSchemas(autoConfig, autoSchemaList)){
+                            if(saveAutoModeSchemas(autoConfig, autoRuleList)){
                                 System.out.println("Settings changes saved.");
                                 // set the schema list to null to be sure that a current version is loaded when the menu is restarted
-                                autoSchemaList = null;
+                                autoRuleList = null;
                             }
                             else System.out.println("Error saving settings! Changes made may be lost."); // skip invalidating list, we'll try to use it as it is until the program shuts down
                         }else{
                             System.out.println("Discarding changes.");
-                            autoSchemaList = null;
+                            autoRuleList = null;
                         }
                     }
                     return false;
@@ -441,16 +448,16 @@ public class X34CLI
 
         CLIMenuOption[] mainOptions = new CLIMenuOption[]{
                 new CLIMenuOption("Retrieve (manual)", ()-> {
-                    batch(getGeneralSettingsArgumentEquivalent(generalConfig), getSchemaDetails(System.in, System.out));
+                    batch(getGeneralSettingsArgumentEquivalent(generalConfig), getRuleDetails(System.in, System.out));
                     return true;
                 }),
 
                 new CLIMenuOption("Retrieve (automatic)", ()->{
-                    X34Schema[] autoSchemas = getAutoModeSchemas(autoConfig);
-                    if(autoSchemas != null && autoSchemas.length > 0){
-                        for(int i = 0; i < autoSchemas.length; i++){
-                            System.out.println("Running retrieval process " + (i + 1) + " of " + autoSchemas.length + "...");
-                            batch(getGeneralSettingsArgumentEquivalent(generalConfig), autoSchemas[i]);
+                    X34Rule[] autoRules = getAutoModeSchemas(autoConfig);
+                    if(autoRules != null && autoRules.length > 0){
+                        for(int i = 0; i < autoRules.length; i++){
+                            System.out.println("Running retrieval process " + (i + 1) + " of " + autoRules.length + "...");
+                            batch(getGeneralSettingsArgumentEquivalent(generalConfig), autoRules[i]);
                         }
                     }else{
                         System.out.println("No schemas available from automatic schema list!");
@@ -483,18 +490,29 @@ public class X34CLI
         main.display(System.out);
     }
 
-    private static X34Schema getSchemaDetails(InputStream in, PrintStream out){
+    private static X34Rule getRuleDetails(InputStream in, PrintStream out)
+    {
         Scanner input = new Scanner(in);
         input.useDelimiter(System.getProperty("line.separator"));
         String failText = "Invalid input! Please try again.";
 
         out.print("Enter tag/query: ");
         String query = getDataFromScanner(input, out, failText);
-        out.print("Enter processor ID: ");
-        String id = getDataFromScanner(input, out, failText);
+        out.println("Enter processor ID(s). When done, enter an invalid processor ID, or 'done' (no quotes). ");
+        out.println("At least one valid processor ID must be entered to continue.");
+        out.println("Enter ID(s):");
+        ArrayList<String> ids = new ArrayList<>();
+        String recent;
+        boolean done = false;
+        do{
+            recent = getDataFromScanner(input, out, "Please enter a processor ID or 'done'.");
+            if(!recent.toLowerCase().equals("done") && X34ProcessorRegistry.getProcessorForID(recent) != null) ids.add(recent);
+            else if(ids.size() > 0) done = true;
+            else out.println("Please enter at least one valid processor ID.");
+        }while (!done);
         out.println();
 
-        return new X34Schema(query, id, null);
+        return new X34Rule(query, null, ids.toArray(new String[ids.size()]));
     }
 
     static String getDataFromScanner(Scanner in, PrintStream out, String failText){
@@ -565,13 +583,13 @@ public class X34CLI
         return res;
     }
 
-    private static X34Schema[] getAutoModeSchemas(File source)
+    private static X34Rule[] getAutoModeSchemas(File source)
     {
         if(source == null || !source.exists() || source.length() == 0) return null;
 
         try{
             ObjectInputStream is = new ObjectInputStream(new FileInputStream(source));
-            X34Schema[] temp = (X34Schema[])is.readObject();
+            X34Rule[] temp = (X34Rule[])is.readObject();
             is.close();
             return temp;
         } catch (IOException | ClassCastException e) {
@@ -583,7 +601,7 @@ public class X34CLI
         }
     }
 
-    private static boolean saveAutoModeSchemas(File dest, X34Schema[] schemas)
+    private static boolean saveAutoModeSchemas(File dest, X34Rule[] schemas)
     {
         if(schemas == null) return true;
         try {
