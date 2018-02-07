@@ -57,4 +57,15 @@ public class X34Rule implements Serializable
     public String[] getProcessorList() {
         return Arrays.copyOf(this.processors, processors.length);
     }
+
+    /**
+     * Validates each contained virtual {@link X34Schema Schema} by calling {@link X34Schema#validate()} on each index in
+     * the array returned by {@link #getSchemas()}.
+     * @return {@code true} if all virtual {@link X34Schema Schemas} passed validation, {@code false} otherwise
+     */
+    public boolean validate()
+    {
+        for(X34Schema x : getSchemas()) if (!x.validate()) return false;
+        return true;
+    }
 }
