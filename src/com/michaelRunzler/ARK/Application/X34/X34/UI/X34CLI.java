@@ -318,7 +318,7 @@ public class X34CLI
                     // print other settings if there are any
                     boolean hasMoreSettings = false;
                     for(String s : generalArgList){
-                        if(!s.contains("mkdirs") && !s.contains("overwrite") && !s.contains("dest=")){
+                        if(!s.contains("mkdirs") && !s.contains("overwrite") && !s.contains("dest=") && !s.contains("confirmdl")){
                             if(!hasMoreSettings){
                                 // only print the 'more settings' header if there actually ARE any more settings besides default ones
                                 System.out.println();
@@ -625,11 +625,14 @@ public class X34CLI
         try{
             ObjectInputStream is = new ObjectInputStream(new FileInputStream(source));
             String[] temp = (String[])is.readObject();
-            String[] temp2 = new String[temp.length];
-            System.arraycopy(temp, 0, temp2, 0, temp.length);
-            temp2[temp2.length - 1] = "confirmdl";
-            is.close();
-            return temp2;
+            // check for the DL confirmation setting, if it isn't there, add it.
+            if(ARKArrayUtil.containsString(temp, "confirmdl") < 0) {
+                String[] temp2 = new String[temp.length + 1];
+                System.arraycopy(temp, 0, temp2, 0, temp.length);
+                temp2[temp2.length - 1] = "confirmdl";
+                is.close();
+                return temp2;
+            }else return temp;
         } catch (IOException | ClassCastException e) {
             e.printStackTrace();
             return null;
