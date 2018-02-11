@@ -26,22 +26,15 @@ public class R34PProcessor extends X34RetrievalProcessor
     private final String ID = "R34P";
     private final String INF = "Rule34 Paheal";
 
-    final String PAGESRV_ROOT       = "http://rule34.paheal.net/post/list/";
-    final String PAGESRV_PID_PREFIX = "/";
-    final String IMG_SECTION_START  = "<section id='imagelist'>";
-    final String IMG_SECTION_END    = "<section id='paginator'>";
-    final String IMG_LINK_START     = "<br><a href=\"";
-    final String IMG_LINK_END       = "\">Image Only</a>";
-    final String LINK_HASH_START    = "/_images/";
-    final String LINK_HASH_END      = "/";
-    final String END_OF_PAGES       = "<title>No Images Found</title>\n";
-
-    /**
-     * Zero-arg constructor to allow calling from the {@link X34ProcessorRegistry} class.
-     */
-    public R34PProcessor()
-    {
-    }
+    private final String PAGESRV_ROOT       = "http://rule34.paheal.net/post/list/";
+    private final String PAGESRV_PID_PREFIX = "/";
+    private final String IMG_SECTION_START  = "<section id='imagelist'>";
+    private final String IMG_SECTION_END    = "<section id='paginator'>";
+    private final String IMG_LINK_START     = "<br><a href=\"";
+    private final String IMG_LINK_END       = "\">Image Only</a>";
+    private final String LINK_HASH_START    = "/_images/";
+    private final String LINK_HASH_END      = "/";
+    private final String END_OF_PAGES       = "<title>No Images Found</title>\n";
 
     @Override
     public ArrayList<X34Image> process(X34Index index, X34Schema schema) throws ValidationException
@@ -157,6 +150,7 @@ public class R34PProcessor extends X34RetrievalProcessor
 
     @Override
     public boolean validateIndex(X34Index index) throws IOException, ValidationException {
+        //todo finish
         return false;
     }
 

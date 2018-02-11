@@ -22,20 +22,13 @@ public class R34XProcessor extends X34RetrievalProcessor
     private final String ID = "R34X";
     private final String INF = "Rule 34";
 
-    final String PAGESRV_ROOT       = "https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=";
-    final String PAGESRV_PID_PREFIX = "&pid=";
-    final String IMG_LINK_START     = "file_url=\"";
-    final String IMG_LINK_END       = "\" parent_id=";
-    final String LINK_HASH_START    = "/images/";
-    final String LINK_HASH_SEPARATOR= "/";
-    final String LINK_HASH_END      = ".";
-
-    /**
-     * Zero-arg constructor to allow calling from the {@link X34ProcessorRegistry} class.
-     */
-    public R34XProcessor()
-    {
-    }
+    private final String PAGESRV_ROOT       = "https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=100&tags=";
+    private final String PAGESRV_PID_PREFIX = "&pid=";
+    private final String IMG_LINK_START     = "file_url=\"";
+    private final String IMG_LINK_END       = "\" parent_id=";
+    private final String LINK_HASH_START    = "/images/";
+    private final String LINK_HASH_SEPARATOR= "/";
+    private final String LINK_HASH_END      = ".";
 
     @Override
     public ArrayList<X34Image> process(X34Index index, X34Schema schema) throws ValidationException
@@ -147,6 +140,7 @@ public class R34XProcessor extends X34RetrievalProcessor
 
     @Override
     public boolean validateIndex(X34Index index) throws IOException, ValidationException {
+        //todo finish
         return false;
     }
 

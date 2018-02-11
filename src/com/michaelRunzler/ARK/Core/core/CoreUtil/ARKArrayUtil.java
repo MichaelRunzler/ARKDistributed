@@ -190,8 +190,9 @@ public class ARKArrayUtil
      * are equivalent to the hex value {@code FF1002FE}.
      * @param input the string to parse for values
      * @return a byte array containing the hex equivalents of the parsed characters. The array's length will be equivalent
-     * to {@code (int)Math.ceil(input.length / 2)}. If the input String is an odd number of characters long, the last
-     * character will be padded with a leading zero.
+     * to {@code (int)Math.ceil(input.length / 2)}. Since the array represents <i>pairs</i> of input characters as single
+     * bytes, it is impossible to represent a single odd character at the end of an input string. Thus, in this case, the
+     * ending character of the input string will be padded with a virtual leading zero.
      * If the input is null or zero-length, the result will be null.
      * @see ARKArrayUtil#byteArrayToHexString(byte[]) for information about the reverse of this conversion
      */
@@ -201,7 +202,7 @@ public class ARKArrayUtil
 
         String hex = input.trim().toLowerCase();
 
-        ByteBuffer buffer = ByteBuffer.allocate((int)Math.ceil(hex.length() / 2));
+        ByteBuffer buffer = ByteBuffer.allocate((int)Math.ceil(hex.length() / 2.0));
         try{
             boolean done = false;
 
@@ -214,11 +215,11 @@ public class ARKArrayUtil
             int interval = 2;
             while (!done){
                 buffer.put((byte)(Integer.parseInt(hex.substring(last, last + interval), 16) - 128));
-                if(last + interval >= hex.length()) done = true;
-                else if(last + interval + 1 >= hex.length()){
-                    last += 1;
+                last += interval;
+                if(last == hex.length()) done = true;
+                else if(last + interval > hex.length()){
                     interval = 1;
-                }else last += 2;
+                }
             }
         } catch (NumberFormatException e){
             return null;
@@ -246,6 +247,48 @@ public class ARKArrayUtil
             st.append(String.format("%02x", b + 128));
         }
         return st.toString();
+    }
+
+    /**
+     * Converts a base-36 string (consisting of the characters: a-z A-Z 0-9) to a base-16 string (consisting of the
+     * characters: 0-9 A-F). This is done by breaking the input string into 12-character chunks, decoding each chunk individually
+     * into a decimal number, re-encoding each chunk into a hexadecimal number, and finally concatenating all of the chunks
+     * back into a single string.
+     * Can also be used to convert base-64 strings, but will not actually decode them via base-64,
+     * instead interpreting the string as base-36 and decoding it that way.
+     * @param input the base-36 input string to decode. If the input String is an odd number of characters long, the last
+     * character will be padded with a leading zero.
+     * @return the hexadecimal string equivalent of the input
+     */
+    public static String base36ToHexString(@NotNull String input)
+    {
+        if(input == null || input.length() == 0) return null;
+
+        ArrayList<String> subStrings = new ArrayList<>();
+        if(input.length() > 12){
+            int rem = input.length();
+            while(rem > 0){
+                subStrings.add(input.substring((rem - 12 < 0 ? 0 : rem - 12), rem).toLowerCase().trim().replace(" ", ""));
+                rem -= 12;
+            }
+        }else{
+            subStrings.add(input);
+        }
+
+        StringBuilder res = new StringBuilder();
+        for(String s : subStrings){
+            // take out '=' when decoding in case the input is base-64
+            try {
+                String r = Long.toHexString(Long.parseLong(s.replace("=", ""), 36));
+                // prepend leading 0 if result is a 1-digit hex value
+                if(r.length() % 2 == 1) r = r.substring(0, r.length() - 1) + "0" + r.substring(r.length() - 1, r.length());
+                res.append(r);
+            }catch (NumberFormatException e){
+                return null;
+            }
+        }
+
+        return res.toString();
     }
 
     /**

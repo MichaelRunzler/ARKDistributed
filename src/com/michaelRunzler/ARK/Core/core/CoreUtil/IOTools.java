@@ -267,7 +267,7 @@ public class IOTools
         if(data == null || startMark == null || endMark == null){
             throw new IllegalArgumentException("All input data must not be null!");
         }else if(pos < 0 || pos >= data.length()){
-            throw new IllegalArgumentException("Starting position must be positive and less that the data's length!");
+            throw new IllegalArgumentException("Starting position must be positive and less than the data's length!");
         }else if(!data.contains(startMark) || !data.contains(endMark)){
             return null;
         }

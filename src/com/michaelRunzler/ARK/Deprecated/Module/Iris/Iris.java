@@ -1,7 +1,7 @@
-package Iris;
+package com.michaelRunzler.ARK.Deprecated.Module.Iris;
 
-import Iris.util.AP;
-import Iris.util.IPV4Address;
+import com.michaelRunzler.ARK.Deprecated.Module.Iris.util.AP;
+import com.michaelRunzler.ARK.Deprecated.Module.Iris.util.IPV4Address;
 import com.sun.istack.internal.NotNull;
 import core.CoreUtil.IOTools;
 import core.system.ARKTransThreadTransportHandler;

@@ -1,7 +1,6 @@
-package Iris.util;
+package com.michaelRunzler.ARK.Deprecated.Module.Iris.util;
 
-import Iris.modules.UniFi;
-import Iris.modules.RADWIN;
+import com.michaelRunzler.ARK.Deprecated.Module.Iris.modules.UniFi;
 import core.system.ARKTransThreadTransport;
 
 /**
@@ -115,13 +114,7 @@ public class AP
      */
     public void queryLiveStats()
     {
-        if(this.type == APType.RADWIN){
-            try {
-                this.cpeList = (new RADWIN().getData(this)).getCPEList();
-            } catch (ARKTransThreadTransport e) {
-                e.handleTransportPacketNoUI();
-            }
-        }else{
+        if(this.type == APType.AirOS6){
             try {
                 this.cpeList = (new UniFi().getData(this)).getCPEList();
             } catch (ARKTransThreadTransport e) {
