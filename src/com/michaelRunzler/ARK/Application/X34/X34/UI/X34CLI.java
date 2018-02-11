@@ -83,18 +83,7 @@ public class X34CLI
             System.exit(0);
         }else if(CMLUtils.getArgument(args, "processors") != null)
         {
-            try {
-                String[] uids = X34ProcessorRegistry.getAvailableProcessorIDs();
-                String[] unames = X34ProcessorRegistry.getAvailableProcessorNames();
-                System.out.println("Processor IDs and names are as follows:\n");
-                for(int i = 0; i < uids.length; i++){
-                    String id = uids[i];
-                    String name = unames[i];
-                    System.out.println("- " + id + " : " + name);
-                }
-            } catch (ClassNotFoundException | IOException e) {
-                e.printStackTrace();
-            }
+            displayAvailableProcessors();
             System.exit(0);
         }
 
@@ -184,20 +173,22 @@ public class X34CLI
     private static void CLI()
     {
         CLIMenuOption[] autoOptions = new CLIMenuOption[]{
-                new CLIMenuOption("List Current Schemas", ()->{
+                new CLIMenuOption("List Current Rules", ()->{
                     // self-explanatory
                     if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
                     if(autoRuleList == null || autoRuleList.length == 0){
-                        System.out.println("Schema list is empty. Add some, you perv~!");
+                        System.out.println("Rule list is empty. Add some, you perv~!");
                     }else{
-                        System.out.println("Current auto schema list is as follows:");
+                        System.out.println("Current auto rule list is as follows.");
+                        System.out.println("RID is the index of the rule, SID is the ID of the schema within the rule.");
                         System.out.println();
-                        System.out.println("#. PUID : Query/Tag");
+                        System.out.println("RID-SID. PID : Query/Tag");
                         System.out.println();
-                        for(X34Rule r : autoRuleList) {
+                        for(int i = 0; i < autoRuleList.length; i++) {
+                            X34Rule r = autoRuleList[i];
                             X34Schema[] schemas = r.getSchemas();
-                            for (int i = 0; i < schemas.length; i++) {
-                                System.out.println((i + 1) + ". " + schemas[i].type + " : " + schemas[i].query);
+                            for (int j = 0; j < schemas.length; j++) {
+                                System.out.println((i + 1) + "-" + (j + 1) + ". " + schemas[j].type + " : " + schemas[j].query);
                             }
                         }
                     }
@@ -209,7 +200,12 @@ public class X34CLI
                     return true;
                 }),
 
-                new CLIMenuOption("Add New Schema", ()->{
+                new CLIMenuOption("View Available Processor IDs", ()->{
+                    displayAvailableProcessors();
+                   return true;
+                }),
+
+                new CLIMenuOption("Add New Rule", ()->{
                     if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
                     if(autoRuleList != null) {
                         // if the list is not null, lengthen it by one
@@ -226,14 +222,16 @@ public class X34CLI
                     return true;
                 }),
 
-                new CLIMenuOption("Remove Schema", ()->{
+                new CLIMenuOption("Remove Rule", ()->{
                     if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
                     if(autoRuleList == null || autoRuleList.length == 0){
-                        System.out.println("Schema list is empty! Add some, you perv~!");
+                        System.out.println("Rule list is empty! Add some, you perv~!");
                         return true;
                     }
 
-                    System.out.print("Enter the index of the entry to be removed:");
+                    System.out.println("Enter the index of a rule in the list.");
+                    System.out.println("Please note that this will remove all sub-schemas within this rule.");
+                    System.out.print("Enter the index of the rule to be removed.");
                     int removed = getIntFromScanner(new Scanner(System.in), System.out, "Invalid index! Please try again.", autoRuleList.length);
                     System.out.println();
 
@@ -249,21 +247,21 @@ public class X34CLI
                         autoRuleList = temp;
                     }
 
-                    System.out.println("Schema removed!");
+                    System.out.println("Rule removed!");
                     return true;
                 }),
 
-                new CLIMenuOption("Clear Schema List", ()->{
+                new CLIMenuOption("Clear Rule List", ()->{
                     if(autoRuleList == null) autoRuleList = getAutoModeSchemas(autoConfig);
                     if(autoRuleList == null || autoRuleList.length == 0){
-                        System.out.println("Schema list is already empty!");
+                        System.out.println("Rule list is already empty!");
                         return true;
                     }
 
-                    System.out.print("Really clear schema list completely (y/n)?");
+                    System.out.print("Really clear rule list completely (y/n)?");
                     if(getBooleanFromScanner(new Scanner(System.in), System.out, "y", "n", "Please enter y for yes or n for no.")){
                         autoRuleList = new X34Rule[0];
-                        System.out.println("Schema list cleared.");
+                        System.out.println("Rule list cleared.");
                     }else{
                         System.out.println("Clear operation aborted.");
                     }
@@ -393,11 +391,10 @@ public class X34CLI
                         generalArgList = new String[0];
                     }else {
                         // bisect the array at the entry to be removed, and copy the two halves (not including the removed index) to the new array
-                        int before = removed - 1;
-                        int after = generalArgList.length - removed;
+                        int after = generalArgList.length - removed - 1;
                         String[] temp = new String[generalArgList.length - 1];
-                        if(before > 0) System.arraycopy(generalArgList, 0, temp, 0, before);
-                        if(after > 0) System.arraycopy(generalArgList, removed, temp, removed - 1, after);
+                        if(removed > 0) System.arraycopy(generalArgList, 0, temp, 0, removed);
+                        if(after > 0) System.arraycopy(generalArgList, removed + 1, temp, removed, after);
                         generalArgList = temp;
                     }
 
@@ -460,7 +457,7 @@ public class X34CLI
                             batch(getGeneralSettingsArgumentEquivalent(generalConfig), autoRules[i]);
                         }
                     }else{
-                        System.out.println("No schemas available from automatic schema list!");
+                        System.out.println("No rules available from automatic rule list!");
                         System.out.println("Add some in the auto-retrieval settings menu!");
                     }
                     return true;
@@ -656,6 +653,23 @@ public class X34CLI
         } catch (IOException e) {
             System.out.println(e.getMessage());
             return false;
+        }
+    }
+
+    private static void displayAvailableProcessors()
+    {
+        try {
+            String[] uids = X34ProcessorRegistry.getAvailableProcessorIDs();
+            String[] unames = X34ProcessorRegistry.getAvailableProcessorNames();
+            System.out.println("Processor IDs and names are as follows:\n");
+            for(int i = 0; i < uids.length; i++){
+                String id = uids[i];
+                String name = unames[i];
+                System.out.println("- " + id + " : " + name);
+            }
+            System.out.println();
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
         }
     }
 }
