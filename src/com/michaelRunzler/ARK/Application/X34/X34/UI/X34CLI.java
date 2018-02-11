@@ -629,7 +629,10 @@ public class X34CLI
                 temp2[temp2.length - 1] = "confirmdl";
                 is.close();
                 return temp2;
-            }else return temp;
+            }else{
+                is.close();
+                return temp;
+            }
         } catch (IOException | ClassCastException e) {
             e.printStackTrace();
             return null;
