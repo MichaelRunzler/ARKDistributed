@@ -73,12 +73,13 @@ public class X34Image implements Serializable
      * Verification is typically done using a 32 or 48 byte insecure cryptographic hash, although exact procedures vary
      * by implementation.
      * @return true if the data passed verification, false otherwise
+     * @throws IOException if an unrecoverable I/O error occurred during verification
      */
-    public boolean verifyIntegrity()
+    public boolean verifyIntegrity() throws IOException
     {
         if(hash == null || hash.length == 0 || source == null) throw new IllegalArgumentException("Invalid hash data or source URI");
 
-        //todo finish
-        return false;
+        // Using simple length-verification technique instead of hash for now, may change at some point in the future.
+        return IOTools.getRemoteFileSize(this.source) > 0;
     }
 }

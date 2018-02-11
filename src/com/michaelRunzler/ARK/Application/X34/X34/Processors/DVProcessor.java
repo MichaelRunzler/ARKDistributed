@@ -330,10 +330,30 @@ public class DVProcessor extends X34RetrievalProcessor
     }
 
     @Override
-    public boolean validateIndex(X34Index index) throws IOException, ValidationException
+    public boolean validateIndex(X34Index index) throws IOException
     {
-        //todo finish
-        return false;
+        if(index == null || index.id == null) return false;
+        if(index.entries.size() == 0) return true;
+
+        String id = index.metadata.get("processor");
+
+        // Validate index ownership
+        if(id != null && !id.equals(this.getID())) throw new IllegalArgumentException("Provided index was created with another processor: " + id);
+        if(id == null){
+            X34Image img = index.entries.get(0);
+            if(!img.source.toString().contains(".deviantart.net")) throw new IllegalArgumentException("Provided index was not created with this processor!");
+        }
+
+        // Check image source data and integrity.
+        ArrayList<X34Image> removed = new ArrayList<>();
+        for(X34Image img : index.entries) {
+            if(!img.source.toString().contains(".deviantart.net")) continue;
+            if(!img.verifyIntegrity()) removed.add(img);
+        }
+
+        index.entries.removeAll(removed);
+
+        return removed.size() == 0;
     }
 
     @Override

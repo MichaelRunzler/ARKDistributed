@@ -302,9 +302,6 @@ public class IOTools
         int initialIDX = data.indexOf(startMark, pos) + startMark.length();
         int endIDX = data.length();
 
-        if(endIDX == -1)
-            return null;
-
         return data.substring(initialIDX, endIDX);
     }
 

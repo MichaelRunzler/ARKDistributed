@@ -1,7 +1,9 @@
 package X34.Core;
 
+import X34.Processors.X34ProcessorRegistry;
 import core.CoreUtil.ARKArrayUtil;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
@@ -67,5 +69,24 @@ public class X34Index implements Serializable
         if(id != null && !id.isEmpty()) return id.replace('_', ' ').replace('+', ' ');
         else return id;
     }
-    
+
+    /**
+     * Checks that the provided {@link X34Index Index} has correct hash and URI data, and corrects it if necessary.
+     * Automatically detects which processor created this index.
+     * Processor detection is done by checking the Index's metadata for the 'processor' tag.
+     * Operates by calling {@link X34.Processors.X34RetrievalProcessor#validateIndex(X34Index)} on whichever processor created
+     * the provided index.
+     * If the index cannot be identified, this method will return {@code false}.
+     * @param index the index to validate against the server
+     * @return true if validation was successful, false if not all contained images validated successfully
+     * @throws IOException if a non-recoverable I/O error was encountered during operation
+     * @see X34.Processors.X34RetrievalProcessor#validateIndex(X34Index) for more information on the verification process
+     */
+    public static boolean validateIndex(X34Index index) throws IOException
+    {
+        if(index == null || index.entries.size() == 0) return true;
+        if(index.metadata.get("processor") == null) return false;
+
+        return X34ProcessorRegistry.getProcessorForID(index.metadata.get("processor")).validateIndex(index);
+    }
 }

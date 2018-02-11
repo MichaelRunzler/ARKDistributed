@@ -35,9 +35,8 @@ public abstract class X34RetrievalProcessor
      * @param index the index to validate against the server
      * @return true if validation was successful, false if not all contained images validated successfully
      * @throws IOException if a non-recoverable I/O error was encountered during operation
-     * @throws ValidationException if a provided element fails to pass validation
      */
-    public abstract boolean validateIndex(@NotNull X34Index index) throws IOException, ValidationException;
+    public abstract boolean validateIndex(@NotNull X34Index index) throws IOException;
 
     /**
      * Gets this Processor's ID. The ID of a processor is the value that is used by the {@link X34ProcessorRegistry} class to
