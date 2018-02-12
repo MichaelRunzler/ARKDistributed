@@ -31,7 +31,11 @@ public class ARKJsonObject
     public ARKJsonObject(@NotNull String content)
     {
         this.content = content;
-        if(!validateContent()) throw new IllegalArgumentException("Input data does not appear to be valid JSON.");
+        // Try to validate. If it fails, try force-formatting the input. If that still fails, throw an IAX.
+        if(!validateContent()){
+            this.content = ARKJsonParser.formatJSONStr(content, ARKJsonParser.INDENT_SPACING_COUNT);
+            if(!validateContent()) throw new IllegalArgumentException("Input data does not appear to be valid JSON.");
+        }
         this.arrays = new ArrayList<>();
         this.elements = new ArrayList<>();
         hasLoaded = false;

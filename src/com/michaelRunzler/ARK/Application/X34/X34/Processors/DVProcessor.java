@@ -1,5 +1,6 @@
 package X34.Processors;
 
+import X34.Core.ValidationException;
 import X34.Core.X34Image;
 import X34.Core.X34Index;
 import X34.Core.X34Schema;
@@ -11,7 +12,6 @@ import core.CoreUtil.ARKJsonParser.ARKJsonObject;
 import core.CoreUtil.ARKJsonParser.ARKJsonParser;
 import core.CoreUtil.IOTools;
 
-import javax.xml.bind.ValidationException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -29,7 +29,7 @@ public class DVProcessor extends X34RetrievalProcessor
     private final String AUTH_CLIENT_ID     = "7591";
     private final String AUTH_CLIENT_SECRET = "1e68d7fd21576d79a7a71f63dd21aa7f";
     private final String AUTH_CLIENT_PATH   = "https://www.deviantart.com/api/v1/oauth2/browse/newest?q=";
-    private final String AUTH_UUID_PREFIX   = "&mature_content=true&access_token=";
+    private final String AUTH_UUID_PREFIX   = "&mature_content=true&limit=24&access_token=";
     private final String AUTH_TOKEN_REQUEST = "https://www.deviantart.com/oauth2/token?grant_type=client_credentials&client_id=" + AUTH_CLIENT_ID + "&client_secret=" + AUTH_CLIENT_SECRET;
 
     // legacy variables for old routine
@@ -70,6 +70,7 @@ public class DVProcessor extends X34RetrievalProcessor
         int failed = 0;
         final int PAGE_OFFSET_DELTA = 20;
         int total = 0;
+        boolean rtlTriggered = false;
 
         // Loop until we run out of pages
         do{
@@ -87,9 +88,9 @@ public class DVProcessor extends X34RetrievalProcessor
                 // Force the JSON data to null, forcing the end-of-page handler, since the server has told us that this is the case.
                 json = null;
             } catch (IOException e){
-                if(e.getMessage().contains("Server returned HTTP response code: 401")){
+                if(e.getMessage().contains("HTTP response code: 401") || e.getMessage().contains("HTTP response code: 400")){
                     // If the server gives an auth error, try getting a new token.
-                    log.logEvent("API authentication token expired, getting new one...");
+                    log.logEvent(LogEventLevel.WARNING, "API authentication token expired, getting new one...");
                     String newToken = getAuthToken();
                     if(newToken == null){
                         // If we couldn't get an API access token, return with no images
@@ -99,6 +100,18 @@ public class DVProcessor extends X34RetrievalProcessor
                     // Refresh base URL with the new token and keep going.
                     URLBase = AUTH_CLIENT_PATH + schema.query.replace(' ', '+').toLowerCase() + AUTH_UUID_PREFIX + newToken + PAGESRV_PID_PREFIX;
                     log.logEvent("New authentication token received: " + newToken);
+                    continue;
+                }else if(e.getMessage().contains("HTTP response code: 403") || e.getMessage().contains("HTTP response code: 429")){
+                    // The server has triggered its rate-limiting, wait for about 10s to let it catch up.
+                    log.logEvent(LogEventLevel.WARNING, "Adaptive API rate-limiting triggered. Waiting for 10s.");
+                    try{Thread.sleep(10000);}catch(InterruptedException e1){continue;}
+                    log.logEvent("Resuming retrieval.");
+                    // If the rate-limit detection has been tripped twice in a row, assume that we have run across some kind of severe limit, log it as an error.
+                    if(rtlTriggered){
+                        failed ++;
+                        rtlTriggered = false;
+                    }
+                    else rtlTriggered = true;
                     continue;
                 }
                 // Otherwise, the error is probably something we can't deal with, error out.
@@ -171,6 +184,12 @@ public class DVProcessor extends X34RetrievalProcessor
             }catch (NumberFormatException | NullPointerException e){
                 currentOffset = -1;
             }
+
+            // Reset the rate-limit detection flag since we got a page successfully.
+            rtlTriggered = false;
+
+            // Sleep for 1000ms to avoid server overload.
+            try{Thread.sleep(1000);}catch(InterruptedException ignored){}
         }while (currentOffset != -1);
 
         log.logEvent("Page pull complete.");

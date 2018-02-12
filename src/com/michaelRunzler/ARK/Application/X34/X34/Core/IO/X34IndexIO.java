@@ -54,7 +54,7 @@ public class X34IndexIO
 
         // Generate filename. Filename is comprised of the neutralized ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
-        File target = new File(parent, nid + (processor == null || processor.isEmpty() ? "" : "%" + processor) + INDEX_FILE_EXTENSION);
+        File target = new File(parent, nid.replace("?", "").replace("*", "") + (processor == null || processor.isEmpty() ? "" : "%" + processor) + INDEX_FILE_EXTENSION);
 
         X34Index index;
 
@@ -95,7 +95,7 @@ public class X34IndexIO
 
         // Generate filename. Filename is comprised of the neutralized ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
-        File target = new File(parent, index.id + (index.metadata.get("processor") == null ? "" : "%" + index.metadata.get("processor")) + INDEX_FILE_EXTENSION);
+        File target = new File(parent, index.id.replace("?", "").replace("*", "")  + (index.metadata.get("processor") == null ? "" : "%" + index.metadata.get("processor")) + INDEX_FILE_EXTENSION);
 
         if(target.exists() && !target.delete()) throw new IOException("Unable to delete existing index file");
         if(!target.createNewFile()) throw new IOException("Unable to create new index file");

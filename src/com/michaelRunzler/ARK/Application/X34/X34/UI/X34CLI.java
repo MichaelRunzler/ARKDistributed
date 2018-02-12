@@ -1,16 +1,12 @@
 package X34.UI;
 
-import X34.Core.X34Core;
-import X34.Core.X34Image;
-import X34.Core.X34Rule;
-import X34.Core.X34Schema;
+import X34.Core.*;
 import X34.Processors.X34ProcessorRegistry;
 import core.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.CMLUtils;
 import core.system.ARKGlobalConstants;
 
-import javax.xml.bind.ValidationException;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Scanner;

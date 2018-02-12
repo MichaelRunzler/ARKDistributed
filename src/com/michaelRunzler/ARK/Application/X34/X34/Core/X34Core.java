@@ -10,7 +10,6 @@ import core.AUNIL.LogEventLevel;
 import core.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 
-import javax.xml.bind.ValidationException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;

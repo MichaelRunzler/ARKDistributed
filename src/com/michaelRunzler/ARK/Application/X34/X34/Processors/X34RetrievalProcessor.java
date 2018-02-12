@@ -1,12 +1,8 @@
 package X34.Processors;
 
-import X34.Core.X34Core;
-import X34.Core.X34Image;
-import X34.Core.X34Index;
-import X34.Core.X34Schema;
+import X34.Core.*;
 import com.sun.istack.internal.NotNull;
 
-import javax.xml.bind.ValidationException;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;

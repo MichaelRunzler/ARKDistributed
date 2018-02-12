@@ -1,5 +1,6 @@
 package X34.Processors;
 
+import X34.Core.ValidationException;
 import X34.Core.X34Image;
 import X34.Core.X34Index;
 import X34.Core.X34Schema;
@@ -8,7 +9,6 @@ import core.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.IOTools;
 
-import javax.xml.bind.ValidationException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
