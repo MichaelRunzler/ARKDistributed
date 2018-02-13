@@ -87,39 +87,43 @@ public class DVProcessor extends X34RetrievalProcessor
             }catch (FileNotFoundException e){
                 // Force the JSON data to null, forcing the end-of-page handler, since the server has told us that this is the case.
                 json = null;
-            } catch (IOException e){
-                if(e.getMessage().contains("HTTP response code: 401") || e.getMessage().contains("HTTP response code: 400")){
-                    // If the server gives an auth error, try getting a new token.
-                    log.logEvent(LogEventLevel.WARNING, "API authentication token expired, getting new one...");
-                    String newToken = getAuthToken();
-                    if(newToken == null){
-                        // If we couldn't get an API access token, return with no images
-                        log.logEvent(LogEventLevel.ERROR, "API authentication request failed.");
-                        return null;
-                    }
-                    // Refresh base URL with the new token and keep going.
-                    URLBase = AUTH_CLIENT_PATH + schema.query.replace(' ', '+').toLowerCase() + AUTH_UUID_PREFIX + newToken + PAGESRV_PID_PREFIX;
-                    log.logEvent("New authentication token received: " + newToken);
-                    continue;
-                }else if(e.getMessage().contains("HTTP response code: 403") || e.getMessage().contains("HTTP response code: 429")){
-                    // The server has triggered its rate-limiting, wait for about 10s to let it catch up.
-                    log.logEvent(LogEventLevel.WARNING, "Adaptive API rate-limiting triggered. Waiting for 10s.");
-                    try{Thread.sleep(10000);}catch(InterruptedException e1){continue;}
-                    log.logEvent("Resuming retrieval.");
-                    // If the rate-limit detection has been tripped twice in a row, assume that we have run across some kind of severe limit, log it as an error.
-                    if(rtlTriggered){
+            } catch (IOException e) {
+                // Detect error code and take action accordingly.
+                switch (ProcessorUtils.getHttpErrorCode(e))
+                {
+                    case 400 | 401:
+                        // If the server gives an auth error, try getting a new token.
+                        log.logEvent(LogEventLevel.WARNING, "API authentication token expired, getting new one...");
+                        String newToken = getAuthToken();
+                        if(newToken == null){
+                            // If we couldn't get an API access token, return with no images
+                            log.logEvent(LogEventLevel.ERROR, "API authentication request failed.");
+                            return null;
+                        }
+                        // Refresh base URL with the new token and keep going.
+                        URLBase = AUTH_CLIENT_PATH + schema.query.replace(' ', '+').toLowerCase() + AUTH_UUID_PREFIX + newToken + PAGESRV_PID_PREFIX;
+                        log.logEvent("New authentication token received: " + newToken);
+                        continue;
+                    case 403 | 429:
+                        // The server has triggered its rate-limiting, wait for about 10s to let it catch up.
+                        log.logEvent(LogEventLevel.WARNING, "Adaptive API rate-limiting triggered. Waiting for 10s.");
+                        try{Thread.sleep(10000);}catch(InterruptedException e1){continue;}
+                        log.logEvent("Resuming retrieval.");
+                        // If the rate-limit detection has been tripped twice in a row, assume that we have run across some kind of severe limit, log it as an error.
+                        if(rtlTriggered){
+                            failed ++;
+                            rtlTriggered = false;
+                        }
+                        else rtlTriggered = true;
+                        continue;
+                    default:
+                        // Otherwise, the error is probably something we can't deal with, error out.
+                        log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
+                        log.logEvent(e);
+                        currentOffset += PAGE_OFFSET_DELTA;
                         failed ++;
-                        rtlTriggered = false;
-                    }
-                    else rtlTriggered = true;
-                    continue;
+                        continue;
                 }
-                // Otherwise, the error is probably something we can't deal with, error out.
-                log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
-                log.logEvent(e);
-                currentOffset += PAGE_OFFSET_DELTA;
-                failed ++;
-                continue;
             }
 
             // If the JSON data is null, assume that the read failed and skip this page.

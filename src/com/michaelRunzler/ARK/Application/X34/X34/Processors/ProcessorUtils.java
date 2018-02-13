@@ -2,12 +2,13 @@ package X34.Processors;
 
 import X34.Core.X34Image;
 import X34.Core.X34Index;
+import com.sun.istack.internal.NotNull;
 import core.CoreUtil.IOTools;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class ProcessorUtils
+class ProcessorUtils
 {
     /**
      * Cyclically tries getting data from a URL until it succeeds or exceeds the try count (default: 5).
@@ -71,4 +72,91 @@ public class ProcessorUtils
 
         return newImages;
     }
+
+    static void handleHttpError(@NotNull IOException e, HttpErrorHandler... handlers)
+    {
+        // Get code from the provided event and check its range.
+        short code = getHttpErrorCode(e);
+        if(code == -1 || handlers == null || handlers.length == 0) return;
+
+        // Provided that both the code and handler stack are valid, iterate through and activate any handlers whose codes match.
+        for(HttpErrorHandler handler : handlers) {
+            if(handler.getCode() == code) handler.handleError();
+        }
+    }
+
+    /**
+     * Extracts the HTTP error code from an {@link IOException} that contains such a code.
+     * Will return the 3-digit HTTP error code as a {@code short}, or {@code -1} if none could be located.
+     * WIll never return a value larger than {@code 600}, or less than {@code 100} (with the exception of {@code -1} for invalid values).
+     * @param e the {@link IOException} to extract the error code from
+     * @return the 3-digit HTTP error code contained within the provided exception as a {@code short}, or {@code -1} if no valid code was found
+     */
+    static short getHttpErrorCode(@NotNull IOException e)
+    {
+        if(e.getMessage() != null && e.getMessage().contains("Server returned HTTP response code: ")){
+            try{
+                short retV = Short.parseShort(IOTools.getFieldFromData(e.getMessage(), "code: ", " for URL", 0));
+                if(retV > 600 || retV < 100) return -1;
+                else return retV;
+            }catch (NumberFormatException e1){
+                return -1;
+            }
+        }else return -1;
+    }
+}
+
+/**
+ * Handles an HTTP error code using the provided {@link HttpErrorActionEvent} handler.
+ * Primarily useful as a container-type object.
+ */
+class HttpErrorHandler
+{
+    private short code;
+    private HttpErrorActionEvent e;
+
+    /**
+     * Constructs a new instance of this object.
+     * @param code the 3-digit HTTP error code to indicate which type of error should be handled by this object.
+     * @param event the {@link HttpErrorActionEvent} handler to activate when this object's {@link #handleError()} or {@link #handleError(short)}
+     *              method is called.
+     */
+    HttpErrorHandler(short code, HttpErrorActionEvent event){
+        this.code = code;
+        this.e = event;
+    }
+
+    /**
+     * Handles an HTTP error code. Checks the provided code against this object's stored code, and returns without taking
+     * action if they do not match.
+     * @param code the HTTP error code to check against this object's internal code
+     */
+    void handleError(short code){
+        if(code == this.code) this.handleError();
+    }
+
+    /**
+     * Triggers this object's internal handler object.
+     * It is up to the calling class to determine when to call this method - no internal checks are done prior to calling
+     * the contained handler's {@link HttpErrorActionEvent#action(short)} method.
+     */
+    void handleError(){
+        this.e.action(code);
+    }
+
+    /**
+     * Gets this object's stored HTTP error code.
+     * @return a short representing this object's contained HTTP error code
+     */
+    short getCode() {
+        return code;
+    }
+}
+
+/**
+ * A generic handler-type abstract class designed to handle HTTP errors delegated to it by the {@link HttpErrorHandler} class.
+ * Takes a single argument to its method, a short representing the HTTP code that it is being called to handle.
+ */
+abstract class HttpErrorActionEvent{
+    public abstract void action(short code);
 }

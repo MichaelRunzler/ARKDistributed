@@ -46,6 +46,7 @@ public class X34CLI
 
     private static X34Rule[] autoRuleList = null;
     private static String[] generalArgList = null;
+    private static X34Core xCore;
 
     /**
      * Command-line argument detail:
@@ -87,6 +88,7 @@ public class X34CLI
         }
 
         log = new XLoggerInterpreter("X34 CLI");
+        xCore = new X34Core();
 
         // delegate to submethod based on whether batch job keys are in place
         if(CMLUtils.getArgument(args, "tag") == null && CMLUtils.getArgument(args, "repo") == null) CLI();
@@ -135,8 +137,6 @@ public class X34CLI
 
         log.logEvent("Initialization complete.");
         log.logEvent("Schema validation passed.");
-
-        X34Core xCore = new X34Core();
 
         log.logEvent("Retrieving...");
 

@@ -9,6 +9,7 @@ import core.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.IOTools;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -49,6 +50,7 @@ public class R34XProcessor extends X34RetrievalProcessor
 
         int currentPage = 1;
         int failed = 0;
+        boolean rtlTriggered = false;
 
         // Loop until we run out of pages.
         do{
@@ -62,12 +64,32 @@ public class R34XProcessor extends X34RetrievalProcessor
             // Get pagedata from URL. Skip page if the read fails.
             try{
                 page = ProcessorUtils.tryDataTransfer(URLBase + (currentPage - 1), 5);
+            }catch (FileNotFoundException e){
+                // Force the page to an empty XML tag, forcing the end-of-page handler, since the server has told us that this is the case.
+                page = "<>";
             }catch (IOException e){
-                log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
-                log.logEvent(e);
-                currentPage ++;
-                failed ++;
-                continue;
+                // Detect error code and take action accordingly.
+                switch (ProcessorUtils.getHttpErrorCode(e))
+                {
+                    case 429:
+                        // The server has triggered its rate-limiting, wait for about 10s to let it catch up.
+                        log.logEvent(LogEventLevel.WARNING, "Adaptive API rate-limiting triggered. Waiting for 10s.");
+                        try{Thread.sleep(10000);}catch(InterruptedException e1){continue;}
+                        log.logEvent("Resuming retrieval.");
+                        // If the rate-limit detection has been tripped twice in a row, assume that we have run across some kind of severe limit, log it as an error.
+                        if(rtlTriggered){
+                            failed ++;
+                            rtlTriggered = false;
+                        }
+                        else rtlTriggered = true;
+                        continue;
+                    default:
+                        log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
+                        log.logEvent(e);
+                        currentPage ++;
+                        failed ++;
+                        continue;
+                }
             }
 
             // If the page length is 0, assume that the read failed and skip this page.

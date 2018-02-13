@@ -59,6 +59,7 @@ public class XLoggerCore
         // the shutdown hook.
         try {
             SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
+            internal.logEvent(LogEventLevel.DEBUG, "JVM version looks good, shutdown hook registered.");
         }catch (NoClassDefFoundError e){
             internal.logEvent(LogEventLevel.CRITICAL, "You appear to be running a nonstandard JRE or JDK (possibly Java 9 or higher)\r\n" +
                                                               "without access to the Sun miscellaneous libraries. Please note that this is suboptimal,\r\n" +
