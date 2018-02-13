@@ -134,6 +134,19 @@ public class XLoggerInterpreter
     }
 
     /**
+     * Changes the global {@link LogVerbosityLevel verbosity level} of this Interpreter's associated {@link XLoggerCore core} object.
+     * By default, new {@link XLoggerCore}s are set to the {@link LogVerbosityLevel#DEBUG} verbosity level for compatibility reasons.
+     * Verbosity level only affects events logged to the system console. Events logged to any
+     * {@link XLoggerInterpreter Interpreter}'s logfile (or the master file) will be unaffected by the verbosity level set here.
+     * @param level the verbosity level to change to
+     * @throws SecurityException if the {@link XLoggerInterpreter Interpreter} requesting the change is not authorized
+     * to execute such a change
+     */
+    public void changeLoggerVerbosity(LogVerbosityLevel level) throws SecurityException{
+        executor.changeLogVerbosity(this, level);
+    }
+
+    /**
      * Logs the specified event to this object's associated {@link XLoggerCore} object.
      * Uses the specified event level instead of this object's implicit event level.
      * @param level the overridden log event level for this event

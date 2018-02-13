@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -33,6 +34,7 @@ public class XLoggerCore
     private XLoggerInterpreter internal;
     private XLoggerInterpreter master;
     private DateFormat dateFormat;
+    private LogVerbosityLevel verbosity;
 
     /**
      * Constructs a new instance of this object. Sets its parent directory to a subdirectory of
@@ -49,13 +51,17 @@ public class XLoggerCore
         internal = new XLoggerInterpreter(this, "Logger Core");
         master = new XLoggerInterpreter(this, "Master Logfile " + this.toString().substring(this.toString().lastIndexOf('@'), this.toString().length()));
         dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+        verbosity = LogVerbosityLevel.DEBUG;
         internal.associate();
         master.associate();
         SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
 
-        internal.logEvent("Initialization finished.");
-        internal.logEvent("File write enabled: " + fileWrite);
-        internal.logEvent("Parent directory: " + parent.getAbsolutePath());
+        internal.logEvent(LogEventLevel.DEBUG, "Initialization finished.");
+        internal.logEvent(LogEventLevel.DEBUG, "File write enabled: " + fileWrite);
+        internal.logEvent(LogEventLevel.DEBUG, "Parent directory: " + parent.getAbsolutePath());
+        internal.logEvent(LogEventLevel.DEBUG, "Verbosity level: " + verbosity.name());
+        internal.logEvent(LogEventLevel.DEBUG, "Available verbosity levels: " + Arrays.toString(LogVerbosityLevel.values()));
+        internal.logEvent(LogEventLevel.DEBUG, "Available event severity levels: " + Arrays.toString(LogEventLevel.values()));
         internal.logEvent("Ready.");
     }
 
@@ -105,7 +111,7 @@ public class XLoggerCore
             if(value == null) throw new IOException("File creation failed");
             f = new File(parent, value);
         } catch (IOException e) {
-            internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
             bridges.put(caller, null);
         }
@@ -113,7 +119,7 @@ public class XLoggerCore
         try {
             bridges.put(caller, new XLoggerFileWriteEntry(new BufferedWriter(new FileWriter(f)), f, true));
         } catch (IOException e) {
-            internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
         }
         internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
@@ -128,7 +134,7 @@ public class XLoggerCore
     {
         // Check caller permissions.
         if(!checkCallerPermissions(caller)){
-            internal.logEvent("Interpreter \"" + caller.friendlyName + "\" attempted disassociation while already disassociated.");
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter \"" + caller.friendlyName + "\" attempted disassociation while already disassociated.");
             return;
         }
 
@@ -142,7 +148,7 @@ public class XLoggerCore
                 xf.writer.close();
             }
         } catch (IOException e) {
-            internal.logEvent("Interpreter \"" + caller.friendlyName + "\" encountered an IO error while disassociating. Details below.");
+            internal.logEvent(LogEventLevel.ERROR, "Interpreter \"" + caller.friendlyName + "\" encountered an IO error while disassociating. Details below.");
             internal.logEvent(e);
         }
 
@@ -247,7 +253,7 @@ public class XLoggerCore
     void optOutOfMasterLog(XLoggerInterpreter caller)
     {
         if(!checkCallerPermissions(caller)){
-            internal.logEvent("Interpreter \"" + caller.friendlyName + "\" attempted master write opt-out while disassociated.");
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter \"" + caller.friendlyName + "\" attempted master write opt-out while disassociated.");
             return;
         }
 
@@ -257,6 +263,28 @@ public class XLoggerCore
             internal.logEvent("Interpreter \"" + caller.friendlyName + "\" opted-out of master logging.");
             fw.writeToMaster = false;
         }
+    }
+
+    /**
+     * Requests that this object's log verbosity level be changed to the specified level.
+     * By default, new {@link XLoggerCore}s are set to the {@link LogVerbosityLevel#DEBUG} verbosity level for compatibility reasons.
+     * Verbosity level only affects events logged to the system console. Events logged to any
+     * {@link XLoggerInterpreter Interpreter}'s logfile (or the master file) will be unaffected by the verbosity level set here.
+     * @param caller the {@link XLoggerInterpreter} that is requesting the verbosity change
+     * @param level the verbosity level to change to
+     * @throws SecurityException if the {@link XLoggerInterpreter Interpreter} requesting the change is not authorized
+     * to execute such a change
+     */
+    synchronized void changeLogVerbosity(XLoggerInterpreter caller, LogVerbosityLevel level) throws SecurityException
+    {
+        if(level == verbosity) return;
+
+        if(!checkCallerPermissions(caller)){
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter \"" + caller.friendlyName + "\" attempted to change verbosity settings while disassociated.");
+            throw new SecurityException("Caller does not have permission to perform this operation.");
+        }
+
+        verbosity = level;
     }
 
     /**
@@ -270,7 +298,7 @@ public class XLoggerCore
     {
         // Check that the caller is associated. If it is not, log it and return without doing anything else.
         if(!checkCallerPermissions(caller) && caller != internal){
-            if(internal != null) internal.logEvent("Interpreter \"" + caller.friendlyName + "\" attempted event log while disassociated.");
+            if(internal != null) internal.logEvent(LogEventLevel.WARNING, "Interpreter \"" + caller.friendlyName + "\" attempted event log while disassociated.");
             return;
         }
 
@@ -308,7 +336,7 @@ public class XLoggerCore
      * @param message see other method
      * @see XLoggerCore#logEvent(XLoggerInterpreter, LogEventLevel, String)
      */
-    private synchronized void logEventInternal(XLoggerInterpreter caller, LogEventLevel level, String message)
+    private void logEventInternal(XLoggerInterpreter caller, LogEventLevel level, String message)
     {
         // Compile the output data.
         String compiled = "(" + dateFormat.format(System.currentTimeMillis()) + ") <" + level.name() + "> [" + caller.friendlyName + "]: " + message;
@@ -338,8 +366,8 @@ public class XLoggerCore
             }
         }
 
-        // Write the message to the system console.
-        System.out.println(compiled);
+        // Write the message to the system console if verbosity settings allow it.
+        if(checkVerbosityLevel(verbosity, level)) System.out.println(compiled);
     }
 
     /**
@@ -360,7 +388,7 @@ public class XLoggerCore
     {
         if(bridges.isEmpty()) return;
 
-        internal.logEvent(LogEventLevel.WARNING, "Forced shutdown initiated by core.");
+        internal.logEvent(LogEventLevel.DEBUG, "Forced shutdown initiated by core.");
         // Lock the write stack.
         lockLogWrites = true;
 
@@ -379,6 +407,27 @@ public class XLoggerCore
      */
     private boolean checkCallerPermissions(XLoggerInterpreter caller) {
         return caller != null && (caller.classID != null && bridges.containsKey(caller));
+    }
+
+    /**
+     * Checks if an event should be logged to the console under the provided {@link LogVerbosityLevel verbosity level}.
+     * @param level the {@link LogVerbosityLevel verbosity level} that this event should be filtered under
+     * @param severity the {@link LogEventLevel event level} to check under the verbosity filter
+     * @return {@code true} if the event should be allow to output to the console, {@code false} if otherwise
+     */
+    private boolean checkVerbosityLevel(LogVerbosityLevel level, LogEventLevel severity)
+    {
+        switch (level)
+        {
+            case STANDARD:
+                return severity != LogEventLevel.DEBUG;
+            case MINIMAL:
+                return severity != LogEventLevel.DEBUG && severity != LogEventLevel.INFO;
+            case DEBUG:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /**

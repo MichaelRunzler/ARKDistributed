@@ -37,6 +37,9 @@ public class X34CLI
             "* Example command-line call:\n" +
             "* java -jar X34CLI.jar \"tag=elite_dangerous\" \"repo=R34X\" \"dest=\\images\" overwrite mkdirs";
 
+    private static final String quickstartGuide1 =
+            "";
+
     private static XLoggerInterpreter log;
     private static final File autoConfig = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLAutoCfg.x34c");
     private static final File generalConfig = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLGeneralCfg.x34c");
@@ -440,6 +443,11 @@ public class X34CLI
                         "Please select an option from the list below:", "Enter an option: ", generalSettingsOptions);
 
         CLIMenuOption[] mainOptions = new CLIMenuOption[]{
+                new CLIMenuOption("View Quick-Start Guide", ()->{
+                    System.out.println("Coming soon!");
+                    return true;
+                }),
+
                 new CLIMenuOption("Retrieve (manual)", ()-> {
                     batch(getGeneralSettingsArgumentEquivalent(generalConfig), getRuleDetails(System.in, System.out));
                     return true;
