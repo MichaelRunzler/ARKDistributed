@@ -384,7 +384,8 @@ public class ARKJsonObject
                     lastMark = -1;
                 }else {
                     // Otherwise, parse all of its sub-elements as well, and add the resulting elements to the result list.
-                    int spaces = getLeadingSpaceCount(content, content.indexOf(compoundStartMark, lastMark));
+                    // Uses a substring of the main content to avoid accidentally capturing any block start characters after the end of the array scope.
+                    int spaces = getLeadingSpaceCount(content.substring(0, blockEndIndex), content.indexOf(compoundStartMark, lastMark));
                     ArrayList<ARKJsonElement> res = parseDocumentArrayInternal(content.substring(lastMark, blockEndIndex), spaces);
                     results.add(new ARKJsonElement(key, true, null, res.toArray(new ARKJsonElement[res.size()])));
                     lastMark = blockEndIndex + 1;
@@ -420,10 +421,31 @@ public class ARKJsonObject
     {
         ArrayList<ARKJsonElement> results = new ArrayList<>();
 
-        // Start with the index of the block open character. Iterate through the scope, running the parser on each contained block
-        // element and storing its sub-elements into the result list. Once done, update the start point to the next block
-        // and repeat until we run out of blocks.
+        // Start with the index of the block open character.
         int lastBlock = content.indexOf(compoundStartMark);
+
+        // If we couldn't find a block open character, assume that the entries are unnamed strings instead of compound entries,
+        // and search for them instead.
+        if(lastBlock == -1){
+            // Loop through the array scope, adding each string value field to the result list, and returning when done.
+            do {
+                lastBlock = content.indexOf(keyStartMark, lastBlock);
+                // Skip the rest of this iteration if we've hit the end to avoid an exception
+                if(lastBlock == -1) continue;
+
+                int start = content.indexOf(keyStartMark, lastBlock - 1);
+                int end = content.indexOf(keyEndMark, start + 1) + 1;
+                String value = content.substring(start, end);
+                // forward start position past the end of this value segment
+                lastBlock = content.indexOf(keyStartMark, lastBlock + 1) + 1;
+                results.add(new ARKJsonElement(null, false, value));
+            } while (lastBlock > -1);
+
+            return results;
+        } // implied else clause
+
+        // Iterate through the scope, running the parser on each contained block element and storing its sub-elements into the
+        // result list. Once done, update the start point to the next block and repeat until we run out of blocks.
         while (lastBlock > -1)
         {
             // Get the index of its matching close-block character.

@@ -158,15 +158,20 @@ public class ARKJsonElement
      */
     public String toJSON(int spaceCount, boolean isFinal)
     {
+        // If this element has neither a value nor a name, and is not compound, it is invalid, and should not be added to the output.
+        // Return an empty string.
+        if(this.name == null && this.value == null && !this.hasSubElements()) return "";
+
         StringBuilder str = new StringBuilder();
 
         String spacer = "";
         for(int i = 0; i < spaceCount; i++) spacer += " ";
 
-        // If this element is non-compound, it must have a name. Append said name and the value if it has one and return.
+        // Since this element is non-compound, it must have either a name or a value (or one of the two). Append them,
+        // along with spacing and comma if necessary.
         if(!this.hasSubElements()){
             str.append(spacer);
-            str.append("\"").append(this.name).append("\"").append(": ");
+            if(this.name != null) str.append("\"").append(this.name).append("\"").append(": ");
             str.append(this.value == null ? "" : value);
             if(!isFinal) str.append(",");
             str.append(ARKJsonParser.LINE_SEPARATOR);
@@ -185,8 +190,8 @@ public class ARKJsonElement
             str.append(e.toJSON(spaceCount + ARKJsonParser.INDENT_SPACING_COUNT, i == subElements.length - 1));
         }
 
-        // Add block close character and spacing.
-        str.append(spacer).append(this.isArray ? ']' : '}').append(ARKJsonParser.LINE_SEPARATOR);
+        // Add block close character, comma if this is not the final entry, and spacing.
+        str.append(spacer).append(this.isArray ? ']' : '}').append(isFinal ? "" : ",").append(ARKJsonParser.LINE_SEPARATOR);
 
         return str.toString();
     }
