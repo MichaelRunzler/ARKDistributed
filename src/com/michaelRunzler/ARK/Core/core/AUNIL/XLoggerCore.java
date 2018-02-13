@@ -54,7 +54,19 @@ public class XLoggerCore
         verbosity = LogVerbosityLevel.DEBUG;
         internal.associate();
         master.associate();
-        SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
+
+        // Java 9 removed the Sun Misc package from the standard classpath. Check if it's present, and if not, issue a warning and disable
+        // the shutdown hook.
+        try {
+            SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
+        }catch (NoClassDefFoundError e){
+            internal.logEvent(LogEventLevel.CRITICAL, "You appear to be running a nonstandard JRE or JDK (possibly Java 9 or higher)\r\n" +
+                                                              "without access to the Sun miscellaneous libraries. Please note that this is suboptimal,\r\n" +
+                                                              "and may result in undefined behavior. Among other things, this logging system will be\r\n" +
+                                                              "unable to automatically shut down its core loggers when the program exits, possibly resulting\r\n" +
+                                                              "in log data loss. Please run this program with a standard JRE or JDK if possible.");
+            internal.logEvent(LogEventLevel.CRITICAL, "Recommended Java versions are: JRE 8u113-8u151 x86/x64, JDK 8u58-8u151 x64");
+        }
 
         internal.logEvent(LogEventLevel.DEBUG, "Initialization finished.");
         internal.logEvent(LogEventLevel.DEBUG, "File write enabled: " + fileWrite);

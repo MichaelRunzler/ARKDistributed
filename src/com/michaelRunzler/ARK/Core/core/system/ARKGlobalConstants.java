@@ -11,8 +11,8 @@ public class ARKGlobalConstants
         WINDOWS,MAC,LINUX,ANDROID,IOS,UNIX,OTHER
     }
 
-    public static File DESKTOP_CACHE_ROOT = new File(System.getenv("AppData") + "\\ARK\\Cache");
-    public static File DESKTOP_DATA_ROOT = new File(System.getenv("AppData") + "\\ARK\\Persistent");
+    public static File DESKTOP_CACHE_ROOT = new File(System.getenv("AppData").equals("null") ? "" : System.getenv("AppData") + "\\ARK\\Cache");
+    public static File DESKTOP_DATA_ROOT = new File(System.getenv("AppData").equals("null") ? "" : System.getenv("AppData") + "\\ARK\\Persistent");
 
     /**
      * Gets the generic type of OS that this JVM is running on from a list of possible choices. Specific architecture is
