@@ -50,16 +50,21 @@ public class ARKAppCompat
         switch (os){
             case WINDOWS:
                 s = System.getenv("AppData");
+                break;
             case MAC:
                 s = System.getProperty("user.home") + "\\Library\\";
+                break;
             case LINUX:
                 s = System.getProperty("user.home") + "\\.ark\\";
+                break;
             case ANDROID:
                 throw new RuntimeException("WARNING: Do not use this method to get Android filesystem roots, use the Android API instead.");
             case UNIX:
                 s = System.getProperty("user.home") + "\\.ark\\";
+                break;
             default:
                 s = System.getenv("AppData").equals("null") ? System.getProperty("user.home") : System.getenv("AppData");
+                break;
         }
 
         return new File(s + "\\ARK\\Cache");
@@ -78,16 +83,21 @@ public class ARKAppCompat
         switch (os){
             case WINDOWS:
                 s = System.getenv("AppData");
+                break;
             case MAC:
                 s = System.getProperty("user.home") + "\\Library\\";
+                break;
             case LINUX:
                 s = System.getProperty("user.home") + "\\.ark\\";
+                break;
             case ANDROID:
                 throw new RuntimeException("WARNING: Do not use this method to get Android filesystem roots, use the Android API instead.");
             case UNIX:
                 s = System.getProperty("user.home") + "\\.ark\\";
+                break;
             default:
                 s = System.getenv("AppData").equals("null") ? System.getProperty("user.home") : System.getenv("AppData");
+                break;
         }
 
         return new File(s + "\\ARK\\Cache");
