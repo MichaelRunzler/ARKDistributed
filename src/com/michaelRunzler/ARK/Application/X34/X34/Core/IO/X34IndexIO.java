@@ -3,7 +3,7 @@ package X34.Core.IO;
 import X34.Core.X34Index;
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import core.system.ARKGlobalConstants;
+import core.system.ARKAppCompat;
 
 import java.io.*;
 
@@ -18,11 +18,11 @@ public class X34IndexIO
 
     /**
      * Default constructor. Sets the parent directory to the default value as specified by the expression
-     * {@code {@link core.system.ARKGlobalConstants#DESKTOP_DATA_ROOT} + "\\X34Indexes"}.
+     * {@code {@link ARKAppCompat#DESKTOP_DATA_ROOT} + "\\X34Indexes"}.
      */
     public X34IndexIO()
     {
-        this.parent = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34Indexes");
+        this.parent = new File(ARKAppCompat.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34Indexes");
     }
 
     /**

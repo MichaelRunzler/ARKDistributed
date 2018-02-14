@@ -1,6 +1,6 @@
 package core.AUNIL;
 
-import core.system.ARKGlobalConstants;
+import core.system.ARKAppCompat;
 import sun.misc.SharedSecrets;
 
 import java.io.BufferedWriter;
@@ -38,12 +38,12 @@ public class XLoggerCore
 
     /**
      * Constructs a new instance of this object. Sets its parent directory to a subdirectory of
-     * {@link ARKGlobalConstants#DESKTOP_DATA_ROOT}, named 'AUNIL'.
+     * {@link ARKAppCompat#DESKTOP_DATA_ROOT}, named 'AUNIL'.
      * Disk write is defaulted to 'on'.
      */
     XLoggerCore()
     {
-        parent = new File(ARKGlobalConstants.DESKTOP_CACHE_ROOT.getAbsolutePath() + "\\AUNIL");
+        parent = new File(ARKAppCompat.DESKTOP_CACHE_ROOT.getAbsolutePath() + "\\AUNIL");
         fileWrite = true;
         lockLogWrites = false;
         queue = new ArrayList<>();

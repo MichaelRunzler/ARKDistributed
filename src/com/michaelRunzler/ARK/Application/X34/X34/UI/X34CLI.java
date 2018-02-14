@@ -5,7 +5,7 @@ import X34.Processors.X34ProcessorRegistry;
 import core.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.CMLUtils;
-import core.system.ARKGlobalConstants;
+import core.system.ARKAppCompat;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -22,7 +22,7 @@ public class X34CLI
             "* [String]tag: the tag to pull from the designated repo.\n" +
             "* [String]repo: the repo ID of the processor to be used when pulling images.\n" +
             "* [File]dest: the destination folder to write downloaded images to. If not present, will default to the local user desktop.\n" +
-            "*             Incomplete file paths (such as '\\images\\download' will be appended to said desktop directory.\n" +
+            "*             File paths that start with '@' (such as '@images\\download' will be appended to said desktop directory.\n" +
             "* (optional)[void]overwrite: if present, any existing files in the download directory\n" +
             "* (optional)[void]mkdirs: if present, the path to the download directory will be created if it does not exist.\n" +
             "* (optional)[void]confirmdl: if present, user confirmation will be required before downloading any found images.\n"+
@@ -35,14 +35,16 @@ public class X34CLI
             "* \n" +
             "* \n" +
             "* Example command-line call:\n" +
-            "* java -jar X34CLI.jar \"tag=elite_dangerous\" \"repo=R34X\" \"dest=\\images\" overwrite mkdirs";
+            "* java -jar X34CLI.jar \"tag=elite_dangerous\" \"repo=R34X\" \"dest=@images\" overwrite mkdirs\n" +
+            "* \n" +
+            "* Starting this program with no arguments will initialize the command-line interface (CLI) menu instead.";
 
     private static final String quickstartGuide1 =
             "";
 
     private static XLoggerInterpreter log;
-    private static final File autoConfig = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLAutoCfg.x34c");
-    private static final File generalConfig = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLGeneralCfg.x34c");
+    private static final File autoConfig = new File(ARKAppCompat.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLAutoCfg.x34c");
+    private static final File generalConfig = new File(ARKAppCompat.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\X34", "CMLGeneralCfg.x34c");
 
     private static X34Rule[] autoRuleList = null;
     private static String[] generalArgList = null;
@@ -56,7 +58,7 @@ public class X34CLI
      *         <ul>
      *         <li>[String]tag: the tag to pull from the designated repo.</li>
      *         <li>[String]repo: the repo ID of the processor to be used when pulling images. If not present, will default to the local user desktop.
-     *                           Incomplete file paths (such as '\images\download' will be appended to said desktop directory.</li>
+     *                           File paths that start with '@' (such as '@images\download' will be appended to said desktop directory.</li>
      *         <li>[File]dest: the destination folder to write downloaded images to.</li>
      *         <li>(optional)[void]overwrite: if present, any existing files in the download directory</li>
      *         <li>(optional)[void]mkdirs: if present, the path to the download directory will be created if it does not exist.</li>
@@ -71,6 +73,7 @@ public class X34CLI
      *         </ul>
      *     </li>
      * </ul>
+     * Starting this program with no arguments will initialize the command-line interface (CLI) menu instead.
      */
     public static void main(String[] args)
     {
@@ -122,8 +125,8 @@ public class X34CLI
         // compute download root directory location
         String temp = CMLUtils.getArgument(args, "dest");
         File root;
-        if(temp == null || temp.isEmpty()) root = ARKGlobalConstants.getOSSpecficDesktopRoot();
-        else if(temp.startsWith("\\")) root = new File(ARKGlobalConstants.getOSSpecficDesktopRoot().getAbsolutePath() + temp);
+        if(temp == null || temp.isEmpty()) root = ARKAppCompat.getOSSpecificDesktopRoot();
+        else if(temp.startsWith("@")) root = new File(ARKAppCompat.getOSSpecificDesktopRoot().getAbsolutePath() + temp);
         else root = new File(temp);
 
         // set directory creation and overwrite flags

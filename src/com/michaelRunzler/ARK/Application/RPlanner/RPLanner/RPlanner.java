@@ -1,6 +1,6 @@
 package RPLanner;
 
-import core.system.ARKGlobalConstants;
+import core.system.ARKAppCompat;
 
 import java.awt.*;
 import java.io.*;
@@ -12,8 +12,8 @@ import java.util.Scanner;
 public class RPlanner
 {
     private static ArrayList<Plan> index = new ArrayList<>();
-    private static final File MASTER_INDEX = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\Config", "RPlannerConfig.vcss");
-    private static final File REFERENCE_INDEX = new File(ARKGlobalConstants.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\Config", "RPLannerReference.vcss");
+    private static final File MASTER_INDEX = new File(ARKAppCompat.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\Config", "RPlannerConfig.vcss");
+    private static final File REFERENCE_INDEX = new File(ARKAppCompat.DESKTOP_DATA_ROOT.getAbsolutePath() + "\\Config", "RPLannerReference.vcss");
     private static final Scanner INPUT = new Scanner(System.in);
     private static final Random GENERATOR = new Random();
 
@@ -473,7 +473,7 @@ public class RPlanner
         if(INPUT.hasNext() && INPUT.next().equals("y"))
         {
             System.out.println("Writing temporary file...");
-            File cache = new File(ARKGlobalConstants.DESKTOP_CACHE_ROOT.getAbsolutePath() + "\\RPC", "RPOutputCache" + System.currentTimeMillis() + ".txt");
+            File cache = new File(ARKAppCompat.DESKTOP_CACHE_ROOT.getAbsolutePath() + "\\RPC", "RPOutputCache" + System.currentTimeMillis() + ".txt");
             try {
                 cache.getParentFile().delete();
                 cache.getParentFile().mkdirs();
