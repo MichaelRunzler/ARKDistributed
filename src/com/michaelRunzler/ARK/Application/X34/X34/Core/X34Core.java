@@ -6,8 +6,8 @@ import X34.Core.IO.X34IndexIO;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import com.sun.istack.internal.NotNull;
-import core.AUNIL.LogEventLevel;
-import core.AUNIL.XLoggerInterpreter;
+import core.CoreUtil.AUNIL.LogEventLevel;
+import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 
 import java.io.File;

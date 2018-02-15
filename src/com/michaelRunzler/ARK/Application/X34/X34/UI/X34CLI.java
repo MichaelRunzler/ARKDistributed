@@ -2,7 +2,7 @@ package X34.UI;
 
 import X34.Core.*;
 import X34.Processors.X34ProcessorRegistry;
-import core.AUNIL.XLoggerInterpreter;
+import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.CMLUtils;
 import core.system.ARKAppCompat;
@@ -126,7 +126,7 @@ public class X34CLI
         String temp = CMLUtils.getArgument(args, "dest");
         File root;
         if(temp == null || temp.isEmpty()) root = ARKAppCompat.getOSSpecificDesktopRoot();
-        else if(temp.startsWith("@")) root = new File(ARKAppCompat.getOSSpecificDesktopRoot().getAbsolutePath() + temp);
+        else if(temp.startsWith("@")) root = new File(ARKAppCompat.getOSSpecificDesktopRoot().getAbsolutePath() + temp.replace('@', '\\'));
         else root = new File(temp);
 
         // set directory creation and overwrite flags

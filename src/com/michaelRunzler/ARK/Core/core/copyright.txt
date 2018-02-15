@@ -1,5 +1,5 @@
 ARK Distributed Application System Copyright Attributions
-Version 3.0.2
+Version 3.1.2
 Revised 3/9/2017
 
 ARK Distributed Application System
@@ -32,6 +32,7 @@ copyrighted by external entities, is licensed under the terms of the GNU General
 
 Usage of this project is dictated by the terms of the ARK Open Application Library License and Release of Liability
 Agreement (LRLA), included with this software library (LRLA.txt).
+Where terms of the GNU public license conflict with the terms set forth in the LRLA, the LRLA's terms shall have precedence.
 Distribution of this project is dictated by the ARK Open Application Library Program Component Redistribution
 Guideline Document, also included (distribution.txt).
 
@@ -46,22 +47,11 @@ SNMP4J (Simple Network Management Protocol for Java) by SMNP4J.org, licensed und
 
 JNA (Java Native Access) by The JNA Team, licensed under LGPL and Apache Commons 2.0.
 
-HTMLManipulator by Nick Frolov, licensed under GPL.
-
 
 SECTION III: MEDIA AND INTELLECTUAL PROPERTY MATERIAL
 
-Media file copyright and intellectual property attribution information is as follows:
+Unless explicitly stated on a per-item basis, all copyrighted material within this project is the property of its respective
+owners.
 
-Icon files 'info.png', 'options.png', and 'warning.png' are the intellectual property of Microsoft Corporation,
-and are R34Assets included with the Windows 7 operating system, and are licensed under the Microsoft End-User License Agreement.
-
-Icon files from the 'encoder', 'database', 'SoundBoard', 'HDLS' packages are
-the intellectual property of Michael Runzler.
-
-Icon file 'r34-main-dpc.png' from the 'R34Assets' package is a derivative of copyrighted material owned by Kyoto Animation.
-Derivative is the intellectual property of Michael Runzler.
-
-Icon file 'r34-main.png' from the 'R34Assets' package is a derivative of material sourced from the Danbooru-driven site
-'Rule 34' (http://rule34.xxx). Original author information and copyright status is unknown. No additional source information
-is available. Derivative is the intellectual property of Michael Runzler.
+If you are a copyright holder, and you believe that your material has been used unfairly, and wish to request
+modification, specific credit, or removal, please contact me via the GitHub issue reporting system.

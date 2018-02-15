@@ -1,4 +1,4 @@
-package core.AUNIL;
+package core.CoreUtil.AUNIL;
 
 /**
  * Data container for log data stored by the {@link XLoggerCore XLoggerCore} class.

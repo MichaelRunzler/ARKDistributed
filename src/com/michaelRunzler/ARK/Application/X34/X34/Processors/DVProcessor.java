@@ -4,8 +4,8 @@ import X34.Core.ValidationException;
 import X34.Core.X34Image;
 import X34.Core.X34Index;
 import X34.Core.X34Schema;
-import core.AUNIL.LogEventLevel;
-import core.AUNIL.XLoggerInterpreter;
+import core.CoreUtil.AUNIL.LogEventLevel;
+import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.ARKJsonParser.ARKJsonElement;
 import core.CoreUtil.ARKJsonParser.ARKJsonObject;
@@ -91,7 +91,8 @@ public class DVProcessor extends X34RetrievalProcessor
                 // Detect error code and take action accordingly.
                 switch (ProcessorUtils.getHttpErrorCode(e))
                 {
-                    case 400 | 401:
+                    case 400:
+                    case 401:
                         // If the server gives an auth error, try getting a new token.
                         log.logEvent(LogEventLevel.WARNING, "API authentication token expired, getting new one...");
                         String newToken = getAuthToken();
@@ -104,7 +105,8 @@ public class DVProcessor extends X34RetrievalProcessor
                         URLBase = AUTH_CLIENT_PATH + schema.query.replace(' ', '+').toLowerCase() + AUTH_UUID_PREFIX + newToken + PAGESRV_PID_PREFIX;
                         log.logEvent("New authentication token received: " + newToken);
                         continue;
-                    case 403 | 429:
+                    case 403:
+                    case 429:
                         // The server has triggered its rate-limiting, wait for about 10s to let it catch up.
                         log.logEvent(LogEventLevel.WARNING, "Adaptive API rate-limiting triggered. Waiting for 10s.");
                         try{Thread.sleep(10000);}catch(InterruptedException e1){continue;}

@@ -67,7 +67,7 @@ public class ARKAppCompat
                 break;
         }
 
-        return new File(s + "\\ARK\\Cache");
+        return new File(s + "\\ARK\\Persistent");
     }
 
     /**

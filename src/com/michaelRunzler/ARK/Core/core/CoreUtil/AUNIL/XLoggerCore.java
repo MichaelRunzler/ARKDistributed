@@ -1,4 +1,4 @@
-package core.AUNIL;
+package core.CoreUtil.AUNIL;
 
 import core.system.ARKAppCompat;
 import sun.misc.SharedSecrets;
