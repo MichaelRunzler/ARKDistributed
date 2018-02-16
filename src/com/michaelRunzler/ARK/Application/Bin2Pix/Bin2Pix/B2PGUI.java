@@ -13,6 +13,7 @@ import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.UI.ARKInterfaceAlert;
 import core.UI.ARKInterfaceDialogYN;
+import core.system.ARKAppCompat;
 import javafx.application.Application;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
@@ -425,11 +426,11 @@ public class B2PGUI extends Application
         if(result == null || result.size() == 0){
             new ARKInterfaceAlert("Notice", "Conversion complete with no errors!", (int)(DEFAULT_DIALOG_SIZE * SCALE), (int)(DEFAULT_DIALOG_SIZE * 1.25 * SCALE)).display();
         }else{
-            new ARKInterfaceAlert("Notice", "Conversion completed with errors, written to errors.txt in your user documents directory.", (int)(DEFAULT_DIALOG_SIZE * SCALE * 2), (int)(DEFAULT_DIALOG_SIZE * SCALE * 2)).display();
+            new ARKInterfaceAlert("Notice", "Conversion completed with errors, written to errors.txt in your user desktop directory.", (int)(DEFAULT_DIALOG_SIZE * SCALE * 2), (int)(DEFAULT_DIALOG_SIZE * SCALE * 2)).display();
 
             try {
                 log.logEvent("Writing error report...");
-                File f = new File(System.getProperty("user.home") + "\\Documents", "errors.txt");
+                File f = new File(ARKAppCompat.getOSSpecificDesktopRoot(), "B2PErrors.txt");
                 if(f.exists()) f.delete();
                 f.createNewFile();
 

@@ -36,7 +36,7 @@ public class B2PCore
         }else if(data == null || data.length <= method.length){
             throw new IllegalArgumentException("Provided data array is invalid");
         }else if(data.length > MAX_DATA_LENGTH){
-            throw new IllegalArgumentException("Input data is larger than allowed length");
+            throw new IllegalArgumentException("Input data is larger than allowed length (300 MB)");
         }
         
         int perPixelBytes = (method.length * 3) + method.MSR;
