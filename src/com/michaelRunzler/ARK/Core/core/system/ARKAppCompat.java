@@ -17,6 +17,12 @@ public class ARKAppCompat
     public static final File DESKTOP_CACHE_ROOT = getOSSpecificAppCacheRoot();
     public static final File DESKTOP_DATA_ROOT = getOSSpecificAppPersistRoot();
 
+    public static final String INDEX_FILE_EXTENSION     = ".vcsi";
+    public static final String CONFIG_FILE_EXTENSION    = ".vcss";
+    public static final String CLASS_FILE_EXTENSION     = ".axc";
+    public static final String DATABASE_FILE_EXTENSION  = ".vcsd";
+    public static final String LOG_FILE_EXTENSION       = ".vcsl";
+
     /**
      * Gets the generic type of OS that this JVM is running on from a list of possible choices. Specific architecture is
      * not determined, but some type information is determined, for example, it cannot tell which <i>version</i> of Windows

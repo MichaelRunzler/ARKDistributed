@@ -1,8 +1,10 @@
 package X34.Processors;
 
 import com.sun.istack.internal.NotNull;
+import com.sun.istack.internal.Nullable;
 import core.CoreUtil.ClassUtils;
 
+import java.io.File;
 import java.io.IOException;
 
 public class X34ProcessorRegistry
@@ -10,6 +12,7 @@ public class X34ProcessorRegistry
     // Local cache of results from getAvailableProcessors and sub-methods. Since it is not possible for the class configuration
     // to change after compilation, we can safely assume that the result from said methods will be the same every single time
     // it is run, so we can sacrifice a small amount of memory for much faster run times and fewer disk accesses.
+    // Also useful for caching the results from the external load method alongside the internal results.
     private static Class[] available = null;
     private static X34RetrievalProcessor[] availableObjects = null;
 
@@ -137,5 +140,24 @@ public class X34ProcessorRegistry
         // Store result in internal cache array for future use.
         available = ClassUtils.getClasses(X34RetrievalProcessor.class.getPackage(), X34RetrievalProcessor.class);
         return available;
+    }
+
+    /**
+     * Loads any external {@link X34RetrievalProcessor} classes from an external directory.
+     * Adds any valid classes found by the search to the internal registry.
+     * @param directory the directory to load classes from
+     * @return the list of classes found by the search
+     */
+    public static @Nullable Class[] getProcessorsFromExternalDir(@NotNull File directory)
+    {
+        Class[] result = ClassUtils.loadClassesFromExternalDirectory(directory, X34RetrievalProcessor.class);
+        if(result == null || result.length == 0) return result;
+
+        Class[] temp = new Class[result.length + available.length];
+        System.arraycopy(available, 0, temp, 0, available.length);
+        System.arraycopy(result, 0, temp, available.length, result.length);
+        available = temp;
+
+        return result;
     }
 }

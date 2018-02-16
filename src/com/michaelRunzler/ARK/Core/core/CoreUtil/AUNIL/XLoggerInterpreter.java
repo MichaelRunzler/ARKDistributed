@@ -198,7 +198,7 @@ public class XLoggerInterpreter
      * @see XLoggerInterpreter#logEvent(LogEventLevel, Exception) for the alternate version of this method
      */
     public void logEvent(Exception e) {
-        this.logEvent(LogEventLevel.ERROR, e);
+        this.logEvent(LogEventLevel.DEBUG, e);
     }
 
     /**

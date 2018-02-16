@@ -188,14 +188,16 @@ public class DVProcessor extends X34RetrievalProcessor
             try {
                 currentOffset = Integer.parseInt(json.getElementByName("next_offset").getValue());
             }catch (NumberFormatException | NullPointerException e){
+                log.logEvent("End of valid entries.");
                 currentOffset = -1;
+                continue;
             }
 
             // Reset the rate-limit detection flag since we got a page successfully.
             rtlTriggered = false;
 
-            // Sleep for 1000ms to avoid server overload.
-            try{Thread.sleep(1000);}catch(InterruptedException ignored){}
+            // Sleep for 2s to avoid server overload.
+            try{Thread.sleep(2000);}catch(InterruptedException ignored){}
         }while (currentOffset != -1);
 
         log.logEvent("Page pull complete.");

@@ -115,37 +115,18 @@ public class X34Core
         if(configList == null) throw new ValidationException("Rule failed to pass validation.");
         ArrayList<X34Schema> schemas = new ArrayList<>(Arrays.asList(configList.getSchemas()));
 
-        log.logEvent("Validating schema" + (schemas.size() == 1 ? "" : "s") + "...");
-
-        // Validate Schemas one by one, adding their indexes to the buffer array if they fail validation
-        ArrayList<Integer> failed = new ArrayList<>();
-        for(int i = 0; i < schemas.size(); i++){
-            if(!schemas.get(i).validate()) failed.add(i);
-        }
-
-        // If the size of the buffer is the same as the Schema array, we know all of them failed validation
-        if(failed.size() == schemas.size()) throw new ValidationException("All Schemas failed to validate.");
-
-        // Otherwise, print the indices of the schema(s) that failed validation (if there are any) and remove them
-        if(failed.size() > 0){
-            log.logEvent("The following schema" + (failed.size() == 1 ? "" : "s") + " failed to validate:");
-            for(int i : failed){
-                log.logEvent(schemas.get(i).type + " : " + schemas.get(i).query + " @ index " + i);
-                schemas.remove(schemas.get(i));
-            }
-        }
-
-        // Iterate through the remaining schemas (guaranteed not to be 0, since we already checked that) and run retrieval for all of them,
-        // adding their results to the master array as we do so.
+        // Iterate through the available schemas and run retrieval for all of them, adding their results to the master array as we do so.
         ArrayList<X34Image> returned = new ArrayList<>();
         for(int i = 0; i < schemas.size(); i++){
             log.logEvent("Running retrieval operation " + (i + 1) + " of " + schemas.size());
             try {
                 returned.addAll(retrieve(schemas.get(i)));
                 log.logEvent("Retrieval " + (i + 1) + " of " + schemas.size() + " completed with no errors.");
-            } catch (IOException | ValidationException e) {
-                log.logEvent("Retrieval operation returned exception with partial results, see below.");
+            } catch (IOException e) {
+                log.logEvent(LogEventLevel.ERROR, "Retrieval operation returned exception with partial results, see below.");
                 log.logEvent(e);
+            } catch (ValidationException e){
+                log.logEvent(LogEventLevel.WARNING, e.getMessage());
             }
         }
 
@@ -164,7 +145,8 @@ public class X34Core
      */
     public void writeImagesToFile(ArrayList<X34Image> images, File parent, boolean overwriteExisting, boolean createDirs) throws IOException
     {
-        if(parent == null || (!parent.exists() && !createDirs)) throw new IllegalArgumentException("Destination directory is invalid or does not exist");
+        if(parent == null) throw new IllegalArgumentException("Destination directory cannot be null");
+        else if(!parent.exists() && !createDirs) throw new IllegalArgumentException("Destination directory is invalid or does not exist");
         if(images == null || images.size() == 0) return;
         if(createDirs && !parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create parent directory");
 

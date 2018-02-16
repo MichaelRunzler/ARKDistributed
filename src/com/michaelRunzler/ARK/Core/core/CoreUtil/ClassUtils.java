@@ -5,9 +5,7 @@ import com.sun.istack.internal.Nullable;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -28,7 +26,7 @@ public class ClassUtils
      * @throws ClassNotFoundException if a class file found in the search is not registered with the classloader
      * @throws IOException if a critical I/O error is encountered while searching the package tree
      */
-    public static Class[] getClasses(@NotNull Package root, @Nullable Class superclass, @Nullable Class... interfaces) throws ClassNotFoundException, IOException
+    public static @NotNull Class[] getClasses(@NotNull Package root, @Nullable Class superclass, @Nullable Class... interfaces) throws ClassNotFoundException, IOException
     {
         // Get the name of the provided package.
         String packageName = root.getName();
@@ -48,8 +46,7 @@ public class ClassUtils
             } catch (URISyntaxException e) {
                 dirs.add(new File(resource.getFile()));
             } catch (IllegalArgumentException e){ // URI is not hierarchical, probably a JARfile, use JAR search instead
-                List<Class> clss = findClassesInJar(resource, packageName, superclass, interfaces);
-                return clss.toArray(new Class[clss.size()]);
+                return findClassesInJar(resource, packageName, superclass, interfaces);
             }
         }
 
@@ -63,7 +60,62 @@ public class ClassUtils
     }
 
     /**
+     * Loads all valid class files from a specified external directory.
+     * Recursively searches all subdirectories in the parent directory before initiating class load.
+     * Will not load classes from JAR files, use {@link #findClassesInJar(URL, String, Class, Class[])} for that.
+     * Use {@link #findClasses(File, String, Class, Class[])} for loading classes from an internal non-JAR directory.
+     * @param directory the directory to use as the base for the search
+     * @param superclass an optional additional filter requirement. If this argument is non-null, classes will be required to
+     *                   have this class as a superclass in order to qualify for addition to the list.
+     * @param interfaces an optional additional filter requirement. If this argument is present and non-null, classes will
+     *                   be required to implement all of these interfaces in order to qualify for addition to the list.
+     * @return The classes found by the search
+     */
+    public static @Nullable Class[] loadClassesFromExternalDirectory(@NotNull File directory, @Nullable Class superclass, @Nullable Class... interfaces)
+    {
+        if(!directory.exists()) return null;
+
+        URL target;
+        try{
+            target = directory.toURI().toURL();
+        }catch (MalformedURLException e){
+            return null;
+        }
+
+        // Get the contents of the directory.
+        File[] contents = IOTools.getFileTree(directory);
+
+        if(contents.length == 1) return null;
+
+        ClassLoader loader = new URLClassLoader(new URL[]{target});
+        List<Class> results = new ArrayList<>();
+
+        // Iterate through the list of files returned by the parser, skipping the error status file at the end of the list.
+        for(int i = 0; i < contents.length - 1; i++)
+        {
+            File f = contents[i];
+            // Skip this file if it is a directory, has an incorrect file extension, or does not exist.
+            if(f.isDirectory() || !f.getName().contains(".class") || !f.exists()) continue;
+
+            // Get the relative section of the file path for use by the ClassLoader
+            String relPath = f.getAbsolutePath();
+            relPath = relPath.substring(relPath.indexOf(directory.getAbsolutePath()) + directory.getAbsolutePath().length() + 1);
+            relPath = relPath.replace('\\', '.');
+
+            // Try loading the class. If successful, the loaded class will be added to the list. If failed, it will be skipped.
+            try{
+                Class cls = loader.loadClass(relPath);
+                if((superclass == null || cls.getSuperclass().equals(superclass)) && verifyInterfaces(cls, interfaces)) results.add(cls);
+            }catch (ClassNotFoundException ignored){}
+        }
+
+        return results.toArray(new Class[results.size()]);
+    }
+
+    /**
      * Recursive method used to find all classes in a given directory and subdirectories.
+     * Only works in directories that are managed by the default {@link ClassLoader} instance. Not suitable for external directories.
+     * Use {@link #loadClassesFromExternalDirectory(File, Class, Class[])} for that.
      * Original base code sourced from <a href="https://dzone.com/articles/get-all-classes-within-package">http://dzone.com</a>.
      * @param directory   The base directory to search
      * @param packageName The package name for classes found inside the base directory
@@ -108,7 +160,7 @@ public class ClassUtils
      * @throws ClassNotFoundException if a class file found in the search is not registered with the classloader
      * @throws IOException if an I/O error is encountered while finding or parsing the JAR in question
      */
-    private static List<Class> findClassesInJar(@NotNull URL jarURL, @NotNull String packageName, @Nullable Class superclass, @Nullable Class... interfaces) throws ClassNotFoundException, IOException
+    public static @NotNull Class[] findClassesInJar(@NotNull URL jarURL, @NotNull String packageName, @Nullable Class superclass, @Nullable Class... interfaces) throws ClassNotFoundException, IOException
     {
         File f;
         try {
@@ -129,7 +181,7 @@ public class ClassUtils
             }
         }
 
-        return classes;
+        return classes.toArray(new Class[classes.size()]);
     }
 
     private static boolean verifyInterfaces(Class clazz, Class[] interfaces)
