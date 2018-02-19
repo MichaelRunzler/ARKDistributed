@@ -1,6 +1,6 @@
 package X34.Core;
 
-import X34.Core.IO.X34ConfigIO;
+import X34.Core.IO.X34Config;
 import X34.Core.IO.X34IndexDelegator;
 import X34.Core.IO.X34IndexIO;
 import X34.Processors.X34ProcessorRegistry;
@@ -26,7 +26,7 @@ public class X34Core
 
     /**
      * Default constructor. Uses the main instance from the {@link X34IndexDelegator}
-     * for its reference to the {@link X34ConfigIO config} and {@link X34IndexIO} index I/O objects.
+     * for its reference to the {@link X34Config config} and {@link X34IndexIO} index I/O objects.
      */
     public X34Core()
     {
@@ -37,7 +37,7 @@ public class X34Core
 
     /**
      * Same as the default constructor, but uses the specified dynamic instance from the {@link X34IndexDelegator}
-     * for its reference to the {@link X34ConfigIO config} and {@link X34IndexIO} index I/O objects.
+     * for its reference to the {@link X34Config config} and {@link X34IndexIO} index I/O objects.
      * @param IID the instance ID to pass to the Delegator
      */
     public X34Core(short IID)

@@ -1,5 +1,6 @@
 package core.UI;
 
+import core.CoreUtil.JFXUtil;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -11,7 +12,6 @@ import javafx.stage.Stage;
 
 public class ARKInterfaceDialogYN
 {
-
     private Stage window;
     private Label label;
     private Button yesButton, noButton;
@@ -48,8 +48,18 @@ public class ARKInterfaceDialogYN
         AnchorPane.setLeftAnchor(label, 0.0);
         AnchorPane.setRightAnchor(label, 0.0);
 
-        scene = new Scene(layout, width, height);
+        if(width > 0 && height > 0)
+            scene = new Scene(layout, width, height);
+        else{
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 100 : 100) * JFXUtil.SCALE;
+            scene = new Scene(layout, size, size);
+        }
         window.setScene(scene);
+    }
+
+    public ARKInterfaceDialogYN(String title, String message, String yesText, String noText)
+    {
+        this(title, message, yesText, noText, -1, -1);
     }
 
     boolean answer;

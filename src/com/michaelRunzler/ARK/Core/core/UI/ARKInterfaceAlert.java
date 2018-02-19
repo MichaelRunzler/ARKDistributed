@@ -1,5 +1,6 @@
 package core.UI;
 
+import core.CoreUtil.JFXUtil;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -45,7 +46,18 @@ public class ARKInterfaceAlert
         AnchorPane.setLeftAnchor(label, 0.0);
         AnchorPane.setRightAnchor(label, 0.0);
 
-        scene = new Scene(layout, width, height);
+        if(width > 0 && height > 0)
+            scene = new Scene(layout, width, height);
+        else{
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 100 : 100) * JFXUtil.SCALE;
+            scene = new Scene(layout, size, size);
+        }
+        window.setScene(scene);
+    }
+
+    public ARKInterfaceAlert(String title, String message)
+    {
+        this(title, message, -1, -1);
     }
 
     public void display()

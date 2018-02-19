@@ -8,7 +8,6 @@ import Bin2Pix.Core.B2PCore;
 import Bin2Pix.Core.ConversionException;
 import Bin2Pix.Core.EncodingSchema;
 import Bin2Pix.Core.ImageAdapter;
-import com.sun.istack.internal.NotNull;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.UI.ARKInterfaceAlert;
@@ -18,13 +17,11 @@ import javafx.application.Application;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Screen;
@@ -34,6 +31,8 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import static core.CoreUtil.JFXUtil.*;
 
 public class B2PGUI extends Application
 {
@@ -69,9 +68,6 @@ public class B2PGUI extends Application
     // Global variables and constants
     private HashMap<String, ImageAdapter> adapters;
 
-    private final double BASE_SCALE_SIZE = 16.0;
-    private final double SCALE = Math.rint(new Text("").getLayoutBounds().getHeight()) / BASE_SCALE_SIZE;
-    private final double DEFAULT_SPACING = 32.0;
     private final int DEFAULT_DIALOG_SIZE = 80;
 
     private FileListViewer fileListViewer;
@@ -207,35 +203,35 @@ public class B2PGUI extends Application
 
         // Some of these are called twice because one sets the position relative to the grid in some coordinates,
         // and the other sets the position as a non-grid number in other coordinates.
-        setElementPositionInGrid(exit, 0, -1, -1, 0);
-        setElementPositionInGrid(convert, -1, 0, -1, 0);
-        setElementPositionInGrid(fileList, -1, 1, -1, 0);
+        setElementPositionInGrid(layout, exit, 0, -1, -1, 0);
+        setElementPositionInGrid(layout, convert, -1, 0, -1, 0);
+        setElementPositionInGrid(layout, fileList, -1, 1, -1, 0);
 
-        setElementPositionInGrid(sourceSelect, 0, -1, 0, -1);
-        setElementPositionInGrid(destSelect, 0, -1, 1, -1);
+        setElementPositionInGrid(layout, sourceSelect, 0, -1, 0, -1);
+        setElementPositionInGrid(layout, destSelect, 0, -1, 1, -1);
 
-        setElementPositionInGrid(overwrite, 0, -1, 2, -1);
+        setElementPositionInGrid(layout, overwrite, 0, -1, 2, -1);
 
-        setElementPositionInGrid(aspectRatioLabel, 0, -1, 3, -1);
-        setElementPositionInGrid(aspectRatioNum, 0, -1, 4, -1);
-        setElementPositionInGrid(aspectRatioColon, -1, -1, 4, -1);
-        setElementPositionInGrid(aspectRatioDenom, -1, -1, 4, -1);
-        setElementPosition(aspectRatioColon, aspectRatioNum.getPrefWidth(), -1, -1, -1);
-        setElementPosition(aspectRatioDenom, aspectRatioDenom.getPrefWidth() + aspectRatioColon.getPrefWidth(), -1, -1, -1);
+        setElementPositionInGrid(layout, aspectRatioLabel, 0, -1, 3, -1);
+        setElementPositionInGrid(layout, aspectRatioNum, 0, -1, 4, -1);
+        setElementPositionInGrid(layout, aspectRatioColon, -1, -1, 4, -1);
+        setElementPositionInGrid(layout, aspectRatioDenom, -1, -1, 4, -1);
+        setElementPosition(layout, aspectRatioColon, aspectRatioNum.getPrefWidth(), -1, -1, -1);
+        setElementPosition(layout, aspectRatioDenom, aspectRatioDenom.getPrefWidth() + aspectRatioColon.getPrefWidth(), -1, -1, -1);
 
-        setElementPositionInGrid(progressLabel, 0, -1, -1, 3);
-        setElementPositionInGrid(progress, 0, -1, -1, 2);
-        setElementPositionInGrid(progressActiveIndicator, -1, -1, -1, 2);
-        setElementPosition(progressActiveIndicator, progress.getPrefWidth() - (15 * SCALE), -1, -1, -1);
+        setElementPositionInGrid(layout, progressLabel, 0, -1, -1, 3);
+        setElementPositionInGrid(layout, progress, 0, -1, -1, 2);
+        setElementPositionInGrid(layout, progressActiveIndicator, -1, -1, -1, 2);
+        setElementPosition(layout, progressActiveIndicator, progress.getPrefWidth() - (15 * SCALE), -1, -1, -1);
 
-        setElementPositionInGrid(format, -1, 0, 0, -1);
-        setElementPositionInGrid(advanced, -1, 0, 2, -1);
-        setElementPositionInGrid(MSRPref, -1, 0, 3, -1);
-        setElementPositionInGrid(lengthPref, -1, 0, 4, -1);
-        setElementPositionInGrid(MSRPrefLabel, -1, -1, 3, -1);
-        setElementPositionInGrid(lengthPrefLabel, -1, -1, 4, -1);
-        setElementPosition(MSRPrefLabel, -1, MSRPref.getPrefWidth(), -1, -1);
-        setElementPosition(lengthPrefLabel, -1, lengthPref.getPrefWidth(), -1, -1);
+        setElementPositionInGrid(layout, format, -1, 0, 0, -1);
+        setElementPositionInGrid(layout, advanced, -1, 0, 2, -1);
+        setElementPositionInGrid(layout, MSRPref, -1, 0, 3, -1);
+        setElementPositionInGrid(layout, lengthPref, -1, 0, 4, -1);
+        setElementPositionInGrid(layout, MSRPrefLabel, -1, -1, 3, -1);
+        setElementPositionInGrid(layout, lengthPrefLabel, -1, -1, 4, -1);
+        setElementPosition(layout, MSRPrefLabel, -1, MSRPref.getPrefWidth(), -1, -1);
+        setElementPosition(layout, lengthPrefLabel, -1, lengthPref.getPrefWidth(), -1, -1);
 
         log.logEvent("Position setup complete.");
     }
@@ -349,8 +345,7 @@ public class B2PGUI extends Application
             protected Task createTask() {
                 return new Task() {
                     @Override
-                    protected Object call() throws Exception
-                    {
+                    protected Object call() {
                         XLoggerInterpreter xl = new XLoggerInterpreter("Bin2Pix Conversion Worker");
                         ArrayList<Exception> errors = new ArrayList<>();
 
@@ -500,42 +495,5 @@ public class B2PGUI extends Application
         log.logEvent("Shutting down...");
         log.disassociate();
         System.exit(0);
-    }
-
-    /*
-     * UTILS
-     */
-
-    // autocompensates for scaling
-    private void setElementPosition(@NotNull Node element, double left, double right, double top, double bottom)
-    {
-        if(!layout.getChildren().contains(element)) layout.getChildren().add(element);
-
-        if(left >= 0) AnchorPane.setLeftAnchor(element, left * SCALE);
-        if(right >= 0) AnchorPane.setRightAnchor(element, right * SCALE);
-        if(top >= 0) AnchorPane.setTopAnchor(element, top * SCALE);
-        if(bottom >= 0) AnchorPane.setBottomAnchor(element, bottom * SCALE);
-    }
-
-    // autocompensates for scaling
-    private void setElementPositionInGrid(@NotNull Node element, int leftGridID, int rightGridID, int topGridID, int bottomGridID)
-    {
-        if(!layout.getChildren().contains(element)) layout.getChildren().add(element);
-
-        if(leftGridID >= 0) AnchorPane.setLeftAnchor(element, (DEFAULT_SPACING * 2 * SCALE) * leftGridID);
-        if(rightGridID >= 0) AnchorPane.setRightAnchor(element, (DEFAULT_SPACING * 2 * SCALE) * rightGridID);
-        if(topGridID >= 0) AnchorPane.setTopAnchor(element, (DEFAULT_SPACING * SCALE) * topGridID);
-        if(bottomGridID >= 0) AnchorPane.setBottomAnchor(element, (DEFAULT_SPACING * SCALE) * bottomGridID);
-    }
-
-    // numerical only, factors for scaling, digit width 15px
-    private void limitTextFieldToNumerical(TextField node, int maxDigits)
-    {
-        node.setPrefWidth((15 * maxDigits) * SCALE);
-        node.textProperty().addListener((observable, oldValue, newValue) -> {
-            if(!newValue.matches("\\d*") || newValue.length() > maxDigits){
-                node.setText(oldValue);
-            }
-        });
     }
 }

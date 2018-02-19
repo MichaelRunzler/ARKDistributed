@@ -8,6 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * Stores and manages application configuration settings. Also manages read/write to/from the config
@@ -15,7 +16,7 @@ import java.util.HashMap;
  *
  * Copied from ARK-Android.
  */
-public class X34ConfigIO
+public class X34Config
 {
     private HashMap<String, Object> storage;
     private HashMap<String, Object> defaults;
@@ -26,7 +27,7 @@ public class X34ConfigIO
     /**
      * Constructs a new instance of this object with an empty internal registry and null file target.
      */
-    public X34ConfigIO() {
+    public X34Config() {
         storage = new HashMap<>();
         defaults = new HashMap<>();
         tempFlags = new HashMap<>();
@@ -38,7 +39,7 @@ public class X34ConfigIO
      * Constructs a new instance of this object with an empty internal registry and the specified file target.
      * @param target a File representing the desired target configuration file.
      */
-    public X34ConfigIO(File target){
+    public X34Config(File target){
         storage = new HashMap<>();
         defaults = new HashMap<>();
         tempFlags = new HashMap<>();
@@ -53,6 +54,44 @@ public class X34ConfigIO
      */
     public Object getSetting(String key) {
         return storage.getOrDefault(key, null);
+    }
+
+    /**
+     * Gets a setting value from the stored list.
+     * Returns the default value provided if a value was not found at the specified key.
+     * Auto-casts the returned value to the same type as the default value if a setting was found at the specified key.
+     * @param key the key to search for in the settings index
+     * @param defaultValue the value to return if no value is found at the specified index. Also used as a type-reference
+     *                     for auto-casting the return value if a key was found.
+     * @return the value corresponding to the provided key, or the provided default value if the key does not exist in the index
+     */
+    public <T> T getSettingOrDefault(String key, T defaultValue)
+    {
+        try{
+            T retV = (T)storage.getOrDefault(key, defaultValue);
+            if(retV.getClass() == defaultValue.getClass() || (retV.getClass().getSuperclass() == defaultValue.getClass().getSuperclass()))
+            return retV;
+            else return defaultValue;
+        }catch (ClassCastException e){
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Gets a setting value from the stored list.
+     * Returns the default value provided if a value was not found at the specified key.
+     * Also stores the provided default value if the setting did not exist in the index.
+     * Auto-casts the returned value to the same type as the default value if a setting was found at the specified key.
+     * @param key the key to search for in the settings index
+     * @param defaultValue the value to return if no value is found at the specified index. Also used as a type-reference
+     *                     for auto-casting the return value if a key was found.
+     * @return the value corresponding to the provided key, or the provided default value if the key does not exist in the index
+     */
+    public <T> T getSettingOrStore(String key, T defaultValue)
+    {
+        T retV = getSettingOrDefault(key, defaultValue);
+        if(retV == defaultValue) storeSetting(key, retV);
+        return retV;
     }
 
     /**
@@ -402,6 +441,24 @@ public class X34ConfigIO
         if(storage.containsKey(key)) storage.remove(key);
 
         storage.put(key, defaults.get(key));
+    }
+
+    /**
+     * Clears the main index, and copies all default settings in the defaults index to the main index.
+     * This is irreversible, use caution.
+     * If no defaults index exists (or if it is empty), no action will be taken.
+     * The defaults index is left intact, and is treated as read-only.
+     */
+    public void loadAllDefaults()
+    {
+        if(defaults == null || defaults.size() == 0) return;
+        storage.clear();
+
+        Iterator<String> itr = defaults.keySet().iterator();
+        for(int i = 0; i < defaults.keySet().size(); i++){
+            String key = itr.next();
+            storage.put(key, defaults.get(key));
+        }
     }
 
     /**
