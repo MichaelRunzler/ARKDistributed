@@ -35,9 +35,7 @@ public class X34IndexIO
     }
 
     /**
-     * Loads an index with a specified ID. If successfully loaded, the loaded index will be cached for future use. Multiple
-     * successive calls to this method with the same ID will result in lower process times due to the index being cached.
-     * Only one index may be cached at any given time. The cached index will always be the most recent successfully loaded index.
+     * Loads an index with a specified ID.
      * @param id the ID of the index to load
      * @param processor the ID of the processor that was used to create the target index, provide null to load indices without
      *                  a processor identifier.
@@ -54,7 +52,7 @@ public class X34IndexIO
 
         // Generate filename. Filename is comprised of the neutralized ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
-        File target = new File(parent, nid.replace("?", "").replace("*", "") + (processor == null || processor.isEmpty() ? "" : "%" + processor) + INDEX_FILE_EXTENSION);
+        File target = assembleIndexFileDescriptor(id, processor);
 
         X34Index index;
 
@@ -95,7 +93,7 @@ public class X34IndexIO
 
         // Generate filename. Filename is comprised of the neutralized ID of the index, followed by its processor ID if it has one, and then the file extension.
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
-        File target = new File(parent, index.id.replace("?", "").replace("*", "")  + (index.metadata.get("processor") == null ? "" : "%" + index.metadata.get("processor")) + INDEX_FILE_EXTENSION);
+        File target = assembleIndexFileDescriptor(index.id, index.metadata.get("processor"));
 
         if(target.exists() && !target.delete()) throw new IOException("Unable to delete existing index file");
         if(!target.createNewFile()) throw new IOException("Unable to create new index file");
@@ -107,6 +105,28 @@ public class X34IndexIO
         else os.writeObject(index);
         os.flush();
         os.close();
+    }
+
+    /**
+     * Checks if an index file exists that matches the specified ID and processor ID.
+     * Does not check index validity, only if the file is present and non-zero-length.
+     * To get more details about an index file, it must be loaded. For that, use {@link #loadIndex(String, String)}.
+     * @param id the ID of the index to load
+     * @param processor the ID of the processor that was used to create the target index, provide null to load indices without
+     *                  a processor identifier.
+     * @return {@code true} if an index file exists that correlates to the provided IDs, {@code false} if otherwise
+     */
+    public synchronized boolean checkIndex(@NotNull String id, @Nullable String processor)
+    {
+        if(id == null || id.length() == 0) throw new IllegalArgumentException("ID cannot be null or zero-length");
+
+        File target = assembleIndexFileDescriptor(id, processor);
+
+        return target.exists() && target.length() > 0;
+    }
+
+    private File assembleIndexFileDescriptor(String id, String proc) {
+        return new File(parent, id.replace("?", "").replace("*", "")  + (proc == null ? "" : "%" + proc) + INDEX_FILE_EXTENSION);
     }
 
     /**

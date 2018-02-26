@@ -2,6 +2,7 @@ package core.CoreUtil;
 
 import com.sun.istack.internal.NotNull;
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -13,6 +14,10 @@ import java.util.Deque;
  */
 public class ARKArrayUtil
 {
+    //
+    // Type conversion methods
+    //
+
     /**
      * Converts a character array to a byte array.
      * @param input the char[] to convert
@@ -66,6 +71,10 @@ public class ARKArrayUtil
         }
         return null;
     }
+
+    //
+    // Byte array manipulation
+    //
 
     /**
      * Searches for a byte[] inside of another byte[].
@@ -183,6 +192,10 @@ public class ARKArrayUtil
         return true;
     }
 
+    //
+    // String/array encoding methods
+    //
+
     /**
      * Converts a String into a byte array by parsing it two characters at a time and converting the found characters
      * into a byte value equivalent to the hex value (<i>NOT</i> the character ID) of the parsed characters.
@@ -291,6 +304,10 @@ public class ARKArrayUtil
         return res.toString();
     }
 
+    //
+    // General utility methods
+    //
+
     /**
      * Gets the index of a partial or complete {@link String} in a provided {@link String} array.
      * The search is conducted by calling {@link String#contains(CharSequence)} on each entry in the array and returning
@@ -323,5 +340,306 @@ public class ARKArrayUtil
 
         for(Object o : array) if (o != null) return false;
         return true;
+    }
+
+    //
+    // Array contents check methods
+    //
+
+    /**
+     * Gets the index of an object inside of an array of that type.
+     * Functions identically to {@link ArrayList#indexOf(Object)}.
+     * @param array the array to search
+     * @param search the object to find inside the array
+     * @param <T> the type of object that the array and search query are a member of
+     * @return the index of the searched object, or {@code -1} if no results are found or the array is invalid
+     */
+    public static <T> int contains(T[] array, T search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == null && search == null) return i;
+            else if(array[i].equals(search)) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * Gets the index of a primitive value inside of an array of that type.
+     * Functions identically to {@link ArrayList#indexOf(Object)}, but without encapsulating primitives inside their object type.
+     * @param array the array to search
+     * @param search the primitive value to find inside the array
+     * @return the index of the searched value, or {@code -1} if no results are found or the array is invalid
+     */
+    public static int contains(int[] array, int search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(double[] array, double search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(float[] array, float search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(byte[] array, byte search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(long[] array, long search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(short[] array, short search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(char[] array, char search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    /**
+     * @see #contains(int[], int) for general information
+     */
+    public static int contains(boolean[] array, boolean search)
+    {
+        if(array == null) return -1;
+
+        for(int i = 0; i < array.length; i++) {
+            if(array[i] == search) return i;
+        }
+
+        return -1;
+    }
+
+    //
+    // Array index removal methods
+    //
+
+    /**
+     * Removes the value at a specified index from an array of objects.
+     * This is done by selectively copying all other values in the source array over to a temporary destination array.
+     * More specifically, given a source array of size {@code x} and a target index {@code y}, the method will create a
+     * destination array of size {@code x - 1}. It will then copy all values from indices {@code 0} to {@code y - 1}
+     * to the corresponding indices in the destination array, and finally copy all values from indices {@code y + 1} to {@code x},
+     * shifting the index of each copied value left by one, so that the resultant array is identical to the source array,
+     * except that all entries at and past the target index are shifted left by one, and the total length is one shorter.
+     * The source array is considered read-only in any case.
+     * @param array the source array. If this is zero-length or {@code null}, it will be returned without modification.
+     * @param index the index of the value to remove. If this is out-of-bounds of the source array, said array will be returned
+     *              without modification.
+     * @param <T> the type of the array being provided
+     * @return a shallow copy of the source array with the specified index removed, or the source array itself if it or the
+     * provided index were invalid
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T[] remove(final T[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        // Get class type of the source array
+        Class type = array.getClass().getComponentType();
+
+        // Type variable arrays cannot be instantiated directly, so the class type we got earlier has to be used
+        // to instantiate the array instead.
+        T[] temp = (T[])Array.newInstance(type, array.length - 1);
+        int after = array.length - index - 1;
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * Removes the value at a specified index from an array of primitive values.
+     * This is done by selectively copying all other values in the source array over to a temporary destination array.
+     * More specifically, given a source array of size {@code x} and a target index {@code y}, the method will create a
+     * destination array of size {@code x - 1}. It will then copy all values from indices {@code 0} to {@code y - 1}
+     * to the corresponding indices in the destination array, and finally copy all values from indices {@code y + 1} to {@code x},
+     * shifting the index of each copied value left by one, so that the resultant array is identical to the source array,
+     * except that all entries at and past the target index are shifted left by one, and the total length is one shorter.
+     * The source array is considered read-only in any case.
+     * @param array the source array. If this is zero-length or {@code null}, it will be returned without modification.
+     * @param index the index of the value to remove. If this is out-of-bounds of the source array, said array will be returned
+     *              without modification.
+     * @return a shallow copy of the source array with the specified index removed, or the source array itself if it or the
+     * provided index were invalid
+     */
+    public static int[] remove(final int[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        int[] temp = new int[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static double[] remove(final double[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        double[] temp = new double[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static float[] remove(final float[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        float[] temp = new float[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static byte[] remove(final byte[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        byte[] temp = new byte[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static long[] remove(final long[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        long[] temp = new long[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static short[] remove(final short[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        short[] temp = new short[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static char[] remove(final char[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        char[] temp = new char[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
+    }
+
+    /**
+     * @see #remove(int[], int) for general information
+     */
+    public static boolean[] remove(final boolean[] array, int index)
+    {
+        if(index < 0 || array == null || index >= array.length) return array;
+
+        int after = array.length - index - 1;
+        boolean[] temp = new boolean[array.length - 1];
+        if(index > 0) System.arraycopy(array, 0, temp, 0, index);
+        if(after > 0) System.arraycopy(array, index + 1, temp, index, after);
+        return temp;
     }
 }

@@ -24,6 +24,8 @@ public class X34Core
     private XLoggerInterpreter log;
     private X34IndexIO loader;
 
+    //todo override finalizer to close logger
+
     /**
      * Default constructor. Uses the main instance from the {@link X34IndexDelegator}
      * for its reference to the {@link X34Config config} and {@link X34IndexIO} index I/O objects.
@@ -112,7 +114,7 @@ public class X34Core
     public ArrayList<X34Image> retrieve(@NotNull X34Rule configList) throws ValidationException
     {
         // Check Rule validity
-        if(configList == null) throw new ValidationException("Rule failed to pass validation.");
+        if(configList == null || !configList.validate()) throw new ValidationException("Rule failed to pass validation.");
         ArrayList<X34Schema> schemas = new ArrayList<>(Arrays.asList(configList.getSchemas()));
 
         // Iterate through the available schemas and run retrieval for all of them, adding their results to the master array as we do so.

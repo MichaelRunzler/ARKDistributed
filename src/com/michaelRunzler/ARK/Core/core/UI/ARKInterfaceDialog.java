@@ -46,7 +46,6 @@ public class ARKInterfaceDialog
         layout.getChildren().addAll(label, yesButton, noButton, input);
         layout.setPadding((new Insets(15, 15, 15, 15)));
 
-        AnchorPane.setBottomAnchor(input, height * 0.4);
         AnchorPane.setLeftAnchor(input, 10.0);
         AnchorPane.setRightAnchor(input, 10.0);
         AnchorPane.setBottomAnchor(yesButton, 0.0);
@@ -57,11 +56,15 @@ public class ARKInterfaceDialog
         AnchorPane.setLeftAnchor(label, 0.0);
         AnchorPane.setRightAnchor(label, 0.0);
 
-        if(width > 0 && height > 0)
+        if(width > 0 && height > 0) {
             scene = new Scene(layout, width, height);
+            AnchorPane.setBottomAnchor(input, height * 0.4);
+        }
         else{
-            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 100 : 100) * JFXUtil.SCALE;
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 135 : 135) * JFXUtil.SCALE;
             scene = new Scene(layout, size, size);
+
+            AnchorPane.setBottomAnchor(input, (double)JFXUtil.DEFAULT_SPACING * 1.1);
         }
         window.setScene(scene);
     }

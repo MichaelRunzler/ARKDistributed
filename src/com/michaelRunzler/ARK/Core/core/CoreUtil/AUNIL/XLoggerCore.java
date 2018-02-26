@@ -297,6 +297,8 @@ public class XLoggerCore
             throw new SecurityException("Caller does not have permission to perform this operation.");
         }
 
+        internal.logEvent(LogEventLevel.DEBUG, "Verbosity changed from " + verbosity.name() + " to " + level.name());
+
         verbosity = level;
     }
 

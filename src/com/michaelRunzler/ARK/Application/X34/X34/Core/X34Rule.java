@@ -65,6 +65,7 @@ public class X34Rule implements Serializable
      */
     public boolean validate()
     {
+        if(getSchemas().length == 0) return false;
         for(X34Schema x : getSchemas()) if (!x.validate()) return false;
         return true;
     }

@@ -79,6 +79,7 @@ public class X34Config
 
     /**
      * Gets a setting value from the stored list.
+     * Useful as a compact way of making sure that a specified value exists in the config index one way or another.
      * Returns the default value provided if a value was not found at the specified key.
      * Also stores the provided default value if the setting did not exist in the index.
      * Auto-casts the returned value to the same type as the default value if a setting was found at the specified key.
@@ -267,7 +268,7 @@ public class X34Config
         if(target.exists()){
             if(!target.delete()) throw new IOException("Unable to delete current config file");
         }else{
-            if(!target.getParentFile().mkdirs()) throw new IOException("Unable to create necessary config directory path");
+            if(!target.getParentFile().exists() && !target.getParentFile().mkdirs()) throw new IOException("Unable to create necessary config directory path");
         }
 
         if(!target.createNewFile()) throw new IOException("Unable to create config file");
@@ -306,7 +307,7 @@ public class X34Config
         if(target == null || target.isDirectory()) throw new IllegalArgumentException("Config target is invalid");
 
         // If the target is valid, make sure a file exists at the specified location.
-        if(!target.exists() || (target.exists() & !target.getName().contains(".cfg")))
+        if(!target.exists() || (target.exists() & !target.getName().contains(".x34c")))
             throw new IOException("No valid config file exists at the specified location");
 
         // Target is valid. Try to load from it.
@@ -325,6 +326,7 @@ public class X34Config
         // Store the retrieved data.
         // Not an unchecked cast, but IntelliJ seems to think so...
         storage = (HashMap<String,Object>)buffer;
+        is.close();
     }
 
     /**

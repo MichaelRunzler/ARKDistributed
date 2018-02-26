@@ -112,10 +112,7 @@ public class DVProcessor extends X34RetrievalProcessor
                         try{Thread.sleep(10000);}catch(InterruptedException e1){continue;}
                         log.logEvent("Resuming retrieval.");
                         // If the rate-limit detection has been tripped twice in a row, assume that we have run across some kind of severe limit, log it as an error.
-                        if(rtlTriggered){
-                            failed ++;
-                            rtlTriggered = false;
-                        }
+                        if(rtlTriggered) failed++;
                         else rtlTriggered = true;
                         continue;
                     default:
