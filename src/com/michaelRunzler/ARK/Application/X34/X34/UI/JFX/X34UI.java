@@ -74,8 +74,7 @@ public class X34UI extends Application
     // JFX NODES
     //
 
-    @ModeLocal(0)
-    private Button retrieveManual;
+
 
     //
     // INSTANCE VARIABLES
@@ -151,7 +150,7 @@ public class X34UI extends Application
         config = X34ConfigDelegator.getMainInstance();
         config.setTarget(configFile);
         core = new X34Core();
-        ruleMgr = new X34UIRuleManager(Screen.getPrimary().getBounds().getWidth() / 2, Screen.getPrimary().getBounds().getHeight() / 2);
+        ruleMgr = new X34UIRuleManager((Screen.getPrimary().getBounds().getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2, (Screen.getPrimary().getBounds().getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
 
         // Try loading config. If it fails, assume that there is no valid config file, and load defaults instead.
         //todo add other config assignments
@@ -168,6 +167,14 @@ public class X34UI extends Application
             log.logEvent(LogEventLevel.WARNING, "Failed to load config file. Loading defaults.");
             config.loadAllDefaults();
         }
+
+        //todo remove when done
+        ArrayList<X34Rule> temp = new ArrayList<>();
+        temp.add(new X34Rule("query 1", null, "R34X", "R34P", "DVRT"));
+        temp.add(new X34Rule("query 2", null, "R34X", "R34P"));
+        temp.add(new X34Rule("query 3", null, "R34X", "R34P"));
+        temp.add(new X34Rule("query 4", null, "R34X", "R34P", "DVRT"));
+        config.storeSetting(RULE_LIST_KEY, temp);
 
         //
         // INSTANCE VARIABLE INIT
@@ -309,14 +316,7 @@ public class X34UI extends Application
         functionsMenuStartRetrieval.setOnAction(e -> retrieve());
 
         windowMenuRuleManager.setOnAction(e -> {
-            //todo remove when
-            ArrayList<X34Rule> temp = new ArrayList<>();
-            temp.add(new X34Rule("query 1", null, "R34X", "R34P", "DVRT"));
-            temp.add(new X34Rule("query 2", null, "R34X", "R34P"));
-            temp.add(new X34Rule("query 3", null, "R34X", "R34P"));
-            temp.add(new X34Rule("query 4", null, "R34X", "R34P", "DVRT"));
-
-            ruleMgr.setWorkingList(temp);
+            ruleMgr.setWorkingList(config.getSettingOrDefault(RULE_LIST_KEY, new ArrayList<>()));
             ruleMgr.display();
             config.storeSetting(RULE_LIST_KEY, ruleMgr.getCurrentRuleList());
         });

@@ -20,9 +20,13 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.concurrent.Task;
 import javafx.geometry.Orientation;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxListCell;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Region;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.util.Duration;
@@ -52,7 +56,7 @@ public class X34UIRuleManager extends ARKManagerBase
     public static final int DEFAULT_WIDTH = (int)(400 * JFXUtil.SCALE);
     public static final int DEFAULT_HEIGHT = (int)(400 * JFXUtil.SCALE);
     private static final String PROCESSOR_CONFIG_KEY = "external_processors";
-    public static final File PROCESSOR_STORAGE_DIR = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34\\Processors");
+    private static final File PROCESSOR_STORAGE_DIR = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34\\Processors");
 
     //
     // JFX NODES
@@ -70,6 +74,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private ImageView arrow;
     private ImageView divider1;
     private ImageView divider2;
+    private ImageView divider3;
 
     private Label warning;
     private Label info;
@@ -82,7 +87,8 @@ public class X34UIRuleManager extends ARKManagerBase
     //
 
     private ArrayList<X34Rule> fallback;
-    private ArrayList<SimpleBooleanProperty> selected;
+    private HashMap<X34RetrievalProcessor, SimpleBooleanProperty> selected;
+    private HashMap<X34Rule, SimpleBooleanProperty> enabled;
     private HashMap<X34RetrievalProcessor[], File> externalProcessors;
 
     private XLoggerInterpreter log;
@@ -91,6 +97,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private boolean modified;
     private boolean errored;
     private State ruleState;
+    private State enableState;
     private Timer UITimer;
 
     public X34UIRuleManager(double x, double y)
@@ -102,6 +109,7 @@ public class X34UIRuleManager extends ARKManagerBase
         //
 
         ruleState = State.IDLE;
+        enableState = State.IDLE;
         log = new XLoggerInterpreter();
         config = X34ConfigDelegator.getMainInstance();
         UITimer = new Timer();
@@ -129,6 +137,10 @@ public class X34UIRuleManager extends ARKManagerBase
         ruleDown = new Button("Down");
         addProcessor = new Button("Import Processor(s)...");
         removeProcessor = new Button("Remove Processor");
+        arrow = JFXUtil.generateGraphicFromResource("X34/assets/GUI/icon/ic_arrow_right_256px.png", 25);
+        divider1 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
+        divider2 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
+        divider3 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_horiz_256x8.png", 128, 8, true, true));
 
         warning = new Label("");
         info = new Label("");
@@ -144,23 +156,22 @@ public class X34UIRuleManager extends ARKManagerBase
         processors.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         ruleList.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
-        selected = new ArrayList<>();
+        setElementTooltips();
+        setElementKeyModifiers();
+
+        selected = new HashMap<>();
+        enabled = new HashMap<>();
 
         // Load the proper string interpreter and cell type for the processor list
         processors.setCellFactory((ListView<X34RetrievalProcessor> param) -> {
             CheckBoxListCell<X34RetrievalProcessor> cell = new CheckBoxListCell<>(param1 -> {
-                // If the new cell is valid, try to get a property from the list. If that gives a range-check error,
-                // we know that the property does not yet exist. Add it at the correct index (most likely at the end of
-                // the list, but you never know), and return it.
+                // If the new cell is valid, create a new property with the correct settings and set it to the proper position in the list.
                 if(processors.getItems().contains(param1)){
-                    try{
-                        return selected.get(processors.getItems().indexOf(param1));
-                    }catch (IndexOutOfBoundsException e) {
-                        SimpleBooleanProperty bp = new SimpleBooleanProperty();
-                        bp.addListener(e1 -> onIndexModified());
-                        selected.add(processors.getItems().indexOf(param1), bp);
-                        return bp;
-                    }
+                    SimpleBooleanProperty bp = new SimpleBooleanProperty();
+                    bp.addListener(e1 -> onIndexModified());
+
+                    selected.put(param1, bp);
+                    return bp;
                 }else return null;
             });
 
@@ -179,25 +190,59 @@ public class X34UIRuleManager extends ARKManagerBase
             return cell;
         });
 
-        // Add toggle listener for the processor list
-        processors.getSelectionModel().selectedIndexProperty().addListener(e ->{
-            int index = processors.getSelectionModel().getSelectedIndex();
-            if(index < 0 || index > processors.getItems().size()) return;
+        // Load the proper string interpreter and cell type for the rule list
+        ruleList.setCellFactory((ListView<X34Rule> param) ->{
+            CheckBoxListCell<X34Rule> cell = new CheckBoxListCell<>(param1 -> {
+                // If the new cell is valid, create a new property with the correct settings and set it to the proper position in the list.
+                if(ruleList.getItems().contains(param1)){
+                    SimpleBooleanProperty bp = new SimpleBooleanProperty();
 
-            selected.get(index).setValue(!selected.get(index).getValue());
-        });
+                    // Check to see what the initial state of the selection box should be
+                    if(param1 != null) bp.setValue(param1.getMetaData() == null || !param1.getMetaData().containsKey("disabled"));
+                    bp.addListener(e1 -> onRuleModified());
 
-        // Load the proper string interpreter for the rule list
-        ruleList.setCellFactory(param -> new ListCell<X34Rule>() {
-            @Override
-            protected void updateItem(X34Rule item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.query);
-            }
+                    enabled.put(param1, bp);
+                    return bp;
+                }else return null;
+            });
+
+            cell.setConverter(new StringConverter<X34Rule>() {
+                @Override
+                public String toString(X34Rule object) {
+                    return object.query;
+                }
+
+                @Override
+                public X34Rule fromString(String string) {
+                    try {
+                        return new X34Rule(string, null, X34ProcessorRegistry.getAvailableProcessorIDs()[0]);
+                    } catch (ClassNotFoundException | IOException e) {
+                        return null;
+                    }
+                }
+            });
+
+            return cell;
         });
 
         // Add modification listener for the internal rule list.
-        ruleList.getItems().addListener((ListChangeListener<X34Rule>) c -> modified = true);
+        ruleList.getItems().addListener((ListChangeListener<X34Rule>) c ->
+        {
+            // Modification logic check for rule list: check if the fallback and live rule lists are the same size and null state.
+            // If they are, check element properties to see if they match. If so, the list has not changed.
+            if(fallback == null && ruleList.getItems() == null) modified = false;
+            else if(fallback != null && ruleList.getItems() == null || fallback == null && ruleList.getItems() != null) modified = true;
+            else if(fallback.size() != ruleList.getItems().size()) modified = true;
+            else{
+                for(int i = 0; i < fallback.size(); i++)
+                {
+                    if(fallback.get(i) != ruleList.getItems().get(i)){
+                        modified = true;
+                        break;
+                    }else modified = false;
+                }
+            }
+        });
 
         // Add selection update listener for the rule list, link it to the processor list
         ruleList.getSelectionModel().selectedIndexProperty().addListener(e -> onIndexChange());
@@ -227,7 +272,9 @@ public class X34UIRuleManager extends ARKManagerBase
                 displayMessage("No changes to discard!", false, 2500);
             }else if(new ARKInterfaceDialogYN("Query", "Are you sure you want to discard any changes to the rule list?", "Yes", "No").display()) {
                 ruleList.getItems().clear();
-                ruleList.getItems().addAll(fallback);
+                // Shallow clone is OK here, since the setWorkingList method runs a deep clone anyway. We have to do a shallow
+                // clone instead of a direct pass to avoid ConcurrentModificationExceptions during the deep clone.
+                setWorkingList((ArrayList<X34Rule>)fallback.clone());
             }
         });
 
@@ -245,16 +292,17 @@ public class X34UIRuleManager extends ARKManagerBase
             if(index < 0 || index > ruleList.getItems().size() - 1) return;
 
             if(new ARKInterfaceDialogYN("Warning", "Deleting this rule (" + ruleList.getItems().get(index).query
-                    + ") cannot be undone! Proceed?", "Proceed", "Cancel").display())
+                    + ") cannot be undone! Proceed?", "Proceed", "Cancel").display()){
                 ruleList.getItems().remove(index);
+            }
         });
 
         ruleUp.setOnAction(e ->{
             int index = ruleList.getSelectionModel().getSelectedIndex();
-            if(index <= 0 || index > ruleList.getItems().size() - 1){
+            if(index == 0){
                 displayMessage("Rule is already at the top of the list!", false, 2000);
                 return;
-            }
+            }else if(index < 0) return;
 
             X34Rule r = ruleList.getItems().remove(index);
             ruleList.getItems().add(index - 1, r);
@@ -263,10 +311,10 @@ public class X34UIRuleManager extends ARKManagerBase
 
         ruleDown.setOnAction(e ->{
             int index = ruleList.getSelectionModel().getSelectedIndex();
-            if(index < 0 || index >= ruleList.getItems().size() - 1){
+            if(index >= ruleList.getItems().size() - 1){
                 displayMessage("Rule is already at the bottom of the list!", false, 2000);
                 return;
-            }
+            }else if(index < 0) return;
 
             X34Rule r = ruleList.getItems().remove(index);
             ruleList.getItems().add(index + 1, r);
@@ -434,7 +482,7 @@ public class X34UIRuleManager extends ARKManagerBase
 
             for(int i = 0; i < ruleList.getItems().size(); i++) {
                 ruleList.getSelectionModel().select(i);
-                selected.get(index).setValue(false);
+                selected.get(processors.getItems().get(index)).setValue(false);
             }
 
             // If the user had a rule selected before the force-change, select it again as if nothing happened.
@@ -446,67 +494,36 @@ public class X34UIRuleManager extends ARKManagerBase
         });
     }
 
-    public void setWorkingList(ArrayList<X34Rule> rules) {
+    public void setWorkingList(ArrayList<X34Rule> rules)
+    {
+        enableState = State.INVALID;
         ruleList.getItems().clear();
-        if(rules != null) ruleList.getItems().addAll(rules);
-        this.fallback = rules == null ? null : (ArrayList<X34Rule>)rules.clone();
+        enabled.clear();
+        if(rules != null){
+            enableState = State.BUILDING;
+            ruleList.getItems().addAll(rules);
+
+            this.fallback = new ArrayList<>();
+
+            // Deep-clone the array of rules to its fallback copy. This must be done to ensure that metadata changes do not
+            // carry over to the fallback array if they occur.
+            for (X34Rule x : rules) {
+                X34Rule newRule = new X34Rule(x.query + "", new HashMap<>(), x.getProcessorList().clone());
+                if(x.getMetaData() == null) newRule.setMetaData(null);
+                else{
+                    for(String s : x.getMetaData().keySet()){
+                        newRule.getMetaData().put(s + "", x.getMetaData().get(s) + "");
+                    }
+                }
+                fallback.add(newRule);
+            }
+        }else this.fallback = null;
         modified = false;
+        enableState = State.FINALIZED;
     }
 
     public ArrayList<X34Rule> getCurrentRuleList() {
         return new ArrayList<>(ruleList.getItems());
-    }
-
-    private void repositionElements()
-    {
-        processors.setDisable(true);
-        info.setVisible(false);
-        warning.setVisible(false);
-
-        // Link list widths and heights to the window size
-        layout.widthProperty().addListener(e ->{
-            JFXUtil.setElementPositionCentered(layout, close, true, false);
-            JFXUtil.setElementPositionCentered(layout, discard, true, false);
-            warning.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
-            info.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
-
-            repositionOnResize();
-        });
-
-        layout.heightProperty().addListener(e -> repositionOnResize());
-
-        JFXUtil.setElementPositionInGrid(layout, close, -1, -1, -1, 0);
-        JFXUtil.setElementPositionInGrid(layout, discard, -1, -1, -1, 1);
-
-        JFXUtil.setElementPositionInGrid(layout, ruleList, 0, -1, 1, -1);
-        JFXUtil.setElementPositionInGrid(layout, processors, -1, 0, 1, -1);
-
-        JFXUtil.setElementPositionInGrid(layout, warning, 0, -1, 0, -1);
-        JFXUtil.setElementPositionInGrid(layout, info, 0, -1, 0, -1);
-
-        ruleList.setPrefWidth(layout.getWidth() / 3);
-        ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
-        processors.setPrefWidth(layout.getWidth() / 3);
-        processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
-    }
-
-    private void repositionOnResize()
-    {
-        ruleList.setPrefWidth(layout.getWidth() / 3);
-        processors.setPrefWidth(layout.getWidth() / 3);
-        ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
-        processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
-
-        Platform.runLater(() ->{
-            JFXUtil.alignToNode(layout, ruleList, ruleUp, 0, Orientation.VERTICAL, JFXUtil.Alignment.NEGATIVE);
-            JFXUtil.alignToNode(layout, ruleList, ruleDown, 0, Orientation.VERTICAL, JFXUtil.Alignment.POSITIVE);
-
-            JFXUtil.alignToNode(layout, ruleList, addRule, JFXUtil.DEFAULT_SPACING, Orientation.VERTICAL, JFXUtil.Alignment.NEGATIVE);
-            JFXUtil.alignToNode(layout, ruleList, removeRule, JFXUtil.DEFAULT_SPACING, Orientation.VERTICAL, JFXUtil.Alignment.POSITIVE);
-
-            JFXUtil.alignToNode(layout, processors, addProcessor, 0, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
-            JFXUtil.alignToNode(layout, processors, removeProcessor, JFXUtil.DEFAULT_SPACING, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
-        });
     }
 
     private void onIndexChange()
@@ -515,7 +532,7 @@ public class X34UIRuleManager extends ARKManagerBase
         ruleState = State.INVALID;
 
         if(index < 0 || index > ruleList.getItems().size()){
-            for(SimpleBooleanProperty o : selected) {
+            for(SimpleBooleanProperty o : selected.values()) {
                 o.set(false);
             }
             processors.setDisable(true);
@@ -530,7 +547,7 @@ public class X34UIRuleManager extends ARKManagerBase
         X34Rule r = ruleList.getItems().get(index);
 
         // Clear the selection list
-        for(SimpleBooleanProperty o : selected) {
+        for(SimpleBooleanProperty o : selected.values()) {
             o.set(false);
         }
 
@@ -538,7 +555,7 @@ public class X34UIRuleManager extends ARKManagerBase
         if(r != null){
             for(String s : r.getProcessorList()){
                 X34RetrievalProcessor xp = X34ProcessorRegistry.getProcessorForID(s);
-                if(xp != null) selected.get(processors.getItems().indexOf(xp)).set(true);
+                if(xp != null) selected.get(xp).set(true);
             }
         }
 
@@ -553,7 +570,7 @@ public class X34UIRuleManager extends ARKManagerBase
 
         // Ensure that at least one processor is selected before processing changes
         boolean isSelected = false;
-        for(SimpleBooleanProperty b : selected) {
+        for(SimpleBooleanProperty b : selected.values()) {
             if(b.getValue()){
                 isSelected = true;
                 break;
@@ -569,12 +586,12 @@ public class X34UIRuleManager extends ARKManagerBase
             if(processors.getItems().contains(rp)){
                 // Revert the selection state of the previously-selected processor and return, since the rule will not have
                 // changed state effectively, and force a refresh of the list, since it will not refresh automatically
-                selected.get(processors.getItems().indexOf(rp)).setValue(true);
+                selected.get(rp).setValue(true);
                 processors.refresh();
                 return;
             }else{
                 // Default to selecting the first index instead, and go ahead and update to make sure that the change propagates
-                selected.get(0).setValue(true);
+                selected.get(processors.getItems().get(0)).setValue(true);
             }
         }
 
@@ -583,14 +600,38 @@ public class X34UIRuleManager extends ARKManagerBase
             // Get the selection state of each of the processor IDs, store it, and use it to construct a new version
             // of the rule with the updated list.
             ArrayList<String> IDs = new ArrayList<>();
-            for(int i = 0; i < processors.getItems().size(); i++) {
-                if(selected.get(i).getValue()) {
-                    IDs.add(processors.getItems().get(i).getID());
-                }
+            for(X34RetrievalProcessor xp : processors.getItems()) {
+                if(selected.get(xp).getValue()) IDs.add(xp.getID());
             }
 
             ruleList.getItems().set(ruleIndex, new X34Rule(r.query, r.getSchemas()[0].metadata, IDs.toArray(new String[IDs.size()])));
         }
+    }
+
+    private void onRuleModified()
+    {
+        if(enableState != State.FINALIZED) return;
+
+        // Lock out any further listeners from firing, since that would result in an infinite loop.
+        enableState = State.BUILDING;
+
+        for(int i = 0; i < ruleList.getItems().size(); i++)
+        {
+            X34Rule r = ruleList.getItems().get(i);
+
+            if (r != null) {
+                if (r.getMetaData() == null) r.setMetaData(new HashMap<>());
+
+                if (!enabled.get(r).getValue()) r.getMetaData().put("disabled", null);
+                else if (r.getMetaData().containsKey("disabled")) r.getMetaData().remove("disabled");
+
+                // Manually set the modification flag. Since there has been no change to the list of rules, only its contents,
+                // the change listener will not fire by itself.
+                modified = true;
+            }
+        }
+
+        enableState = State.FINALIZED;
     }
 
     private void displayMessage(String text, boolean isWarning, long duration)
@@ -605,7 +646,8 @@ public class X34UIRuleManager extends ARKManagerBase
         if(isWarning) target = warning;
         else target = info;
 
-        UITimer.purge();
+        UITimer.cancel();
+        UITimer = new Timer();
 
         target.setText(text);
 
@@ -697,6 +739,96 @@ public class X34UIRuleManager extends ARKManagerBase
                 externalProcessors.remove(xps);
     }
 
+    private void repositionElements()
+    {
+        processors.setDisable(true);
+        info.setVisible(false);
+        warning.setVisible(false);
+
+        // Link list widths and heights to the window size
+        layout.widthProperty().addListener(e ->{
+            JFXUtil.setElementPositionCentered(layout, close, true, false);
+            JFXUtil.setElementPositionCentered(layout, discard, true, false);
+            warning.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
+            info.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
+
+            repositionOnResize();
+        });
+
+        layout.heightProperty().addListener(e -> repositionOnResize());
+
+        JFXUtil.setElementPositionInGrid(layout, close, -1, -1, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, discard, -1, -1, -1, 1);
+
+        JFXUtil.setElementPositionInGrid(layout, ruleList, 0, -1, 1, -1);
+        JFXUtil.setElementPositionInGrid(layout, processors, -1, 0, 1, -1);
+
+        JFXUtil.setElementPositionInGrid(layout, warning, 0, -1, 0, -1);
+        JFXUtil.setElementPositionInGrid(layout, info, 0, -1, 0, -1);
+
+        ruleList.setPrefWidth(layout.getWidth() / 3);
+        ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
+        processors.setPrefWidth(layout.getWidth() / 3);
+        processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
+    }
+
+    private void repositionOnResize()
+    {
+        ruleList.setPrefWidth(layout.getWidth() / 3);
+        processors.setPrefWidth(layout.getWidth() / 3);
+        ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
+        processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
+
+        Platform.runLater(() ->{
+            JFXUtil.alignToNode(layout, ruleList, ruleUp, 10, Orientation.VERTICAL, JFXUtil.Alignment.NEGATIVE);
+            JFXUtil.alignToNode(layout, ruleList, ruleDown, 10, Orientation.VERTICAL, JFXUtil.Alignment.POSITIVE);
+
+            JFXUtil.alignToNode(layout, ruleList, addRule, JFXUtil.DEFAULT_SPACING + 10, Orientation.VERTICAL, JFXUtil.Alignment.NEGATIVE);
+            JFXUtil.alignToNode(layout, ruleList, removeRule, JFXUtil.DEFAULT_SPACING + 10, Orientation.VERTICAL, JFXUtil.Alignment.POSITIVE);
+
+            JFXUtil.alignToNode(layout, processors, addProcessor, 10, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+            JFXUtil.alignToNode(layout, processors, removeProcessor, JFXUtil.DEFAULT_SPACING + 10, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+
+            JFXUtil.centerToNode(layout, ruleList, getBoundsFromRegion(ruleList), arrow, getBoundsFromImageView(arrow), Orientation.HORIZONTAL);
+
+            JFXUtil.setElementPositionCentered(layout, arrow, getBoundsFromImageView(arrow), true, false);
+
+            layout.layout();
+
+            JFXUtil.setElementPositionCentered(layout, divider1, getBoundsFromImageView(divider1), true, false);
+            AnchorPane.setTopAnchor(divider1, ruleList.getLayoutY() - layout.getPadding().getTop());
+            divider1.setFitHeight(arrow.getLayoutY() - (5 * JFXUtil.SCALE) - ruleList.getLayoutY());
+
+            JFXUtil.alignToNode(layout, arrow, getBoundsFromImageView(arrow), divider2, getBoundsFromImageView(divider2), 10, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+            divider2.setFitHeight(discard.getLayoutY() - (5 * JFXUtil.SCALE) - arrow.getLayoutY() - getBoundsFromImageView(arrow).getHeight() - layout.getPadding().getTop());
+
+            JFXUtil.alignToNode(layout, ruleList, getBoundsFromRegion(ruleList), divider3, getBoundsFromImageView(divider3), 5, Orientation.HORIZONTAL, JFXUtil.Alignment.NEGATIVE);
+            divider3.setFitWidth(processors.getLayoutX() - divider3.getLayoutX() - (5 * JFXUtil.SCALE));
+        });
+    }
+
+    private void setElementTooltips()
+    {
+        //todo finish
+    }
+
+    private void setElementKeyModifiers()
+    {
+        //todo finish
+    }
+
+    private Rectangle2D getBoundsFromRegion(Region r)
+    {
+        return new Rectangle2D(r.getLayoutX(), r.getLayoutY(), JFXUtil.getNormalizedWidth(r),
+                JFXUtil.getNormalizedHeight(r));
+    }
+
+    private Rectangle2D getBoundsFromImageView(ImageView v)
+    {
+        return new Rectangle2D(v.getX(), v.getY(), v.boundsInParentProperty().getValue().getWidth(),
+                v.boundsInParentProperty().getValue().getHeight());
+    }
+
     @Override
     public void display()
     {
@@ -705,6 +837,7 @@ public class X34UIRuleManager extends ARKManagerBase
             window.show();
             repositionElements();
             window.hide();
+            displayMessage("This is the notification area. System messages and other notifications will appear here.", false, 5000);
             window.showAndWait();
         }
     }

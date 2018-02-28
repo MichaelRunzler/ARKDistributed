@@ -24,8 +24,6 @@ public class X34Core
     private XLoggerInterpreter log;
     private X34IndexIO loader;
 
-    //todo override finalizer to close logger
-
     /**
      * Default constructor. Uses the main instance from the {@link X34IndexDelegator}
      * for its reference to the {@link X34Config config} and {@link X34IndexIO} index I/O objects.
@@ -169,5 +167,11 @@ public class X34Core
         }
 
         log.logEvent(count + " of " + images.size() + " image" + (images.size() == 1 ? "" : "s") + " written successfully.");
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        super.finalize();
+        log.disassociate();
     }
 }

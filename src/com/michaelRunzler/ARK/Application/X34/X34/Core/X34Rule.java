@@ -15,6 +15,8 @@ import java.util.HashMap;
  */
 public class X34Rule implements Serializable
 {
+    private static final long serialVersionUID = -213706100518926267L;
+
     public String query;
     private String[] processors;
     private HashMap<String,String> meta;
@@ -56,6 +58,22 @@ public class X34Rule implements Serializable
      */
     public String[] getProcessorList() {
         return Arrays.copyOf(this.processors, processors.length);
+    }
+
+    /**
+     * Gets the current metadata map being stored by this object.
+     * @return the current metadata map
+     */
+    public @Nullable HashMap<String, String> getMetaData() {
+        return meta;
+    }
+
+    /**
+     * Sets this object's metadata map to the specified {@link HashMap}.
+     * @param meta the new metadata map to store
+     */
+    public void setMetaData(@Nullable HashMap<String, String> meta) {
+        this.meta = meta;
     }
 
     /**
