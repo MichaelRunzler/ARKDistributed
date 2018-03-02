@@ -168,14 +168,6 @@ public class X34UI extends Application
             config.loadAllDefaults();
         }
 
-        //todo remove when done
-        ArrayList<X34Rule> temp = new ArrayList<>();
-        temp.add(new X34Rule("query 1", null, "R34X", "R34P", "DVRT"));
-        temp.add(new X34Rule("query 2", null, "R34X", "R34P"));
-        temp.add(new X34Rule("query 3", null, "R34X", "R34P"));
-        temp.add(new X34Rule("query 4", null, "R34X", "R34P", "DVRT"));
-        config.storeSetting(RULE_LIST_KEY, temp);
-
         //
         // INSTANCE VARIABLE INIT
         //
