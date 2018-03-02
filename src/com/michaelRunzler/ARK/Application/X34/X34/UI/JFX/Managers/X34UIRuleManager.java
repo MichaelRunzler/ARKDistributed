@@ -6,6 +6,7 @@ import X34.Core.X34Rule;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import X34.UI.JFX.Util.CheckBoxEditableListCell;
+import core.UI.UINotificationBannerControl;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
@@ -15,7 +16,6 @@ import core.UI.ARKInterfaceDialog;
 import core.UI.ARKInterfaceDialogYN;
 import core.UI.ARKManagerBase;
 import core.system.ARKAppCompat;
-import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
@@ -30,7 +30,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Region;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
-import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import java.io.File;
@@ -40,8 +39,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class X34UIRuleManager extends ARKManagerBase
 {
@@ -76,8 +73,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private ImageView divider1;
     private ImageView divider2;
     private ImageView divider3;
-
-    private Label warning;
+    
     private Label info;
 
     private ListView<X34Rule> ruleList;
@@ -91,6 +87,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private HashMap<X34RetrievalProcessor, SimpleBooleanProperty> selected;
     private HashMap<X34Rule, SimpleBooleanProperty> enabled;
     private HashMap<X34RetrievalProcessor[], File> externalProcessors;
+    private UINotificationBannerControl notice;
 
     private XLoggerInterpreter log;
     private X34Config config;
@@ -99,7 +96,6 @@ public class X34UIRuleManager extends ARKManagerBase
     private boolean errored;
     private State ruleState;
     private State enableState;
-    private Timer UITimer;
 
     public X34UIRuleManager(double x, double y)
     {
@@ -113,7 +109,6 @@ public class X34UIRuleManager extends ARKManagerBase
         enableState = State.IDLE;
         log = new XLoggerInterpreter();
         config = X34ConfigDelegator.getMainInstance();
-        UITimer = new Timer();
 
         fallback = null;
         modified = false;
@@ -142,13 +137,12 @@ public class X34UIRuleManager extends ARKManagerBase
         divider1 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
         divider2 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
         divider3 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_horiz_256x8.png", 128, 8, true, true));
-
-        warning = new Label("");
+        
         info = new Label("");
-        warning.setWrapText(true);
         info.setWrapText(true);
 
-        warning.setGraphic(JFXUtil.generateGraphicFromResource("core/assets/warning.png", 15));
+        notice = new UINotificationBannerControl(info);
+        
         info.setGraphic(JFXUtil.generateGraphicFromResource("core/assets/info.png", 15));
 
         processors = new ListView<>();
@@ -262,7 +256,7 @@ public class X34UIRuleManager extends ARKManagerBase
         // Add selection update listener for the rule list, link it to the processor list
         ruleList.getSelectionModel().selectedIndexProperty().addListener(e -> onIndexChange());
 
-        layout.getChildren().addAll(close, discard, ruleList, processors, addRule, removeRule, ruleUp, ruleDown, info, warning, addProcessor, removeProcessor);
+        layout.getChildren().addAll(close, discard, ruleList, processors, addRule, removeRule, ruleUp, ruleDown, info, addProcessor, removeProcessor);
 
         // Load processors from registry. If that fails, the dialog is essentially useless, so hide it.
         try {
@@ -284,13 +278,13 @@ public class X34UIRuleManager extends ARKManagerBase
 
         discard.setOnAction(e -> {
             if(!modified){
-                displayMessage("No changes to discard!", false, 2500);
+                notice.displayNotice("No changes to discard!", UINotificationBannerControl.Severity.INFO, 2500);
             }else if(new ARKInterfaceDialogYN("Query", "Are you sure you want to discard any changes to the rule list?", "Yes", "No").display()) {
                 ruleList.getItems().clear();
                 // Shallow clone is OK here, since the setWorkingList method runs a deep clone anyway. We have to do a shallow
                 // clone instead of a direct pass to avoid ConcurrentModificationExceptions during the deep clone.
                 setWorkingList((ArrayList<X34Rule>)fallback.clone());
-                displayMessage("Changes discarded.", false, 2500);
+                notice.displayNotice("Changes discarded.", UINotificationBannerControl.Severity.INFO, 2500);
             }
         });
 
@@ -301,7 +295,7 @@ public class X34UIRuleManager extends ARKManagerBase
             // Add new rule with first processor preselected
             ruleList.getItems().add(new X34Rule(name, null, processors.getItems().get(0).getID()));
             ruleList.getSelectionModel().select(ruleList.getItems().size() - 1);
-            displayMessage("Rule added.", false, 1500);
+            notice.displayNotice("Rule added.", UINotificationBannerControl.Severity.INFO, 1500);
         });
 
         removeRule.setOnAction(e ->{
@@ -311,14 +305,14 @@ public class X34UIRuleManager extends ARKManagerBase
             if(new ARKInterfaceDialogYN("Warning", "Deleting this rule (" + ruleList.getItems().get(index).query
                     + ") cannot be undone! Proceed?", "Proceed", "Cancel").display()){
                 ruleList.getItems().remove(index);
-                displayMessage("Rule removed!", false, 1500);
+                notice.displayNotice("Rule removed!", UINotificationBannerControl.Severity.INFO, 1500);
             }
         });
 
         ruleUp.setOnAction(e ->{
             int index = ruleList.getSelectionModel().getSelectedIndex();
             if(index == 0){
-                displayMessage("Rule is already at the top of the list!", false, 2000);
+                notice.displayNotice("Rule is already at the top of the list!", UINotificationBannerControl.Severity.INFO, 2000);
                 return;
             }else if(index < 0) return;
 
@@ -331,7 +325,7 @@ public class X34UIRuleManager extends ARKManagerBase
             int index = ruleList.getSelectionModel().getSelectedIndex();
             if(index < 0) return;
             else if(index >= ruleList.getItems().size() - 1){
-                displayMessage("Rule is already at the bottom of the list!", false, 2000);
+                notice.displayNotice("Rule is already at the bottom of the list!", UINotificationBannerControl.Severity.INFO, 2000);
                 return;
             }
 
@@ -350,7 +344,7 @@ public class X34UIRuleManager extends ARKManagerBase
             File f = fc.showOpenDialog(window);
             if(f == null || !f.exists()) return;
 
-            displayMessage("Importing processor(s), please wait...", false, 5000);
+            notice.displayNotice("Importing processor(s), please wait...", UINotificationBannerControl.Severity.INFO, 5000);
 
             // Cache a snapshot of the current processor list for use in ID conflict checking later on.
             X34RetrievalProcessor[] avTemp;
@@ -375,11 +369,11 @@ public class X34UIRuleManager extends ARKManagerBase
                 X34RetrievalProcessor[] result = importProcessors.getValue();
 
                 if(result == null || result.length < 1){
-                    displayMessage("No valid processor plugin files were found at the specified location.", false, 4000L);
+                    notice.displayNotice("No valid processor plugin files were found at the specified location.", UINotificationBannerControl.Severity.INFO, 4000L);
                     return;
                 }
 
-                displayMessage("Processor import successful. " + result.length + " processor(s) imported.", false, 4000L);
+                notice.displayNotice("Processor import successful. " + result.length + " processor(s) imported.", UINotificationBannerControl.Severity.INFO, 4000L);
 
                 // Check if the IDs of any processors in the new-processor list match any existing ones.
                 int removed = 0;
@@ -416,7 +410,7 @@ public class X34UIRuleManager extends ARKManagerBase
                         }
                     };
 
-                    timer.setOnSucceeded(e2 -> displayMessage(removedF + " processor import(s) cancelled due to ID conflicts with existing processor(s).", true, 2500));
+                    timer.setOnSucceeded(e2 -> notice.displayNotice(removedF + " processor import(s) cancelled due to ID conflicts with existing processor(s).", UINotificationBannerControl.Severity.WARNING, 2500));
 
                     Thread timerThread = new Thread(timer);
                     timerThread.setDaemon(true);
@@ -439,7 +433,7 @@ public class X34UIRuleManager extends ARKManagerBase
                     Files.copy(Paths.get(f.toURI()), Paths.get(dest.toURI()), StandardCopyOption.REPLACE_EXISTING);
                 } catch (IOException e2) {
                     log.logEvent(e2);
-                    displayMessage("Unable to cache imported processor(s)! You may have to re-import.", true, 4000);
+                    notice.displayNotice("Unable to cache imported processor(s)! You may have to re-import.", UINotificationBannerControl.Severity.WARNING, 4000);
                 }
 
                 // Store the results in the external processor registry.
@@ -450,7 +444,7 @@ public class X34UIRuleManager extends ARKManagerBase
                 processors.getItems().addAll(result);
             });
 
-            importProcessors.setOnFailed(e1 -> displayMessage("Processor import failed. Please try again later.", true, 4000));
+            importProcessors.setOnFailed(e1 -> notice.displayNotice("Processor import failed. Please try again later.", UINotificationBannerControl.Severity.WARNING, 4000));
 
             Thread importThread = new Thread(importProcessors);
             importThread.setDaemon(true);
@@ -474,7 +468,7 @@ public class X34UIRuleManager extends ARKManagerBase
             }
 
             if(!found){
-                displayMessage("Processor is part of the default set, cannot be removed!", true, 4000);
+                notice.displayNotice("Processor is part of the default set, cannot be removed!", UINotificationBannerControl.Severity.WARNING, 4000);
                 return;
             }
 
@@ -602,7 +596,7 @@ public class X34UIRuleManager extends ARKManagerBase
         if(!isSelected)
         {
             // If there is no processor selected, get the previously-selected processor for the rule.
-            displayMessage("At least one processor must be selected!", true, 4000);
+            notice.displayNotice("At least one processor must be selected!", UINotificationBannerControl.Severity.WARNING, 4000);
 
             X34Rule r = ruleList.getItems().get(ruleIndex);
             X34RetrievalProcessor rp = X34ProcessorRegistry.getProcessorForID(r.getProcessorList()[0]);
@@ -661,48 +655,6 @@ public class X34UIRuleManager extends ARKManagerBase
         }
 
         enableState = State.FINALIZED;
-    }
-
-    private void displayMessage(String text, boolean isWarning, long duration)
-    {
-        if(duration <= 0) return;
-
-        warning.setVisible(false);
-        info.setVisible(false);
-
-        // Maintain a direct reference to the appropriate Label node
-        Label target;
-        if(isWarning) target = warning;
-        else target = info;
-
-        UITimer.cancel();
-        UITimer = new Timer();
-
-        target.setText(text);
-
-        FadeTransition in = new FadeTransition();
-        in.setFromValue(0.0);
-        in.setToValue(1.0);
-        in.setDuration(new Duration(250));
-        in.setNode(target);
-        in.play();
-        target.setVisible(true);
-
-        UITimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                FadeTransition out = new FadeTransition();
-                out.setFromValue(1.0);
-                out.setToValue(0.0);
-                out.setDuration(new Duration(250));
-                out.setNode(target);
-                out.play();
-                try {
-                    Thread.sleep(250);
-                } catch (InterruptedException ignored) {}
-                target.setVisible(false);
-            }
-        }, duration);
     }
 
     private void loadExternalProcessors() throws ClassNotFoundException, IOException
@@ -772,13 +724,11 @@ public class X34UIRuleManager extends ARKManagerBase
     {
         processors.setDisable(true);
         info.setVisible(false);
-        warning.setVisible(false);
 
         // Link list widths and heights to the window size
         layout.widthProperty().addListener(e ->{
             JFXUtil.setElementPositionCentered(layout, close, true, false);
             JFXUtil.setElementPositionCentered(layout, discard, true, false);
-            warning.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
             info.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
 
             repositionOnResize();
@@ -791,8 +741,7 @@ public class X34UIRuleManager extends ARKManagerBase
 
         JFXUtil.setElementPositionInGrid(layout, ruleList, 0, -1, 1, -1);
         JFXUtil.setElementPositionInGrid(layout, processors, -1, 0, 1, -1);
-
-        JFXUtil.setElementPositionInGrid(layout, warning, 0, -1, 0, -1);
+        
         JFXUtil.setElementPositionInGrid(layout, info, 0, -1, 0, -1);
 
         ruleList.setPrefWidth(layout.getWidth() / 3);
@@ -836,8 +785,7 @@ public class X34UIRuleManager extends ARKManagerBase
 
             JFXUtil.alignToNode(layout, ruleList, getBoundsFromRegion(ruleList), divider3, getBoundsFromImageView(divider3), 5, Orientation.HORIZONTAL, JFXUtil.Alignment.NEGATIVE);
             divider3.setFitWidth(processors.getLayoutX() - divider3.getLayoutX() - (5 * JFXUtil.SCALE));
-
-            warning.setPrefWidth(layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft());
+            
             info.setPrefWidth(layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getRight());
         });
     }
@@ -876,8 +824,8 @@ public class X34UIRuleManager extends ARKManagerBase
             window.show();
             repositionElements();
             window.hide();
-            if(ruleList.getItems() == null || ruleList.getItems().size() == 0) displayMessage("The rule list is currently empty! Add some using the controls below.", false, 5000);
-            else displayMessage("This is the notification area. System messages and other notifications will appear here.", false, 5000);
+            if(ruleList.getItems() == null || ruleList.getItems().size() == 0) notice.displayNotice("The rule list is currently empty! Add some using the controls below.", UINotificationBannerControl.Severity.INFO, 5000);
+            else notice.displayNotice("This is the notification area. System messages and other notifications will appear here.", UINotificationBannerControl.Severity.INFO, 5000);
             window.showAndWait();
         }
     }
