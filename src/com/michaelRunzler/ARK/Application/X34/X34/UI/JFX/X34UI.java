@@ -3,7 +3,6 @@ package X34.UI.JFX;
 import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.IO.X34Config;
 import X34.Core.X34Core;
-import X34.Core.X34Rule;
 import X34.UI.JFX.Managers.X34UIRuleManager;
 import X34.UI.JFX.Util.ModeLocal;
 import X34.UI.JFX.Util.ModeSwitchHook;
@@ -18,7 +17,6 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -35,6 +33,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import static X34.UI.JFX.Util.JFXConfigKeySet.*;
 
 @SuppressWarnings({"FieldCanBeLocal"})
 public class X34UI extends Application
@@ -92,17 +92,10 @@ public class X34UI extends Application
     // CONSTANTS
     //
 
-    private final File configFile = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34","JFXGeneralConfig.x34c");
+    private File configFile = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34","JFXGeneralConfig.x34c");
 
     private static final int MODE_SIMPLE = 0;
     private static final int MODE_ADVANCED = 1;
-
-    //
-    // CONFIG KEYS
-    //
-
-    private static final String WINDOW_MODE_KEY = "window_mode";
-    private static final String RULE_LIST_KEY = "rules";
 
     //
     // PRIMARY METHODS
@@ -153,19 +146,27 @@ public class X34UI extends Application
         ruleMgr = new X34UIRuleManager((Screen.getPrimary().getBounds().getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2, (Screen.getPrimary().getBounds().getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
 
         // Try loading config. If it fails, assume that there is no valid config file, and load defaults instead.
-        //todo add other config assignments
+
+        int delayedMode = 0;
+
+        // DEFAULTS
+        config.setDefaultSetting(KEY_WINDOW_MODE, delayedMode);
+        config.setDefaultSetting(KEY_CONFIG_FILE, configFile);
+
         try{
+            // LOAD
             log.logEvent("Loading configuration file...");
             config.loadConfigFromFile();
             log.logEvent("Configuration file loaded.");
             log.logEvent("Loaded " + config.getAllSettings().keySet().size() + " configuration settings.");
-            config.getSettingOrStore(WINDOW_MODE_KEY, 0);
-
-            // DEFAULTS
-            config.setDefaultSetting(WINDOW_MODE_KEY, 0);
         }catch (IOException e){
+            // FALLBACK
             log.logEvent(LogEventLevel.WARNING, "Failed to load config file. Loading defaults.");
             config.loadAllDefaults();
+        }finally {
+            // RETRIEVE
+            delayedMode = config.getSettingOrStore(KEY_WINDOW_MODE, delayedMode);
+            configFile = config.getSettingOrStore(KEY_CONFIG_FILE, configFile);
         }
 
         //
@@ -203,7 +204,7 @@ public class X34UI extends Application
         menuBarInit();
         nodePositioningInit();
         setActions();
-        switchMode((int)config.getSetting(WINDOW_MODE_KEY));
+        switchMode(delayedMode);
     }
 
     private void menuBarInit()
@@ -308,9 +309,9 @@ public class X34UI extends Application
         functionsMenuStartRetrieval.setOnAction(e -> retrieve());
 
         windowMenuRuleManager.setOnAction(e -> {
-            ruleMgr.setWorkingList(config.getSettingOrDefault(RULE_LIST_KEY, new ArrayList<>()));
+            ruleMgr.setWorkingList(config.getSettingOrDefault(KEY_RULE_LIST, new ArrayList<>()));
             ruleMgr.display();
-            config.storeSetting(RULE_LIST_KEY, ruleMgr.getCurrentRuleList());
+            config.storeSetting(KEY_RULE_LIST, ruleMgr.getCurrentRuleList());
         });
 
         //todo finish
@@ -318,7 +319,7 @@ public class X34UI extends Application
 
     private void retrieve()
     {
-        switch ((int)config.getSetting(WINDOW_MODE_KEY)){
+        switch ((int)config.getSetting(KEY_WINDOW_MODE)){
             case MODE_SIMPLE:
                 //todo finish
                 break;
@@ -415,6 +416,6 @@ public class X34UI extends Application
             }
         }
 
-        config.storeSetting(WINDOW_MODE_KEY, mode);
+        config.storeSetting(KEY_WINDOW_MODE, mode);
     }
 }

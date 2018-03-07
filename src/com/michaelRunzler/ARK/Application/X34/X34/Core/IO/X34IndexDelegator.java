@@ -2,6 +2,11 @@ package X34.Core.IO;
 
 import java.util.ArrayList;
 
+/**
+ * Manages cross-class instancing of the {@link X34IndexIO} object for cases where multiple classes
+ * must share an instance of said object.
+ * Also manages a multi-object dynamic instance index, for multiple concurrent global instances.
+ */
 public class X34IndexDelegator 
 {
     private static X34IndexIO instance = null;

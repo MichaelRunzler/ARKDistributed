@@ -6,6 +6,7 @@ import X34.Core.X34Rule;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import X34.UI.JFX.Util.CheckBoxEditableListCell;
+import com.sun.istack.internal.Nullable;
 import core.UI.UINotificationBannerControl;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.AUNIL.LogEventLevel;
@@ -40,12 +41,20 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static X34.UI.JFX.Util.JFXConfigKeySet.*;
+
+/**
+ * Manages rules and processors for the {@link X34.UI.JFX.X34UI}.
+ */
 public class X34UIRuleManager extends ARKManagerBase
 {
     //
     // CONSTANTS
     //
 
+    /**
+     * Used to indicate internal state changes to prevent cyclic calls in certain cases.
+     */
     enum State{
         IDLE, INVALID, BUILDING, FINALIZED
     }
@@ -53,8 +62,10 @@ public class X34UIRuleManager extends ARKManagerBase
     public static final String TITLE = "Rule/Schema Management";
     public static final int DEFAULT_WIDTH = (int)(400 * JFXUtil.SCALE);
     public static final int DEFAULT_HEIGHT = (int)(400 * JFXUtil.SCALE);
-    private static final String PROCESSOR_CONFIG_KEY = "external_processors";
-    private static final File PROCESSOR_STORAGE_DIR = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34\\Processors");
+
+    // Compiler cannot tell that the result from the config store call below might be the same as the input, so the initializer is NOT redundant
+    @SuppressWarnings("UnusedAssignment")
+    private File PROCESSOR_STORAGE_DIR = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34\\Processors");
 
     //
     // JFX NODES
@@ -119,7 +130,9 @@ public class X34UIRuleManager extends ARKManagerBase
         window.setMinWidth(DEFAULT_WIDTH);
         window.setMinHeight(DEFAULT_HEIGHT);
 
-        externalProcessors = config.getSettingOrDefault(PROCESSOR_CONFIG_KEY, new HashMap<>());
+        config.setDefaultSetting(KEY_PROCESSOR_DIR, PROCESSOR_STORAGE_DIR);
+        PROCESSOR_STORAGE_DIR = config.getSettingOrStore(KEY_PROCESSOR_DIR, PROCESSOR_STORAGE_DIR);
+        externalProcessors = config.getSettingOrDefault(KEY_PROCESSOR_LIST, new HashMap<>());
 
         //
         // NODE INIT
@@ -438,7 +451,7 @@ public class X34UIRuleManager extends ARKManagerBase
 
                 // Store the results in the external processor registry.
                 externalProcessors.put(result, f);
-                config.storeSetting(PROCESSOR_CONFIG_KEY, externalProcessors);
+                config.storeSetting(KEY_PROCESSOR_LIST, externalProcessors);
 
                 // Add the new processors to the display list
                 processors.getItems().addAll(result);
@@ -507,7 +520,12 @@ public class X34UIRuleManager extends ARKManagerBase
         });
     }
 
-    public void setWorkingList(ArrayList<X34Rule> rules)
+    /**
+     * Sets the current list of {@link X34Rule rules} being used by this Manager to the specified list. If the list is zero-length or null,
+     * behavior will be as if the method was never called.
+     * @param rules the list of {@link X34Rule rules} to set as the current working list
+     */
+    public void setWorkingList(@Nullable ArrayList<X34Rule> rules)
     {
         enableState = State.INVALID;
         ruleList.getItems().clear();
@@ -535,10 +553,19 @@ public class X34UIRuleManager extends ARKManagerBase
         enableState = State.FINALIZED;
     }
 
+    /**
+     * Gets the current list of {@link X34Rule rules} from this Manager. This list includes all current changes, and is a
+     * real-time representation of the state of the rules displayed in the interface. Any future changes will <i>not</i>
+     * be reflected in this list, however.
+     * @return the current list of {@link X34Rule rules}, as displayed by the interface
+     */
     public ArrayList<X34Rule> getCurrentRuleList() {
         return new ArrayList<>(ruleList.getItems());
     }
 
+    /**
+     * Called when the selected index in the Rule List changes
+     */
     private void onIndexChange()
     {
         int index = ruleList.getSelectionModel().getSelectedIndex();
@@ -549,6 +576,7 @@ public class X34UIRuleManager extends ARKManagerBase
                 o.set(false);
             }
             processors.setDisable(true);
+            ruleState = State.FINALIZED;
             return;
         }else{
             processors.setDisable(false);
@@ -575,6 +603,9 @@ public class X34UIRuleManager extends ARKManagerBase
         ruleState = State.FINALIZED;
     }
 
+    /**
+     * Called when the selection state of any of the currently selected Rule's processors is changed
+     */
     private void onIndexModified()
     {
         if(ruleState != State.FINALIZED) return;
@@ -595,24 +626,16 @@ public class X34UIRuleManager extends ARKManagerBase
 
         if(!isSelected)
         {
-            // If there is no processor selected, get the previously-selected processor for the rule.
-            notice.displayNotice("At least one processor must be selected!", UINotificationBannerControl.Severity.WARNING, 4000);
+            // If there is no processor selected, alert the user and call the index-change listener. Since the index has not actually changed,
+            // all we are really doing is telling the processor list to rebuild its list of selected processors. Since the action
+            // the user took was never carried over to the rule in question, the list will revert back to its previous state.
+            notice.displayNotice("At least one processor must be selected!", UINotificationBannerControl.Severity.WARNING, 2500);
 
-            X34Rule r = ruleList.getItems().get(ruleIndex);
-            X34RetrievalProcessor rp = X34ProcessorRegistry.getProcessorForID(r.getProcessorList()[0]);
-            if(processors.getItems().contains(rp)){
-                // Revert the selection state of the previously-selected processor and return, since the rule will not have
-                // changed state effectively, and force a refresh of the list, since it will not refresh automatically
-                //fixme not updating checkbox when reset
-                selected.get(rp).setValue(true);
-                processors.refresh();
-                ruleState = State.FINALIZED;
-                return;
-            }else{
-                // Default to selecting the first index instead, and go ahead and update to make sure that the change propagates
-                selected.get(processors.getItems().get(0)).setValue(true);
-                processors.refresh();
-            }
+            // Fire the index-change listener. For some reason, the list does not update its appearance properly if
+            // this is done immediately, so this must be done in a delayed manner on the FX thread.
+            // Rule state is set to FINALIZED in the change listener, so we can return immediately after the listener call finishes.
+            Platform.runLater(this::onIndexChange);
+            return;
         }
 
         X34Rule r = ruleList.getItems().get(ruleIndex);
@@ -625,12 +648,14 @@ public class X34UIRuleManager extends ARKManagerBase
             }
 
             ruleList.getItems().set(ruleIndex, new X34Rule(r.query, r.getSchemas()[0].metadata, IDs.toArray(new String[IDs.size()])));
-            ruleList.getSelectionModel().select(ruleIndex);
         }
 
         ruleState = State.FINALIZED;
     }
 
+    /**
+     * Called when the disable state of a Rule in the Rule List is changed
+     */
     private void onRuleModified()
     {
         if(enableState != State.FINALIZED) return;
@@ -657,6 +682,11 @@ public class X34UIRuleManager extends ARKManagerBase
         enableState = State.FINALIZED;
     }
 
+    /**
+     * Loads processors from stored JAR files, according to the current exclusion list and availability settings
+     * @throws ClassNotFoundException things
+     * @throws IOException moar things
+     */
     private void loadExternalProcessors() throws ClassNotFoundException, IOException
     {
         ArrayList<X34RetrievalProcessor[]> invalid = new ArrayList<>();
@@ -720,6 +750,9 @@ public class X34UIRuleManager extends ARKManagerBase
                 externalProcessors.remove(xps);
     }
 
+    /**
+     * Called when the window is shown, positions all GUI elements and adds listeners for window resizing and position changes
+     */
     private void repositionElements()
     {
         processors.setDisable(true);
@@ -753,6 +786,9 @@ public class X34UIRuleManager extends ARKManagerBase
         addRule.prefWidthProperty().bind(removeRule.widthProperty());
     }
 
+    /**
+     * Contains all common functions that need to be executed when the window is resized in the X or Y axis
+     */
     private void repositionOnResize()
     {
         ruleList.setPrefWidth(layout.getWidth() / 3);
@@ -790,6 +826,9 @@ public class X34UIRuleManager extends ARKManagerBase
         });
     }
 
+    /**
+     * Sets tooltips for all GUI elements
+     */
     private void setElementTooltips()
     {
         close.setTooltip(new Tooltip("Save any changes and return to the main UI."));
@@ -804,12 +843,22 @@ public class X34UIRuleManager extends ARKManagerBase
         processors.setTooltip(new Tooltip("The list of processor types.\nEach processor can retrieve from a specific site.\nSee the Help menu for more information"));
     }
 
+    /**
+     * Gets the absolute bounds of a Region node from its internal coordinate data
+     * @param r the node to check bounds on
+     * @return the bounds of the provided node (X, Y, W, H)
+     */
     private Rectangle2D getBoundsFromRegion(Region r)
     {
         return new Rectangle2D(r.getLayoutX(), r.getLayoutY(), JFXUtil.getNormalizedWidth(r),
                 JFXUtil.getNormalizedHeight(r));
     }
 
+    /**
+     * Gets the absolute bounds of an ImageView node from its internal coordinate data
+     * @param v the node to check bounds on
+     * @return the bounds of the provided node (X, Y, W, H)
+     */
     private Rectangle2D getBoundsFromImageView(ImageView v)
     {
         return new Rectangle2D(v.getX(), v.getY(), v.boundsInParentProperty().getValue().getWidth(),
