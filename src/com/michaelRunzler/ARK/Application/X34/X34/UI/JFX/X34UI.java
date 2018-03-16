@@ -2,7 +2,10 @@ package X34.UI.JFX;
 
 import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.IO.X34Config;
+import X34.Core.IO.X34IndexDelegator;
 import X34.Core.X34Core;
+import X34.UI.JFX.Managers.X34UIConfigManager;
+import X34.UI.JFX.Managers.X34UIFileManager;
 import X34.UI.JFX.Managers.X34UIRuleManager;
 import X34.UI.JFX.Util.ModeLocal;
 import X34.UI.JFX.Util.ModeSwitchHook;
@@ -84,15 +87,17 @@ public class X34UI extends Application
     private X34Core core;
     private XLoggerInterpreter log;
     private X34UIRuleManager ruleMgr;
+    private X34UIFileManager fileMgr;
+    private X34UIConfigManager configMgr;
 
     private Map<Node, ModeLocal> annotatedNodes;
     private ArrayList<ModeSwitchHook> modeSwitchHooks;
 
+    private File configFile = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34","JFXGeneralConfig.x34c");
+
     //
     // CONSTANTS
     //
-
-    private File configFile = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34","JFXGeneralConfig.x34c");
 
     private static final int MODE_SIMPLE = 0;
     private static final int MODE_ADVANCED = 1;
@@ -144,6 +149,8 @@ public class X34UI extends Application
         config.setTarget(configFile);
         core = new X34Core();
         ruleMgr = new X34UIRuleManager((Screen.getPrimary().getBounds().getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2, (Screen.getPrimary().getBounds().getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
+        fileMgr = new X34UIFileManager((Screen.getPrimary().getBounds().getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2, (Screen.getPrimary().getBounds().getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
+        configMgr = new X34UIConfigManager((Screen.getPrimary().getBounds().getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2, (Screen.getPrimary().getBounds().getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
 
         // Try loading config. If it fails, assume that there is no valid config file, and load defaults instead.
 
@@ -152,6 +159,8 @@ public class X34UI extends Application
         // DEFAULTS
         config.setDefaultSetting(KEY_WINDOW_MODE, delayedMode);
         config.setDefaultSetting(KEY_CONFIG_FILE, configFile);
+        config.setDefaultSetting(KEY_INDEX_DIR, X34IndexDelegator.getMainInstance().getParent());
+        config.setDefaultSetting(KEY_LOGGING_DIR, log.getLogDirectory());
 
         try{
             // LOAD
@@ -293,8 +302,11 @@ public class X34UI extends Application
 
         // Bind the menu bar's height to the layout padding, to ensure that no layout elements clash with the menu bar.
         mainMenuBar.layout();
-        Platform.runLater(() -> layout.setPadding(new Insets(mainMenuBar.getHeight() + layout.getPadding().getTop(),
-                layout.getPadding().getRight(), layout.getPadding().getBottom(), layout.getPadding().getLeft())));
+        Platform.runLater(() ->{
+            layout.setPadding(new Insets(mainMenuBar.getHeight() + layout.getPadding().getTop(),
+                    layout.getPadding().getRight(), layout.getPadding().getBottom(), layout.getPadding().getLeft()));
+            AnchorPane.setTopAnchor(mainMenuBar, -1 * layout.getPadding().getTop());
+        });
 
         //todo align other elements
     }
@@ -313,6 +325,8 @@ public class X34UI extends Application
             ruleMgr.display();
             config.storeSetting(KEY_RULE_LIST, ruleMgr.getCurrentRuleList());
         });
+        windowMenuFileManager.setOnAction(e -> fileMgr.display());
+        windowMenuOptionsManager.setOnAction(e -> configMgr.display());
 
         //todo finish
     }

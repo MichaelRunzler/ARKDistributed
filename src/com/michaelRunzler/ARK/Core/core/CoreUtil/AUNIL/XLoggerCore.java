@@ -103,11 +103,11 @@ public class XLoggerCore
             master.disassociate();
         }
 
-        internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " is requesting association.");
+        internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " is requesting association.");
 
         // If file write is disabled, add to registry with 'null' as the file write entry and return.
         if(!fileWrite){
-            internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
+            internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
             bridges.put(caller, null);
             return;
         }
@@ -135,7 +135,7 @@ public class XLoggerCore
             internal.logEvent(LogEventLevel.WARNING, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
         }
-        internal.logEvent("Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
+        internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
     }
 
     /**
@@ -151,7 +151,7 @@ public class XLoggerCore
             return;
         }
 
-        internal.logEvent("Interpreter \"" + caller.friendlyName + "\" is requesting disassociation.");
+        internal.logEvent(LogEventLevel.DEBUG, "Interpreter \"" + caller.friendlyName + "\" is requesting disassociation.");
 
         // Close the Interpreter's writer if it has one.
         XLoggerFileWriteEntry xf = bridges.get(caller);
@@ -169,7 +169,7 @@ public class XLoggerCore
 
         // Even if the object requesting disassociation was the internal Interpreter, it's not null, it's just disassociated,
         // and it will pass the security check for event logging even if disassociated.
-        internal.logEvent("Interpreter \"" + caller.friendlyName + "\" disassociated.");
+        internal.logEvent(LogEventLevel.DEBUG, "Interpreter \"" + caller.friendlyName + "\" disassociated.");
 
         // If the registry only contains the internal Interpreter, it means that all others have disassociated.
         // In that case, log this and disassociate the internal and master Interpreters as well.
@@ -222,12 +222,12 @@ public class XLoggerCore
         // set its file writer entry's contents to null.
         for(XLoggerInterpreter xl : bridges.keySet())
         {
-            internal.logEvent("Re-associating interpreter \"" + xl.friendlyName + "\"...");
+            internal.logEvent(LogEventLevel.DEBUG, "Re-associating interpreter \"" + xl.friendlyName + "\"...");
             XLoggerFileWriteEntry xf = bridges.get(xl);
 
             // Check if the specified writer has file write enabled. If it doesn't, skip it.
             if(xf == null || xf.writer == null){
-                internal.logEvent("Interpreter " + xl.friendlyName + " has writing disabled, skipping.");
+                internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + xl.friendlyName + " has writing disabled, skipping.");
                 continue;
             }
 
@@ -273,7 +273,7 @@ public class XLoggerCore
         // Turn master log write off if it is not already.
         XLoggerFileWriteEntry fw = bridges.get(caller);
         if(fw != null && fw.writer != null && fw.writeToMaster){
-            internal.logEvent("Interpreter \"" + caller.friendlyName + "\" opted-out of master logging.");
+            internal.logEvent(LogEventLevel.DEBUG, "Interpreter \"" + caller.friendlyName + "\" opted-out of master logging.");
             fw.writeToMaster = false;
         }
     }

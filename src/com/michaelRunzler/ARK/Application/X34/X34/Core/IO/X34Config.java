@@ -1,5 +1,7 @@
 package X34.Core.IO;
 
+import com.sun.istack.internal.NotNull;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -65,11 +67,12 @@ public class X34Config
      *                     for auto-casting the return value if a key was found.
      * @return the value corresponding to the provided key, or the provided default value if the key does not exist in the index
      */
-    public <T> T getSettingOrDefault(String key, T defaultValue)
+    public <T> T getSettingOrDefault(String key, @NotNull T defaultValue)
     {
         try{
             T retV = (T)storage.getOrDefault(key, defaultValue);
-            if(retV.getClass() == defaultValue.getClass() || (retV.getClass().getSuperclass() == defaultValue.getClass().getSuperclass()))
+            if(retV == null && defaultValue == null) return null;
+            if(retV == null|| retV.getClass() == defaultValue.getClass() || (retV.getClass().getSuperclass() == defaultValue.getClass().getSuperclass()))
             return retV;
             else return defaultValue;
         }catch (ClassCastException e){
@@ -88,7 +91,7 @@ public class X34Config
      *                     for auto-casting the return value if a key was found.
      * @return the value corresponding to the provided key, or the provided default value if the key does not exist in the index
      */
-    public <T> T getSettingOrStore(String key, T defaultValue)
+    public <T> T getSettingOrStore(String key, @NotNull T defaultValue)
     {
         T retV = getSettingOrDefault(key, defaultValue);
         if(retV == defaultValue) storeSetting(key, retV);

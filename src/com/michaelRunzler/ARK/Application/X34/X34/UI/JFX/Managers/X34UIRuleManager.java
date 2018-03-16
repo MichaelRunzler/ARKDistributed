@@ -107,6 +107,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private boolean errored;
     private State ruleState;
     private State enableState;
+    private boolean linkedSizeListeners;
 
     public X34UIRuleManager(double x, double y)
     {
@@ -124,6 +125,7 @@ public class X34UIRuleManager extends ARKManagerBase
         fallback = null;
         modified = false;
         errored = false;
+        linkedSizeListeners = false;
 
         window.initModality(Modality.APPLICATION_MODAL);
 
@@ -758,16 +760,21 @@ public class X34UIRuleManager extends ARKManagerBase
         processors.setDisable(true);
         info.setVisible(false);
 
-        // Link list widths and heights to the window size
-        layout.widthProperty().addListener(e ->{
-            JFXUtil.setElementPositionCentered(layout, close, true, false);
-            JFXUtil.setElementPositionCentered(layout, discard, true, false);
-            info.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
+        // Only do this once, then lock it out to prevent unnecessary listener bindings
+        if(!linkedSizeListeners) {
+            // Link list widths and heights to the window size
+            layout.widthProperty().addListener(e -> {
+                JFXUtil.setElementPositionCentered(layout, close, true, false);
+                JFXUtil.setElementPositionCentered(layout, discard, true, false);
+                info.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
 
-            repositionOnResize();
-        });
+                repositionOnResize();
+            });
 
-        layout.heightProperty().addListener(e -> repositionOnResize());
+            layout.heightProperty().addListener(e -> repositionOnResize());
+
+            linkedSizeListeners = true;
+        }
 
         JFXUtil.setElementPositionInGrid(layout, close, -1, -1, -1, 0);
         JFXUtil.setElementPositionInGrid(layout, discard, -1, -1, -1, 1);

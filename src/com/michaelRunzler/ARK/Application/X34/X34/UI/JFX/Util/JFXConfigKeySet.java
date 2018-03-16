@@ -1,7 +1,5 @@
 package X34.UI.JFX.Util;
 
-import X34.UI.JFX.Managers.X34UIConfigManager;
-import X34.UI.JFX.Managers.X34UIFileManager;
 import X34.UI.JFX.Managers.X34UIRuleManager;
 import X34.UI.JFX.X34UI;
 
@@ -26,8 +24,11 @@ public class JFXConfigKeySet
     @Owner(X34UIRuleManager.class)
     public static final String KEY_PROCESSOR_LIST = "external_processors";
 
-    @Owner(X34UIFileManager.class)
+    @Owner(X34UI.class)
     public static final String KEY_INDEX_DIR = "index_dir";
+
+    @Owner(X34UI.class)
+    public static final String KEY_LOGGING_DIR = "master_log_dir";
 }
 
 

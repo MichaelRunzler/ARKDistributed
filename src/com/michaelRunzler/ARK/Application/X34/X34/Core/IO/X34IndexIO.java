@@ -138,4 +138,13 @@ public class X34IndexIO
         if(newParent == null) throw new IllegalArgumentException("Provided parent file cannot be null");
         this.parent = newParent;
     }
+
+    /**
+     * Gets the current index parent directory.
+     * @return a copy of the {@link File} representing the current base directory in which indices are saved
+     */
+    public File getParent()
+    {
+        return new File(parent.getAbsolutePath());
+    }
 }

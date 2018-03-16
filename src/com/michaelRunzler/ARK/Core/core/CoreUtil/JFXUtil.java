@@ -2,7 +2,7 @@ package core.CoreUtil;
 
 import com.sun.istack.internal.NotNull;
 import com.sun.istack.internal.Nullable;
-import javafx.collections.MapChangeListener;
+import javafx.beans.value.ChangeListener;
 import javafx.geometry.Orientation;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
@@ -51,14 +51,14 @@ public class JFXUtil
 
     /**
      * The default spacing in pixels between UI nodes in a grid-type UI arrangement.
-     * For example, this value is used by the {@link #setElementPositionInGrid(AnchorPane, Node, int, int, int, int)} method for spacing its nodes.
+     * For example, this value is used by the {@link #setElementPositionInGrid(AnchorPane, Node, double, double, double, double)} method for spacing its nodes.
      * This value is auto-scaled using {@link #SCALE}.
      */
     public static final int DEFAULT_SPACING = (int)((BASE_SCALE_SIZE * 2) * SCALE);
 
     /**
      * The default spacing in pixels between UI nodes in a grid-type UI arrangement.
-     * For example, this value is used by the {@link #setElementPositionInGrid(AnchorPane, Node, int, int, int, int)} method for spacing its nodes.
+     * For example, this value is used by the {@link #setElementPositionInGrid(AnchorPane, Node, double, double, double, double)} method for spacing its nodes.
      * This value is not auto-scaled.
      */
     public static final int DEFAULT_SPACING_UNSCALED = (int)(BASE_SCALE_SIZE * 2);
@@ -92,6 +92,37 @@ public class JFXUtil
 
     /**
      * Sets the provided {@link Node}'s position inside of the provided {@link AnchorPane}.
+     * Adds the provided {@link Node} to the {@link AnchorPane} if it is not already a member of said {@link AnchorPane}.
+     * Automatically compensates for scaling (retrieved from {@link #SCALE}) when setting positions. For example,
+     * if the native UI scale is 1.5, and the provided value for the 'left' argument is 20, the resultant actual spacing
+     * between the left side of the {@link Node} and the left drawable canvas bound will be 30 pixels.
+     * Specify any value less than 0 to skip aligning that vector and leave the alignment as it was.
+     * Specifying values that clash, such as providing values for both 'left' and 'right', will cause the provided {@link Node}
+     * to be resized to accommodate the specified values. This may cause undocumented behavior if the values are out-of-bounds of
+     * the canvas size.
+     * This variant of the positioning method ignores the padding of the specified {@link AnchorPane}, and sets the provided
+     * {@link Node}'s position relative to the edge of the drawable canvas area, as opposed to the edge of the padding area.
+     * If the provided {@link AnchorPane} has no padding set, or has all padding margins set to {@code 0}, the behavior of
+     * this method will be identical to calling {@link #setElementPosition(AnchorPane, Node, double, double, double, double)}.
+     * @param layout the {@link AnchorPane} in which the provided {@link Node} should be repositioned
+     * @param element the {@link Node} to be repositioned
+     * @param left the distance in pixels from the left side of the drawable canvas area to the left edge of the provided {@link Node}
+     * @param right the distance in pixels from the right side of the drawable canvas area to the right edge of the provided {@link Node}
+     * @param top the distance in pixels from the top of the drawable canvas area to the top edge of the provided {@link Node}
+     * @param bottom the distance in pixels from the bottom of the drawable canvas area to the bottom edge of the provided {@link Node}
+     */
+    public static void setElementPositionIgnorePadding(@NotNull AnchorPane layout, @NotNull Node element, double left, double right, double top, double bottom)
+    {
+        if(!layout.getChildren().contains(element)) layout.getChildren().add(element);
+
+        if(left >= 0) AnchorPane.setLeftAnchor(element, (left * SCALE) - layout.getPadding().getLeft());
+        if(right >= 0) AnchorPane.setRightAnchor(element, (right * SCALE) - layout.getPadding().getRight());
+        if(top >= 0) AnchorPane.setTopAnchor(element, (top * SCALE) - layout.getPadding().getTop());
+        if(bottom >= 0) AnchorPane.setBottomAnchor(element, (bottom * SCALE) - layout.getPadding().getBottom());
+    }
+
+    /**
+     * Sets the provided {@link Node}'s position inside of the provided {@link AnchorPane}.
      * Position values are not in pixels, rather, they are in multiples of {@link #DEFAULT_SPACING}, essentially
      * turning the canvas of the provided {@link AnchorPane} into a grid with cell sizes equal to {@link #DEFAULT_SPACING}<sup>2</sup>.
      * This sizing system automatically scales with global UI scale. See {@link #SCALE} for more information.
@@ -106,7 +137,7 @@ public class JFXUtil
      * @param topGridID the number of grid spaces between the top of the drawable canvas area and the top edge of the provided {@link Node}
      * @param bottomGridID the number of grid spaces between the bottom of the drawable canvas area and the bottom edge of the provided {@link Node}
      */
-    public static void setElementPositionInGrid(@NotNull AnchorPane layout, @NotNull Node element, int leftGridID, int rightGridID, int topGridID, int bottomGridID)
+    public static void setElementPositionInGrid(@NotNull AnchorPane layout, @NotNull Node element, double leftGridID, double rightGridID, double topGridID, double bottomGridID)
     {
         if(!layout.getChildren().contains(element)) layout.getChildren().add(element);
 
@@ -296,7 +327,7 @@ public class JFXUtil
         }else if(axis == Orientation.HORIZONTAL)
         {
             if(margin >= 0) AnchorPane.setLeftAnchor(element, target.getLayoutX() + targetBounds.getWidth() + margin - layout.getPadding().getLeft());
-            else AnchorPane.setLeftAnchor(element, (target.getLayoutX() - elementBounds.getWidth() - (margin == Integer.MIN_VALUE ? 0 : margin) < 0 ? 0 : target.getLayoutX() - elementBounds.getWidth() - (margin == Integer.MIN_VALUE ? 0 : margin)) - layout.getPadding().getLeft());
+            else AnchorPane.setLeftAnchor(element, (target.getLayoutX() - elementBounds.getWidth() + (margin == Integer.MIN_VALUE ? 0 : margin) < 0 ? 0 : target.getLayoutX() - elementBounds.getWidth() + (margin == Integer.MIN_VALUE ? 0 : margin)) - layout.getPadding().getLeft());
 
             if(edgeAlignment == JFXUtil.Alignment.CENTERED) AnchorPane.setTopAnchor(element, target.getLayoutY() + (targetBounds.getHeight() / 2) - (elementBounds.getHeight() / 2) - layout.getPadding().getTop());
             else if(edgeAlignment == JFXUtil.Alignment.NEGATIVE) AnchorPane.setTopAnchor(element, target.getLayoutY() - layout.getPadding().getTop());
@@ -333,7 +364,12 @@ public class JFXUtil
                                            @Nullable double margin, @NotNull Orientation axis, @NotNull Alignment edgeAlignment)
     {
         alignToNode(layout, target, element, margin, axis, edgeAlignment);
-        target.getProperties().addListener((MapChangeListener<Object, Object>) change -> alignToNode(layout, target, element, margin, axis, edgeAlignment));
+        ChangeListener<Number> listener = (observable, oldValue, newValue) -> alignToNode(layout, target, element, margin, axis, edgeAlignment);
+
+        target.widthProperty().addListener(listener);
+        target.heightProperty().addListener(listener);
+        target.layoutXProperty().addListener(listener);
+        target.layoutYProperty().addListener(listener);
     }
 
     /**
@@ -371,7 +407,10 @@ public class JFXUtil
                                            @NotNull Orientation axis, @NotNull Alignment edgeAlignment)
     {
         alignToNode(layout, target, targetBounds, element, elementBounds, margin, axis, edgeAlignment);
-        target.getProperties().addListener((MapChangeListener<Object, Object>) change -> alignToNode(layout, target, targetBounds, element, elementBounds, margin, axis, edgeAlignment));
+        ChangeListener<Number> listener = (observable, oldValue, newValue) -> alignToNode(layout, target, targetBounds, element, elementBounds, margin, axis, edgeAlignment);
+
+        target.layoutXProperty().addListener(listener);
+        target.layoutYProperty().addListener(listener);
     }
 
     /**
