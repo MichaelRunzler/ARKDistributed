@@ -450,6 +450,7 @@ public class JFXUtil
     /**
      * Generates a JFX {@link ImageView} object representing the specified image resource at the specified resolution.
      * Typically useful for setting the {@code graphic} properties of certain types of {@link Node}.
+     * Shorthand call, calls {@link #generateGraphicFromResource(String, int, int)} with {@param resolution} as the X and Y resolution.
      * @param resourceID the relative JFX Resource URI of the image file to load
      * @param resolution the resolution that the image should be scaled to. If this is 0 or less, the image will be loaded
      *                   at its original resolution with no scaling.
@@ -457,9 +458,24 @@ public class JFXUtil
      */
     public static ImageView generateGraphicFromResource(String resourceID, int resolution)
     {
-        if(resolution > 0) {
+        return generateGraphicFromResource(resourceID, resolution, resolution);
+    }
+
+    /**
+     * Generates a JFX {@link ImageView} object representing the specified image resource at the specified resolution.
+     * Typically useful for setting the {@code graphic} properties of certain types of {@link Node}.
+     * @param resourceID the relative JFX Resource URI of the image file to load
+     * @param resX the resolution that the image should be scaled to in the X axis. If this is 0 or less, the image will be loaded
+     *                   at its original resolution with no scaling.
+     * @param resY the resolution that the image should be scaled to in the Y axis. If this is 0 or less, the image will be loaded
+     *                   at its original resolution with no scaling.
+     * @return the resultant {@link ImageView} object
+     */
+    public static ImageView generateGraphicFromResource(String resourceID, int resX, int resY)
+    {
+        if(resX > 0 && resY > 0) {
             return new ImageView(new Image(resourceID,
-                    resolution * JFXUtil.SCALE, resolution * JFXUtil.SCALE, true, true));
+                    resX * JFXUtil.SCALE, resY * JFXUtil.SCALE, true, true));
         }else{
             return new ImageView(new Image(resourceID));
         }

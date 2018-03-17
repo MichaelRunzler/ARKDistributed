@@ -29,6 +29,9 @@ public class JFXConfigKeySet
 
     @Owner(X34UI.class)
     public static final String KEY_LOGGING_DIR = "master_log_dir";
+
+    @Owner(JFXConfigKeySet.class)
+    public static final long MAJOR_CONFIG_VERSION = 1000L;
 }
 
 

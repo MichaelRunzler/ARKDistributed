@@ -93,7 +93,7 @@ public class X34UI extends Application
     private Map<Node, ModeLocal> annotatedNodes;
     private ArrayList<ModeSwitchHook> modeSwitchHooks;
 
-    private File configFile = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34","JFXGeneralConfig.x34c");
+    private File configFile = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\X34\\Config","JFXGeneralConfig.x34c");
 
     //
     // CONSTANTS
@@ -143,7 +143,7 @@ public class X34UI extends Application
 
         log = new XLoggerInterpreter("X34-JFX UI");
         log.setImplicitEventLevel(LogEventLevel.DEBUG);
-        log.changeLoggerVerbosity(LogVerbosityLevel.STANDARD);
+        //todo re-add when done with debugging: log.changeLoggerVerbosity(LogVerbosityLevel.STANDARD);
 
         config = X34ConfigDelegator.getMainInstance();
         config.setTarget(configFile);
@@ -172,6 +172,12 @@ public class X34UI extends Application
             // FALLBACK
             log.logEvent(LogEventLevel.WARNING, "Failed to load config file. Loading defaults.");
             config.loadAllDefaults();
+            try {
+                config.writeStoredConfigToFile();
+            } catch (IOException e1) {
+                log.logEvent(LogEventLevel.DEBUG, "Encountered error while writing initial config settings to file, see below for details.");
+                log.logEvent(e1);
+            }
         }finally {
             // RETRIEVE
             delayedMode = config.getSettingOrStore(KEY_WINDOW_MODE, delayedMode);

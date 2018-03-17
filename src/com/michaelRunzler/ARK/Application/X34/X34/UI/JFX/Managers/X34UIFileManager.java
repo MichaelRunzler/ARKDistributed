@@ -41,6 +41,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Manages the files used by the X34UI application, including config, index, and log files, and allows the user to view,
+ * open, move, and delete said files.
+ */
 public class X34UIFileManager extends ARKManagerBase
 {
     //
@@ -104,9 +108,15 @@ public class X34UIFileManager extends ARKManagerBase
         super(TITLE, DEFAULT_WIDTH, DEFAULT_HEIGHT, x, y);
 
         window.initModality(Modality.APPLICATION_MODAL);
+        window.getIcons().set(0, new Image("core/assets/options.png"));
 
         window.setMinWidth(DEFAULT_WIDTH);
         window.setMinHeight(DEFAULT_HEIGHT);
+
+        window.setOnCloseRequest(e ->{
+            e.consume();
+            hide();
+        });
 
         //
         // BASE OBJECT INIT
@@ -121,15 +131,15 @@ public class X34UIFileManager extends ARKManagerBase
 
         // Initialize tab list. Each tab object contains all necessary metadata to initialize and control its linked JFX Tab object.
         tabs = new FileManagerTabProperty[]{
-                new FileManagerTabProperty(JFXConfigKeySet.KEY_CONFIG_FILE, "Configs", ".x34c").setOnChange(param -> {
+                new FileManagerTabProperty("Configs", JFXConfigKeySet.KEY_CONFIG_FILE, ".x34c").setOnChange(param -> {
                     config.setTarget(param);
                     return null;
                 }),
-                new FileManagerTabProperty(JFXConfigKeySet.KEY_INDEX_DIR, "Indexes", ".x34i").setOnChange(param -> {
+                new FileManagerTabProperty("Indexes", JFXConfigKeySet.KEY_INDEX_DIR, ".x34i").setOnChange(param -> {
                     X34IndexDelegator.getMainInstance().setParent(param);
                     return null;
                 }),
-                new FileManagerTabProperty(JFXConfigKeySet.KEY_LOGGING_DIR, "Log Files", ".x34l").setOnChange(param -> {
+                new FileManagerTabProperty("Log Files", JFXConfigKeySet.KEY_LOGGING_DIR, ".x34l").setOnChange(param -> {
                     try {
                         log.requestLoggerDirectoryChange(param);
                     } catch (IOException e) {
@@ -184,6 +194,8 @@ public class X34UIFileManager extends ARKManagerBase
 
         fileList.setEditable(false);
         fileList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        setElementTooltips();
 
         // Add type conversion to the cells in the file list
         fileList.setCellFactory(param -> new ListCell<File>() {
@@ -325,6 +337,9 @@ public class X34UIFileManager extends ARKManagerBase
         linkedCurrentDir = f;
     }
 
+    /**
+     * Re-positions all UI elements to their proper locations and sizes upon window display.
+     */
     private void repositionElements()
     {
         // Only do this once, then lock it out to prevent unnecessary listener bindings
@@ -346,6 +361,7 @@ public class X34UIFileManager extends ARKManagerBase
                 // Essentially, we are making it impossible for other nodes to clash with the menu bar.
                 layout.setPadding(new Insets(layout.getPadding().getTop() + typeSelector.getHeight(), layout.getPadding().getRight(), layout.getPadding().getBottom(), layout.getPadding().getLeft()));
                 AnchorPane.setTopAnchor(typeSelector, -1 * layout.getPadding().getTop());
+                open.layoutXProperty().addListener(e -> JFXUtil.bindAlignmentToNode(layout, open, listFunctionsLabel, -10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
             });
 
             linkedSizeListeners = true;
@@ -367,10 +383,12 @@ public class X34UIFileManager extends ARKManagerBase
 
         Platform.runLater(() ->{
             JFXUtil.setElementPosition(layout, open, -1, delete.getWidth(), -1, 0);
-            open.layoutXProperty().addListener(e -> JFXUtil.bindAlignmentToNode(layout, open, listFunctionsLabel, -10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
         });
     }
 
+    /**
+     * Called whenever the window or layout resizes on the X or Y axis.
+     */
     private void repositionOnResize()
     {
         directorySeparator.setFitWidth(layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft());
@@ -382,6 +400,9 @@ public class X34UIFileManager extends ARKManagerBase
         });
     }
 
+    /**
+     * Switches the UI's display mode to the appropriate mode for the currently selected tab.
+     */
     private void switchMode()
     {
         // If a cached copy of the node list is present, use that instead of the full reflection routine.
@@ -448,6 +469,18 @@ public class X34UIFileManager extends ARKManagerBase
         }
     }
 
+    private void setElementTooltips()
+    {
+        typeSelector.setTooltip(new Tooltip("Use this to select a file category to view or modify."));
+        currentDir.setTooltip(new Tooltip("The currently set directory path for this file category."));
+        fileList.setTooltip(new Tooltip("The list of all relevant files in the currently set directory for this category.\nThis will only update when tabs are changed or the window is closed and re-opened."));
+        close.setTooltip(new Tooltip("Close this window. Changes will be saved."));
+        openDir.setTooltip(new Tooltip("Open the currently set directory in the system file explorer."));
+        changeDir.setTooltip(new Tooltip("Change the currently set directory."));
+        delete.setTooltip(new Tooltip("Delete the currently selected file. WARNING: this action is permanent!"));
+        open.setTooltip(new Tooltip("Open the currently selected file in its associated program."));
+    }
+
     @Override
     public void display()
     {
@@ -470,7 +503,7 @@ class FileManagerTabProperty
     String name;
     Callback<File, Void> changeAction;
 
-    FileManagerTabProperty(String configKey, String name, String... extensionFilters) {
+    FileManagerTabProperty(String name, String configKey, String... extensionFilters) {
         this.configKey = configKey;
         this.extensionFilters = extensionFilters;
         this.name = name;

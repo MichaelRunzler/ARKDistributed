@@ -128,6 +128,7 @@ public class X34UIRuleManager extends ARKManagerBase
         linkedSizeListeners = false;
 
         window.initModality(Modality.APPLICATION_MODAL);
+        window.getIcons().set(0, new Image("core/assets/options.png"));
 
         window.setMinWidth(DEFAULT_WIDTH);
         window.setMinHeight(DEFAULT_HEIGHT);

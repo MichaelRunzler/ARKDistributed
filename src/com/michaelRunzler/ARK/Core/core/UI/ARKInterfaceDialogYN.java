@@ -51,7 +51,7 @@ public class ARKInterfaceDialogYN
         if(width > 0 && height > 0)
             scene = new Scene(layout, width, height);
         else{
-            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 100 : 100) * JFXUtil.SCALE;
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 75 : 75) * JFXUtil.SCALE;
             scene = new Scene(layout, size, size);
         }
         window.setScene(scene);
