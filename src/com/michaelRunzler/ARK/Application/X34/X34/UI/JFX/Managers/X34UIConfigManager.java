@@ -3,8 +3,8 @@ package X34.UI.JFX.Managers;
 import X34.Core.IO.X34Config;
 import X34.Core.IO.X34ConfigDelegator;
 import X34.UI.JFX.Util.JFXConfigKeySet;
-import X34.UI.JFX.Util.ModeLocal;
-import X34.UI.JFX.Util.ModeSwitchHook;
+import core.UI.ModeLocal;
+import core.UI.ModeSwitchHook;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
@@ -17,6 +17,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.util.Callback;
@@ -64,6 +65,10 @@ public class X34UIConfigManager extends ARKManagerBase
     @ModeLocal(invert = true, value = {MODE_SPECIAL})
     private Button defaults;
 
+    @ModeLocal(invert = true, value = {MODE_SPECIAL})
+    private ScrollPane options;
+    private VBox optionsContainer;
+
     //
     // JFX NODES
     //
@@ -93,6 +98,8 @@ public class X34UIConfigManager extends ARKManagerBase
     private ArrayList<ModeSwitchHook> modeSwitchHooks;
     private UINotificationBannerControl notice;
 
+    //todo: add following settings: global output dir, autodownload, overwrite state, index push,
+
     public X34UIConfigManager(double x, double y)
     {
         super(TITLE, DEFAULT_WIDTH, DEFAULT_HEIGHT, x, y);
@@ -116,11 +123,14 @@ public class X34UIConfigManager extends ARKManagerBase
         cachedMode = mode;
         linkedSizeListeners = false;
 
-        categorySelect = new TabPane();
-
         //
         // JFX NODE INIT
         //
+
+        categorySelect = new TabPane();
+
+        options = new ScrollPane();
+        optionsContainer = new VBox();
 
         close = new Button("Close");
         save = new Button("Save Changes");
@@ -161,6 +171,10 @@ public class X34UIConfigManager extends ARKManagerBase
         // JFX NODE CONFIG
         //
 
+        options.setContent(optionsContainer);
+        options.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        options.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
         info.setWrapText(true);
         notice = new UINotificationBannerControl(info);
 
@@ -176,9 +190,19 @@ public class X34UIConfigManager extends ARKManagerBase
             forceSettingsUpdate();
         });
 
+        modeSwitchHooks.add(mode -> {
+            if(mode == -1 || mode == MODE_SPECIAL) return;
+
+            ConfigManagerTabProperty tab = tabs[mode];
+
+            // Clear the child list, then add the nodes in the tab in question if it has any
+            optionsContainer.getChildren().clear();
+            if(tab.dataPairs != null) for(KeyedActionCallback k : tab.dataPairs) optionsContainer.getChildren().add(k.boundNode);
+        });
+
         setElementTooltips();
 
-        layout.getChildren().addAll(categorySelect, close, save, revert, defaults, globalDefaults, info, saveConfig, loadConfig, additionalOptionsDesc, notificationSeparator, returnToMain);
+        layout.getChildren().addAll(categorySelect, close, save, revert, defaults, globalDefaults, info, saveConfig, loadConfig, additionalOptionsDesc, notificationSeparator, returnToMain, options);
 
         //
         // NODE ACTIONS
@@ -317,6 +341,8 @@ public class X34UIConfigManager extends ARKManagerBase
         JFXUtil.setElementPositionInGrid(layout, info, 0, -1, 0, -1);
         JFXUtil.setElementPositionInGrid(layout, notificationSeparator, 0, -1, 1, -1);
 
+        JFXUtil.setElementPositionInGrid(layout, options, 0, 0, 1.5, 2);
+
         Platform.runLater(() ->{
             info.setMaxHeight(notificationSeparator.getLayoutY());
             JFXUtil.setElementPositionCentered(layout, additionalOptionsDesc, true, false);
@@ -444,6 +470,7 @@ public class X34UIConfigManager extends ARKManagerBase
         }
     }
 
+    //todo convert to ModeSwitchController
     /**
      * Switches the UI's display mode to the appropriate mode for the currently selected tab.
      */
@@ -482,7 +509,7 @@ public class X34UIConfigManager extends ARKManagerBase
                     Object o;
                     try {
                         o = f.get(this);
-                        if (o == null || !(o instanceof Node)) continue;
+                        if (!(o instanceof Node)) continue;
                     } catch (IllegalAccessException ignored) {
                         continue;
                     }

@@ -173,7 +173,7 @@ public class X34Config
      * @param key the key to search for in the settings index
      */
     public void removeSetting(String key) {
-        if(storage.containsKey(key)) storage.remove(key);
+        storage.remove(key);
     }
 
     /**
@@ -240,7 +240,7 @@ public class X34Config
         if(settings.size() == 0) throw new IllegalArgumentException("Input HashMap cannot be null");
 
         for(String key : settings.keySet()) {
-            if(storage.containsKey(key)) storage.remove(key);
+            storage.remove(key);
             storage.put(key, settings.get(key));
         }
     }
@@ -287,7 +287,7 @@ public class X34Config
             // Check each entry for temporary flagging, and remove it from to the temporary write array if it is flagged.
             // Skip removal if the specified key does not exist in the main array for obvious reasons.
             for (String k : storage.keySet()) {
-                if (tempFlags.containsKey(k) && tempFlags.get(k) && writeCopy.containsKey(k)) writeCopy.remove(k);
+                if (tempFlags.containsKey(k) && tempFlags.get(k)) writeCopy.remove(k);
             }
         }
 
@@ -418,7 +418,7 @@ public class X34Config
         if(key.length() == 0) throw new IllegalArgumentException("Key cannot be zero-length");
         if(defaultValue != null && !(defaultValue instanceof Serializable)) throw new IllegalArgumentException("Object must be serializable");
 
-        if(defaults.containsKey(key)) defaults.remove(key);
+        defaults.remove(key);
 
         defaults.put(key, defaultValue);
     }
@@ -443,9 +443,20 @@ public class X34Config
 
         if(!(defaults.containsKey(key))) return;
 
-        if(storage.containsKey(key)) storage.remove(key);
+        storage.remove(key);
 
         storage.put(key, defaults.get(key));
+    }
+
+    /**
+     * Applies a previously set default setting to the main index, if one for the specified key exists.
+     * If a corresponding main index entry for the specified key exists, no action will be taken, and the existing
+     * value will be left as-is.
+     * If no corresponding main index entry for the specified key exists, it will be created.
+     * @param key the key to search for in the index
+     */
+    public void loadDefaultIfNotPresent(String key){
+        if(!storage.containsKey(key)) loadDefault(key);
     }
 
     /**
@@ -463,6 +474,21 @@ public class X34Config
         for(int i = 0; i < defaults.keySet().size(); i++){
             String key = itr.next();
             storage.put(key, defaults.get(key));
+        }
+    }
+
+    /**
+     * Iterates through each key in the defaults index, and calls {@link #loadDefaultIfNotPresent(String)} on each one.
+     * This has the effect of filling 'gaps' in the main index, where values may not be present, and ensures that for any
+     * given key in the default index, there will be a corresponding key in the main one, regardless of whether the two
+     * keys' associated values match.
+     * Calling this method while the main index is empty will have the same result as calling {@link #loadAllDefaults()}.
+     */
+    public void loadDefaultsIfMissing(){
+        if(defaults == null || defaults.size() == 0) return;
+
+        for(String s : defaults.keySet()){
+            loadDefaultIfNotPresent(s);
         }
     }
 

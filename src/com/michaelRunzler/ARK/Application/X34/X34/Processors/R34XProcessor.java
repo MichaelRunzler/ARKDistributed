@@ -1,19 +1,21 @@
 package X34.Processors;
 
-import X34.Core.ValidationException;
-import X34.Core.X34Image;
-import X34.Core.X34Index;
-import X34.Core.X34Schema;
+import X34.Core.*;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.IOTools;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+
+import static X34.Core.X34CoreMetadataKeyMap.*;
 
 /**
  * Pulls image data from <a href="http://rule34.xxx/">Rule 34</a>.
@@ -37,12 +39,29 @@ public class R34XProcessor extends X34RetrievalProcessor
         if(!schema.validate()) throw new ValidationException("Schema failed to pass validation");
         XLoggerInterpreter log = new XLoggerInterpreter(this.INF + " RT Module");
 
+        SimpleIntegerProperty maxPageProperty = null;
+        SimpleIntegerProperty pageProperty = null;
+        SimpleStringProperty errorProperty = null;
+        SimpleBooleanProperty cancelledProperty = null;
+
+        boolean HAS_TELEMETRY = false;
+
+        // Initialize telemetry variables if they are present and valid
+        if(schema.metadata.containsKey(TELEMETRY_CAPABLE) && (boolean)schema.metadata.get(TELEMETRY_CAPABLE)){
+            maxPageProperty = (SimpleIntegerProperty)schema.metadata.get(TELEM_MAX_PAGE_PROP);
+            pageProperty = (SimpleIntegerProperty)schema.metadata.get(TELEM_CURR_PAGE_PROP);
+            errorProperty = (SimpleStringProperty)schema.metadata.get(TELEM_ERROR_STATE_PROP);
+            cancelledProperty = (SimpleBooleanProperty)schema.metadata.get(IS_CANCELLED);
+            HAS_TELEMETRY = true;
+        }
+
         log.logEvent("Starting retrieval...");
         log.logEvent(LogEventLevel.DEBUG, "----DEBUG INFO DUMP----");
         log.logEvent(LogEventLevel.DEBUG, "Index ID: " + index.id);
         log.logEvent(LogEventLevel.DEBUG, "Index length: " + index.entries.size());
         log.logEvent(LogEventLevel.DEBUG, "Schema query: " + schema.query);
         log.logEvent(LogEventLevel.DEBUG, "Processor ID: " + this.getID());
+        log.logEvent(LogEventLevel.DEBUG, "Telemetry enabled: " + HAS_TELEMETRY);
 
         String page;
         String URLBase = PAGESRV_ROOT + schema.query.replace(' ', '_').toLowerCase().trim() + PAGESRV_PID_PREFIX;
@@ -52,11 +71,21 @@ public class R34XProcessor extends X34RetrievalProcessor
         int failed = 0;
         boolean rtlTriggered = false;
 
+        if(maxPageProperty != null) maxPageProperty.set(X34Core.INVALID_INT_PROPERTY_VALUE);
+        if(errorProperty != null) errorProperty.set(null);
+
         // Loop until we run out of pages.
         do{
+            if(pageProperty != null) pageProperty.set(currentPage);
+            if(cancelledProperty != null && cancelledProperty.get()){
+                log.logEvent(LogEventLevel.WARNING, "Retrieval process cancellation request received, stopping.");
+                return null;
+            }
+
             // If we have failed more than 10 pages in a row, assume some kind of critical network error and break loop.
             if(failed > 10){
                 log.logEvent(LogEventLevel.CRITICAL, "Failed 10 pages in a row, assuming critical network error and aborting.");
+                if(errorProperty != null) errorProperty.set("Critical network error");
                 currentPage = -1;
                 continue;
             }
@@ -102,7 +131,10 @@ public class R34XProcessor extends X34RetrievalProcessor
                 continue;
             }else if(!page.contains(IMG_LINK_START)){
                 if(currentPage > 1) log.logEvent("End of valid entries.");
-                else log.logEvent(LogEventLevel.WARNING, "Tag appears to be invalid (reason: first page returned no-images warning)");
+                else{
+                    log.logEvent(LogEventLevel.WARNING, "Tag appears to be invalid (reason: first page returned no-images warning)");
+                    if(errorProperty != null) errorProperty.set("Invalid tag");
+                }
                 currentPage = -1;
                 continue;
             }

@@ -1,8 +1,9 @@
-package X34.UI.JFX.Util;
+package core.UI;
 
 /**
  * Used to represent actions that should be taken when an application mode-switch is in progress.
  */
+@FunctionalInterface
 public interface ModeSwitchHook {
 
     /**

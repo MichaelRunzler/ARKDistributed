@@ -4,8 +4,8 @@ import X34.Core.IO.X34Config;
 import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.IO.X34IndexDelegator;
 import X34.UI.JFX.Util.JFXConfigKeySet;
-import X34.UI.JFX.Util.ModeLocal;
-import X34.UI.JFX.Util.ModeSwitchHook;
+import core.UI.ModeLocal;
+import core.UI.ModeSwitchHook;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
@@ -361,7 +361,7 @@ public class X34UIFileManager extends ARKManagerBase
                 // Essentially, we are making it impossible for other nodes to clash with the menu bar.
                 layout.setPadding(new Insets(layout.getPadding().getTop() + typeSelector.getHeight(), layout.getPadding().getRight(), layout.getPadding().getBottom(), layout.getPadding().getLeft()));
                 AnchorPane.setTopAnchor(typeSelector, -1 * layout.getPadding().getTop());
-                open.layoutXProperty().addListener(e -> JFXUtil.bindAlignmentToNode(layout, open, listFunctionsLabel, -10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
+                open.layoutXProperty().addListener((observable, oldValue, newValue)-> JFXUtil.alignToNode(layout, open, listFunctionsLabel, -10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
             });
 
             linkedSizeListeners = true;
@@ -400,6 +400,7 @@ public class X34UIFileManager extends ARKManagerBase
         });
     }
 
+    //todo convert to ModeSwitchController
     /**
      * Switches the UI's display mode to the appropriate mode for the currently selected tab.
      */
@@ -438,7 +439,7 @@ public class X34UIFileManager extends ARKManagerBase
                     Object o;
                     try {
                         o = f.get(this);
-                        if (o == null || !(o instanceof Node)) continue;
+                        if (!(o instanceof Node)) continue;
                     } catch (IllegalAccessException ignored) {
                         continue;
                     }

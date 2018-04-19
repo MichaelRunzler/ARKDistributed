@@ -8,11 +8,15 @@ import java.util.HashMap;
  */
 public class X34Schema implements Serializable
 {
+    // Static serial version UID to enable backwards-compatibility with older versions that use <String, String> metadata
+    // instead of <String, Object> metadata.
+    public static final long serialVersionUID = -2449289277630283033L;
+
     public String query;
     public String type;
-    public HashMap<String, String> metadata;
+    public HashMap<String, Object> metadata;
 
-    public X34Schema(String query, String type, HashMap<String, String> meta)
+    public X34Schema(String query, String type, HashMap<String, Object> meta)
     {
         this.query = query;
         this.type = type;
@@ -24,9 +28,7 @@ public class X34Schema implements Serializable
      * guaranteed, since the contents of the metadata map are not forced to conform to any specific standards.
      * @return true if this Schema passed validation, false if otherwise
      */
-    public boolean validate()
-    {
-        if(query == null || query.isEmpty() || type == null || type.isEmpty()) return false;
-        else return true;
+    public boolean validate() {
+        return query != null && !query.isEmpty() && type != null && !type.isEmpty();
     }
 }

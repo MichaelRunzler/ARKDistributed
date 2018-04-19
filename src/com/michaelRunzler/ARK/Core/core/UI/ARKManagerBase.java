@@ -23,7 +23,8 @@ public abstract class ARKManagerBase implements ARKManagerInterface
      * provide their own UI nodes and interactivity clauses.
      * By default, the window represented by this object will be resizable, start in the hidden state,
      * and use the icon defined by {@code info.png} icon in the Core Assets directory.
-     * These properties can be
+     * These properties can be changed by calling the respective methods or fields from subclasses, or overriding
+     * their respective methods.
      * @param title the title of this Manager window
      * @param width the initial width of this Manager window
      * @param height the initial height of this Manager window

@@ -61,8 +61,8 @@ public class ARKInterfaceDialog
             AnchorPane.setBottomAnchor(input, height * 0.4);
         }
         else{
-            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 80 : 80) * JFXUtil.SCALE;
-            scene = new Scene(layout, size, size);
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 95 : 95) * JFXUtil.SCALE;
+            scene = new Scene(layout, size, size + JFXUtil.DEFAULT_SPACING * 1.1);
 
             AnchorPane.setBottomAnchor(input, (double)JFXUtil.DEFAULT_SPACING * 1.1);
         }

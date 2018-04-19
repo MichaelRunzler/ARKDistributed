@@ -16,6 +16,12 @@ public class JFXConfigKeySet
     public static final String KEY_RULE_LIST = "rules";
 
     @Owner(X34UI.class)
+    public static final String KEY_OUTPUT_DIR = "master_output_dir";
+
+    @Owner(X34UIRuleManager.class)
+    public static final String KEY_RULEDIR_MAP = "rule_dir_map";
+
+    @Owner(X34UI.class)
     public static final String KEY_CONFIG_FILE = "config_file";
 
     @Owner(X34UIRuleManager.class)
@@ -29,6 +35,9 @@ public class JFXConfigKeySet
 
     @Owner(X34UI.class)
     public static final String KEY_LOGGING_DIR = "master_log_dir";
+
+    @Owner(X34UI.class)
+    public static final String KEY_OVERWRITE_EXISTING = "overwrite_existing_images";
 
     @Owner(JFXConfigKeySet.class)
     public static final long MAJOR_CONFIG_VERSION = 1000L;

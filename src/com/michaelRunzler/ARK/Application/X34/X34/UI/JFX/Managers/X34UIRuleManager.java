@@ -6,16 +6,13 @@ import X34.Core.X34Rule;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import X34.UI.JFX.Util.CheckBoxEditableListCell;
+import X34.UI.JFX.Util.JFXConfigKeySet;
 import com.sun.istack.internal.Nullable;
-import core.UI.UINotificationBannerControl;
+import core.UI.*;
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
-import core.UI.ARKInterfaceAlert;
-import core.UI.ARKInterfaceDialog;
-import core.UI.ARKInterfaceDialogYN;
-import core.UI.ARKManagerBase;
 import core.system.ARKAppCompat;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -79,6 +76,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private Button ruleDown;
     private Button addProcessor;
     private Button removeProcessor;
+    private Button changeOutputDirectory;
 
     private ImageView arrow;
     private ImageView divider1;
@@ -98,6 +96,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private HashMap<X34RetrievalProcessor, SimpleBooleanProperty> selected;
     private HashMap<X34Rule, SimpleBooleanProperty> enabled;
     private HashMap<X34RetrievalProcessor[], File> externalProcessors;
+    private HashMap<X34Rule, File> ruleDirMap;
     private UINotificationBannerControl notice;
 
     private XLoggerInterpreter log;
@@ -136,6 +135,7 @@ public class X34UIRuleManager extends ARKManagerBase
         config.setDefaultSetting(KEY_PROCESSOR_DIR, PROCESSOR_STORAGE_DIR);
         PROCESSOR_STORAGE_DIR = config.getSettingOrStore(KEY_PROCESSOR_DIR, PROCESSOR_STORAGE_DIR);
         externalProcessors = config.getSettingOrDefault(KEY_PROCESSOR_LIST, new HashMap<>());
+        ruleDirMap = config.getSettingOrDefault(KEY_RULEDIR_MAP, new HashMap<>());
 
         //
         // NODE INIT
@@ -149,6 +149,7 @@ public class X34UIRuleManager extends ARKManagerBase
         ruleDown = new Button("Down");
         addProcessor = new Button("Import Processor(s)...");
         removeProcessor = new Button("Remove Processor");
+        changeOutputDirectory = new Button("Download Location...");
         arrow = JFXUtil.generateGraphicFromResource("X34/assets/GUI/icon/ic_arrow_right_256px.png", 25);
         divider1 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
         divider2 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
@@ -207,7 +208,7 @@ public class X34UIRuleManager extends ARKManagerBase
         final StringConverter<X34Rule> scr = new StringConverter<X34Rule>() {
             @Override
             public String toString(X34Rule object) {
-                return object.query;
+                return object == null ? "null" : object.query;
             }
 
             @Override
@@ -256,7 +257,8 @@ public class X34UIRuleManager extends ARKManagerBase
             // If they are, check element properties to see if they match. If so, the list has not changed.
             if(fallback == null && ruleList.getItems() == null) modified = false;
             else if(fallback != null && ruleList.getItems() == null || fallback == null && ruleList.getItems() != null) modified = true;
-            else if(fallback.size() != ruleList.getItems().size()) modified = true;
+            else //noinspection ConstantConditions because that 'possible null' is actually taken care of in an eariler if block
+                if(fallback.size() != ruleList.getItems().size()) modified = true;
             else if(fallback.size() == 0 && ruleList.getItems().size() == 0) modified = false;
             else{
                 for(int i = 0; i < fallback.size(); i++)
@@ -272,7 +274,7 @@ public class X34UIRuleManager extends ARKManagerBase
         // Add selection update listener for the rule list, link it to the processor list
         ruleList.getSelectionModel().selectedIndexProperty().addListener(e -> onIndexChange());
 
-        layout.getChildren().addAll(close, discard, ruleList, processors, addRule, removeRule, ruleUp, ruleDown, info, addProcessor, removeProcessor);
+        layout.getChildren().addAll(close, discard, ruleList, processors, addRule, removeRule, ruleUp, ruleDown, info, addProcessor, removeProcessor, changeOutputDirectory);
 
         // Load processors from registry. If that fails, the dialog is essentially useless, so hide it.
         try {
@@ -308,8 +310,10 @@ public class X34UIRuleManager extends ARKManagerBase
             String name = new ARKInterfaceDialog("Query", "Please enter the search string for the new rule:", "Confirm", "Cancel", "Tag...").display();
             if(name == null || name.isEmpty()) return;
 
-            // Add new rule with first processor preselected
-            ruleList.getItems().add(new X34Rule(name, null, processors.getItems().get(0).getID()));
+            // Add new rule with first processor preselected. Also add corresponding entry to the download location map.
+            X34Rule r = new X34Rule(name, null, processors.getItems().get(0).getID());
+            ruleList.getItems().add(r);
+            ruleDirMap.put(r, config.getSettingOrDefault(KEY_OUTPUT_DIR, ARKAppCompat.getOSSpecificDesktopRoot()));
             ruleList.getSelectionModel().select(ruleList.getItems().size() - 1);
             notice.displayNotice("Rule added.", UINotificationBannerControl.Severity.INFO, 1500);
         });
@@ -320,7 +324,8 @@ public class X34UIRuleManager extends ARKManagerBase
 
             if(new ARKInterfaceDialogYN("Warning", "Deleting this rule (" + ruleList.getItems().get(index).query
                     + ") cannot be undone! Proceed?", "Proceed", "Cancel").display()){
-                ruleList.getItems().remove(index);
+                X34Rule r = ruleList.getItems().remove(index);
+                ruleDirMap.remove(r);
                 notice.displayNotice("Rule removed!", UINotificationBannerControl.Severity.INFO, 1500);
             }
         });
@@ -521,6 +526,21 @@ public class X34UIRuleManager extends ARKManagerBase
             X34RetrievalProcessor xp = processors.getItems().remove(index);
             X34ProcessorRegistry.removeProcessorFromList(xp.getClass());
         });
+
+        changeOutputDirectory.setOnAction(e ->{
+            File original = ruleDirMap.get(ruleList.getSelectionModel().getSelectedItem());
+
+            ARKInterfaceFileChangeDialog fch = new ARKInterfaceFileChangeDialog("Change Rule Image Dest.", "Current rule image download destination directory:");
+            fch.setChoiceMode(ARKInterfaceFileChangeDialog.ChoiceMode.DIR_SELECT);
+            fch.setInitialDirectory(original);
+            fch.setValue(original);
+            fch.setChangeButtonText("Change Directory...");
+            fch.setDefaultValue(config.getSettingOrDefault(JFXConfigKeySet.KEY_OUTPUT_DIR, ARKAppCompat.getOSSpecificDesktopRoot()));
+
+            File f = fch.display();
+
+            if(f != null && !f.equals(original)) ruleDirMap.replace(ruleList.getSelectionModel().getSelectedItem(), original, f);
+        });
     }
 
     /**
@@ -546,7 +566,9 @@ public class X34UIRuleManager extends ARKManagerBase
                 if(x.getMetaData() == null) newRule.setMetaData(null);
                 else{
                     for(String s : x.getMetaData().keySet()){
-                        newRule.getMetaData().put(s + "", x.getMetaData().get(s) + "");
+                        // + "" is necessary to ensure deep-clone via concatenation instead of references for meta keys
+                        // Deep clone of meta values is not possible since they are of unknown types and do not expose the clone() method
+                        newRule.getMetaData().put(s + "", x.getMetaData().get(s));
                     }
                 }
                 fallback.add(newRule);
@@ -579,10 +601,18 @@ public class X34UIRuleManager extends ARKManagerBase
                 o.set(false);
             }
             processors.setDisable(true);
+            ruleUp.setDisable(true);
+            ruleDown.setDisable(true);
+            removeRule.setDisable(true);
+            changeOutputDirectory.setDisable(true);
             ruleState = State.FINALIZED;
             return;
         }else{
             processors.setDisable(false);
+            ruleUp.setDisable(false);
+            ruleDown.setDisable(false);
+            removeRule.setDisable(false);
+            changeOutputDirectory.setDisable(false);
         }
 
         ruleState = State.BUILDING;
@@ -650,7 +680,7 @@ public class X34UIRuleManager extends ARKManagerBase
                 if(selected.get(xp).getValue()) IDs.add(xp.getID());
             }
 
-            ruleList.getItems().set(ruleIndex, new X34Rule(r.query, r.getSchemas()[0].metadata, IDs.toArray(new String[IDs.size()])));
+            ruleList.getItems().set(ruleIndex, new X34Rule(r.query, r.getSchemas()[0].metadata, IDs.toArray(new String[0])));
         }
 
         ruleState = State.FINALIZED;
@@ -674,7 +704,7 @@ public class X34UIRuleManager extends ARKManagerBase
                 if (r.getMetaData() == null) r.setMetaData(new HashMap<>());
 
                 if (!enabled.get(r).getValue()) r.getMetaData().put("disabled", null);
-                else if (r.getMetaData().containsKey("disabled")) r.getMetaData().remove("disabled");
+                else r.getMetaData().remove("disabled");
 
                 // Manually set the modification flag. Since there has been no change to the list of rules, only its contents,
                 // the change listener will not fire by itself.
@@ -759,6 +789,10 @@ public class X34UIRuleManager extends ARKManagerBase
     private void repositionElements()
     {
         processors.setDisable(true);
+        ruleUp.setDisable(true);
+        ruleDown.setDisable(true);
+        removeRule.setDisable(true);
+        changeOutputDirectory.setDisable(true);
         info.setVisible(false);
 
         // Only do this once, then lock it out to prevent unnecessary listener bindings
@@ -773,6 +807,11 @@ public class X34UIRuleManager extends ARKManagerBase
             });
 
             layout.heightProperty().addListener(e -> repositionOnResize());
+
+            ruleUp.prefWidthProperty().bind(ruleDown.widthProperty());
+            addRule.prefWidthProperty().bind(removeRule.widthProperty());
+
+            JFXUtil.bindAlignmentToNode(layout, ruleList, changeOutputDirectory, (JFXUtil.DEFAULT_SPACING * 2) + (10 * JFXUtil.SCALE), Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
 
             linkedSizeListeners = true;
         }
@@ -789,9 +828,6 @@ public class X34UIRuleManager extends ARKManagerBase
         ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
         processors.setPrefWidth(layout.getWidth() / 3);
         processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
-
-        ruleUp.prefWidthProperty().bind(ruleDown.widthProperty());
-        addRule.prefWidthProperty().bind(removeRule.widthProperty());
     }
 
     /**
@@ -801,8 +837,8 @@ public class X34UIRuleManager extends ARKManagerBase
     {
         ruleList.setPrefWidth(layout.getWidth() / 3);
         processors.setPrefWidth(layout.getWidth() / 3);
-        ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
-        processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 4));
+        ruleList.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 5));
+        processors.setPrefHeight(layout.getHeight() - (JFXUtil.DEFAULT_SPACING * 5));
 
         Platform.runLater(() ->{
             JFXUtil.alignToNode(layout, ruleList, ruleUp, 10, Orientation.VERTICAL, JFXUtil.Alignment.NEGATIVE);

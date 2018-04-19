@@ -9,12 +9,22 @@ import com.sun.istack.internal.NotNull;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.ARKArrayUtil;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableMap;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import static X34.Core.X34CoreMetadataKeyMap.*;
 
 /**
  * Runs repository queries and retrieval operations.
@@ -23,6 +33,26 @@ public class X34Core
 {
     private XLoggerInterpreter log;
     private X34IndexIO loader;
+
+    private SimpleIntegerProperty maxPaginationProperty;
+    private SimpleIntegerProperty paginationProperty;
+    
+    private SimpleIntegerProperty maxProcessorCountProperty; 
+    private SimpleIntegerProperty processorCountProperty;
+
+    private SimpleIntegerProperty maxDownloadProgressProperty;
+    private SimpleIntegerProperty downloadProgressProperty;
+    
+    private SimpleStringProperty  currentProcessorProperty;
+    private SimpleStringProperty  currentQueryProperty;
+    private SimpleStringProperty  currentDownloadProperty;
+
+    private SimpleBooleanProperty pushToIndexProperty;
+    private SimpleBooleanProperty cancelledProperty;
+    
+    private ObservableMap<Object, ObservableValue> properties;
+
+    public static final int INVALID_INT_PROPERTY_VALUE = -1;
 
     /**
      * Default constructor. Uses the main instance from the {@link X34IndexDelegator}
@@ -33,6 +63,7 @@ public class X34Core
         log = new XLoggerInterpreter();
         loader = X34IndexDelegator.getMainInstance();
         log.logEvent("Initialization complete.");
+        propertyInit();
     }
 
     /**
@@ -45,6 +76,38 @@ public class X34Core
         log = new XLoggerInterpreter();
         loader = X34IndexDelegator.getDynamicInstance(IID);
         log.logEvent("Initialization complete.");
+        propertyInit();
+    }
+    
+    private void propertyInit()
+    {
+        maxPaginationProperty = new SimpleIntegerProperty();
+        paginationProperty = new SimpleIntegerProperty();
+        maxProcessorCountProperty = new SimpleIntegerProperty();
+        processorCountProperty = new SimpleIntegerProperty();
+        currentProcessorProperty = new SimpleStringProperty();
+        currentQueryProperty = new SimpleStringProperty();
+        currentDownloadProperty = new SimpleStringProperty();
+        maxDownloadProgressProperty = new SimpleIntegerProperty();
+        downloadProgressProperty = new SimpleIntegerProperty();
+        pushToIndexProperty = new SimpleBooleanProperty();
+        cancelledProperty = new SimpleBooleanProperty();
+
+        Map<Object, ObservableValue> propertyBackingMap = new HashMap<>();
+        propertyBackingMap.put(this, maxPaginationProperty);
+        propertyBackingMap.put(this, paginationProperty);
+        propertyBackingMap.put(this, maxPaginationProperty);
+        propertyBackingMap.put(this, maxProcessorCountProperty);
+        propertyBackingMap.put(this, processorCountProperty);
+        propertyBackingMap.put(this, currentProcessorProperty);
+        propertyBackingMap.put(this, currentQueryProperty);
+        propertyBackingMap.put(this, currentDownloadProperty);
+        propertyBackingMap.put(this, maxDownloadProgressProperty);
+        propertyBackingMap.put(this, downloadProgressProperty);
+        propertyBackingMap.put(this, pushToIndexProperty);
+        propertyBackingMap.put(this, cancelledProperty);
+
+        properties = FXCollections.observableMap(propertyBackingMap);
     }
 
     /**
@@ -80,6 +143,13 @@ public class X34Core
             log.logEvent("No index available. New index created.");
         }
 
+        config = setSchemaMetadataProperties(config);
+
+        currentQueryProperty.setValue(config.query);
+        currentProcessorProperty.setValue(config.type);
+        maxProcessorCountProperty.setValue(1);
+        processorCountProperty.setValue(1);
+
         // Run retrieval
         log.logEvent("Retrieving...");
         ArrayList<X34Image> newImages = processor.process(index, config);
@@ -87,16 +157,26 @@ public class X34Core
         // If the index doesn't have a meta tag indicating processor origin, add it.
         if(!index.metadata.containsKey("processor")) index.metadata.put("processor", processor.getID());
 
-        // Check if we got any new images from the processor. If so, save the index and return them. If not, skip saving
+        currentQueryProperty.setValue(null);
+        currentProcessorProperty.setValue(null);
+        maxProcessorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+        processorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+
+        // If the retrieval was cancelled via the property, return an empty array regardless of what we got from the processor.
+        // Otherwise, check if we got any new images from the processor. If so, save the index and return them. If not, skip saving
         // the index, since it will be the same as when loaded, and return an empty array.
-        if(newImages == null || newImages.size() == 0){
+        if(cancelledProperty.get()){
+            log.logEvent(LogEventLevel.WARNING, "Retrieval cancelled.");
+            return new ArrayList<>();
+        }else if(newImages == null || newImages.size() == 0){
             log.logEvent("No new images available from processor.");
             return new ArrayList<>();
-        }
-        else{
-            log.logEvent("New image" + (newImages.size() > 1 ? "s" : "") + " available. Saving index...");
-            loader.saveIndex(index);
-            log.logEvent("Index save successful.");
+        }else{
+            log.logEvent("New image" + (newImages.size() > 1 ? "s" : "") + " available." + (pushToIndexProperty.get() ?  " Saving index..." : " Index save DISABLED."));
+            if(pushToIndexProperty.get()){
+                loader.saveIndex(index);
+                log.logEvent("Index save successful.");
+            }
             return newImages;
         }
     }
@@ -115,12 +195,29 @@ public class X34Core
         if(configList == null || !configList.validate()) throw new ValidationException("Rule failed to pass validation.");
         ArrayList<X34Schema> schemas = new ArrayList<>(Arrays.asList(configList.getSchemas()));
 
+        currentQueryProperty.setValue(configList.query);
+        maxProcessorCountProperty.setValue(schemas.size());
+
         // Iterate through the available schemas and run retrieval for all of them, adding their results to the master array as we do so.
         ArrayList<X34Image> returned = new ArrayList<>();
-        for(int i = 0; i < schemas.size(); i++){
+        for(int i = 0; i < schemas.size(); i++)
+        {
+            // If the retrieval has been cancelled, return the current image list, since changes may have already been
+            // pushed to their indexes and we don't want to lose any data.
+            if(cancelledProperty.get()){
+                log.logEvent(LogEventLevel.WARNING, "Retrieval sequence cancelled. Aborting.");
+                break;
+            }
+
+            X34Schema schema = schemas.get(i);
+
+            schema = setSchemaMetadataProperties(schema);
+
+            processorCountProperty.setValue(i + 1);
+            currentProcessorProperty.setValue(schema.type);
             log.logEvent("Running retrieval operation " + (i + 1) + " of " + schemas.size());
             try {
-                returned.addAll(retrieve(schemas.get(i)));
+                returned.addAll(retrieve(schema));
                 log.logEvent("Retrieval " + (i + 1) + " of " + schemas.size() + " completed with no errors.");
             } catch (IOException e) {
                 log.logEvent(LogEventLevel.ERROR, "Retrieval operation returned exception with partial results, see below.");
@@ -129,6 +226,11 @@ public class X34Core
                 log.logEvent(LogEventLevel.WARNING, e.getMessage());
             }
         }
+
+        currentQueryProperty.setValue(null);
+        currentProcessorProperty.setValue(null);
+        maxProcessorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+        processorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
 
         return returned;
     }
@@ -152,8 +254,14 @@ public class X34Core
 
         log.logEvent("Attempting to write " + images.size() + " image" + (images.size() == 1 ? "" : "s" ) + " to disk...");
 
+        maxDownloadProgressProperty.set(images.size());
+
         int count = 0;
-        for(X34Image x : images){
+        for(int i = 0; i < images.size(); i++)
+        {
+            downloadProgressProperty.set(i + 1);
+            X34Image x = images.get(i);
+            currentDownloadProperty.set(ARKArrayUtil.byteArrayToHexString(x.hash));
             try {
                 if(x.writeToFile(parent, overwriteExisting)) log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " already exists.");
                 else{
@@ -167,11 +275,106 @@ public class X34Core
         }
 
         log.logEvent(count + " of " + images.size() + " image" + (images.size() == 1 ? "" : "s") + " written successfully.");
+
+        maxDownloadProgressProperty.set(INVALID_INT_PROPERTY_VALUE);
+        downloadProgressProperty.set(INVALID_INT_PROPERTY_VALUE);
+    }
+
+    // Schema must have been pre-validated
+    private X34Schema setSchemaMetadataProperties(X34Schema schema)
+    {
+        if(schema.metadata == null) schema.metadata = new HashMap<>();
+
+        schema.metadata.put(PUSH_TO_INDEX, pushToIndexProperty.getValue());
+        schema.metadata.put(TELEMETRY_CAPABLE, Boolean.TRUE);
+        schema.metadata.put(TELEM_CURR_PAGE_PROP, paginationProperty);
+        schema.metadata.put(TELEM_MAX_PAGE_PROP, maxPaginationProperty);
+        schema.metadata.put(IS_CANCELLED, cancelledProperty);
+
+        return schema;
     }
 
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
         log.disassociate();
+    }
+    
+    //
+    // PROPERTY METHODS
+    //
+
+    public final SimpleIntegerProperty maxPaginationProperty() {
+        return maxPaginationProperty;
+    }
+
+    public final SimpleIntegerProperty paginationProperty() {
+        return paginationProperty;
+    }
+    
+    public final SimpleIntegerProperty maxProcessorCountProperty() {
+        return maxProcessorCountProperty;
+    }
+    
+    public final SimpleIntegerProperty processorCountProperty() {
+        return processorCountProperty;
+    }
+
+    public final SimpleIntegerProperty maxDownloadProgressProperty() {
+        return maxDownloadProgressProperty;
+    }
+
+    public final SimpleIntegerProperty downloadProgressProperty() {
+        return downloadProgressProperty;
+    }
+    
+    public final SimpleStringProperty currentProcessorProperty() {
+        return currentProcessorProperty;
+    }
+
+    public final SimpleStringProperty currentQueryProperty() {
+        return currentQueryProperty;
+    }
+
+    public final SimpleStringProperty currentDownloadProperty() {
+        return currentDownloadProperty;
+    }
+
+    public final SimpleBooleanProperty pushToIndexProperty(){
+        return pushToIndexProperty;
+    }
+
+    public final SimpleBooleanProperty cancelledProperty(){
+        return cancelledProperty;
+    }
+
+    /**
+     * Whether or not all {@link X34Schema}s and {@link X34Rule}s executed by this object should push their results to
+     * their respective index files. Note that it is the responsibility of {@link X34RetrievalProcessor}s to enforce this
+     * setting, and not all processors may be able to enforce it.
+     * @param pushToIndex {@code true} if executed {@link X34Schema}s and {@link X34Rule}s should push their changes to their
+     *                                indices, {@code false} otherwise
+     */
+    public void setPushToIndex(boolean pushToIndex){
+        pushToIndexProperty.set(pushToIndex);
+    }
+
+    /**
+     * When called, this will cancel all in-progress retrievals being run on this object. Any successive calls to {@link #retrieve(X34Schema)}
+     * or {@link #retrieve(X34Rule)} will reset the underlying property (accessible by calling {@link #cancelledProperty()}), and re-enable
+     * retrieval.
+     */
+    public void cancelRetrieval() {
+        cancelledProperty.set(true);
+    }
+
+    /**
+     * Gets the current property map possessed by this object.
+     * @return the current property map. The returned map's keys are of type {@link Object}, and are the class that owns the {@link javafx.beans.property.Property}
+     * in question (typically {@link X34Core} for most properties). The map's values are of type {@link ObservableValue},
+     * and represent the properties stored within (since {@link ObservableValue} is the lowest-order superclass of all Property values.
+     */
+    public final ObservableMap<Object, ObservableValue> getProperties() {
+        return properties;
     }
 }
