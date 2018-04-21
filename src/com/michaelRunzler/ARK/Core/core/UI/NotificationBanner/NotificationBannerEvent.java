@@ -1,4 +1,4 @@
-package core.UI;
+package core.UI.NotificationBanner;
 
 import java.util.TimerTask;
 

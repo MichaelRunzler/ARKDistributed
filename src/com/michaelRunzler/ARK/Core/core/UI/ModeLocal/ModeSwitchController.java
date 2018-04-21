@@ -1,7 +1,8 @@
-package core.UI;
+package core.UI.ModeLocal;
 
 import javafx.scene.Node;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,13 +17,16 @@ public class ModeSwitchController
     private Map<Node, ModeLocal[]> annotatedNodes;
     private ArrayList<ModeSwitchHook> modeSwitchHooks;
     private Class associatedClass;
+    private Object assocClassInstance;
     private String[] identifiers;
     private int currentMode;
 
     /**
      * Constructs a new instance of this object. Uses the default (empty) annotation-identifier string. These cannot be changed once
      * set, and this object must be re-initialized to change or clear its set identifiers.
-     * Automatically collects information about its calling class and stores it for later use.
+     * Automatically collects information about its calling class and stores it for later use. If the calling class has fields
+     * which are non-static and annotated with {@link ModeLocal} annotations, use a constructor variant that takes a class
+     * instance instead, such as {@link #ModeSwitchController(Object)}.
      * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
      */
     public ModeSwitchController() throws ClassNotFoundException
@@ -35,12 +39,29 @@ public class ModeSwitchController
         // Get caller class so that we can directly reference its fields without a passed object reference from it
         StackTraceElement str = new Exception().getStackTrace()[2];
         associatedClass = Class.forName(str.getClassName());
+        assocClassInstance = null;
+    }
+
+    /**
+     * Constructs a new instance of this object. Uses the default (empty) annotation-identifier string. These cannot be changed once
+     * set, and this object must be re-initialized to change or clear its set identifiers.
+     * Automatically collects information about its calling class and stores it for later use. Uses the provided class instance
+     * to retrieval field values. This (or any other constructor variant that takes a class instance as an argument) must be
+     * used if the calling class has non-static fields that are annotated with {@link ModeLocal} annotations.
+     * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
+     */
+    public ModeSwitchController(Object classInstance) throws ClassNotFoundException
+    {
+        this();
+        assocClassInstance = classInstance;
     }
 
     /**
      * Constructs a new instance of this object. Uses the provided annotation-identifier string(s). These cannot be changed once
      * set, and this object must be re-initialized to change or clear its set identifiers.
-     * Automatically collects information about its calling class and stores it for later use.
+     * Automatically collects information about its calling class and stores it for later use. If the calling class has fields
+     *  which are non-static and annotated with {@link ModeLocal} annotations, use a constructor variant that takes a class
+     *  instance instead, such as {@link #ModeSwitchController(Object)}
      * @param identifiers the annotation-identifier strings to associate with. Only {@link Node}s annotated with {@link ModeLocal} annotations that
      *                    have identifiers set which match one of these strings will be subject to mode-changes instated by this object.
      *                    All other identifiers (as well as annotations with no or default identifiers, unless the default identifier is also included in the list)
@@ -51,6 +72,25 @@ public class ModeSwitchController
     public ModeSwitchController(String... identifiers) throws ClassNotFoundException
     {
         this();
+        this.identifiers = identifiers == null ? new String[]{""} : identifiers;
+    }
+
+    /**
+     * Constructs a new instance of this object. Uses the provided annotation-identifier string(s). These cannot be changed once
+     * set, and this object must be re-initialized to change or clear its set identifiers.
+     * Automatically collects information about its calling class and stores it for later use. Uses the provided class instance
+     * to retrieval field values. This (or any other constructor variant that takes a class instance as an argument) must be
+     * used if the calling class has non-static fields that are annotated with {@link ModeLocal} annotations.
+     * @param identifiers the annotation-identifier strings to associate with. Only {@link Node}s annotated with {@link ModeLocal} annotations that
+     *                    have identifiers set which match one of these strings will be subject to mode-changes instated by this object.
+     *                    All other identifiers (as well as annotations with no or default identifiers, unless the default identifier is also included in the list)
+     *                    will be ignored by this object during mode changes. Providing {@code null}, a zero-length array, or no
+     *                    arguments at all will result in identical behavior to {@link #ModeSwitchController()} being used.
+     * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
+     */
+    public ModeSwitchController(Object classInstance, String... identifiers) throws ClassNotFoundException
+    {
+        this(classInstance);
         this.identifiers = identifiers == null ? new String[]{""} : identifiers;
     }
 
@@ -120,10 +160,10 @@ public class ModeSwitchController
 
                 Object o;
                 try {
-                    o = f.get(this);
+                    o = f.get(assocClassInstance);
                     // If this field is not a Node, fall through to the catch block
                     if (!(o instanceof Node)) throw new IllegalArgumentException();
-                } catch (IllegalAccessException | IllegalArgumentException ignored) {
+                } catch (IllegalAccessException | IllegalArgumentException e) {
                     // If the field is not of the correct type, stop forcing its access modifier to prevent odd behavior from other classes
                     f.setAccessible(false);
                     continue;

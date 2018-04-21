@@ -76,7 +76,7 @@ public class DVProcessor extends X34RetrievalProcessor
         String token = getAuthToken();
         if(token == null){
             // If we couldn't get an API access token, return with no images
-            log.logEvent(LogEventLevel.ERROR, "API authentication request failed.");
+            log.logEvent(LogEventLevel.ERROR, "Error 04010: API authentication request failed.");
             return null;
         }else{
             log.logEvent("Authentication token received: " + token);
@@ -105,7 +105,7 @@ public class DVProcessor extends X34RetrievalProcessor
 
             // If we have failed more than 10 pages in a row, assume some kind of critical network error and break loop.
             if(failed > 10){
-                log.logEvent(LogEventLevel.CRITICAL, "Failed 10 pages in a row, assuming critical network error and aborting.");
+                log.logEvent(LogEventLevel.CRITICAL, "Error 15040: Failed 10 pages in a row, assuming critical network error and aborting.");
                 if(errorProperty != null) errorProperty.set("Critical network error");
                 currentOffset = -1;
                 continue;
@@ -128,7 +128,7 @@ public class DVProcessor extends X34RetrievalProcessor
                         String newToken = getAuthToken();
                         if(newToken == null){
                             // If we couldn't get an API access token, return with no images
-                            log.logEvent(LogEventLevel.ERROR, "API authentication request failed.");
+                            log.logEvent(LogEventLevel.ERROR, "Error 04010: API authentication request failed.");
                             if(errorProperty != null) errorProperty.set("API auth request failed");
                             return null;
                         }
@@ -148,7 +148,7 @@ public class DVProcessor extends X34RetrievalProcessor
                         continue;
                     default:
                         // Otherwise, the error is probably something we can't deal with, error out.
-                        log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
+                        log.logEvent(LogEventLevel.ERROR, "Error 04000: Encountered I/O error during page read, skipping page. Exception details below.");
                         log.logEvent(e);
                         currentOffset += PAGE_OFFSET_DELTA;
                         failed ++;
@@ -160,7 +160,7 @@ public class DVProcessor extends X34RetrievalProcessor
             // If the data does not contain a valid result array, assume that we have hit the end of the valid page range
             // or that the tag wasn't valid in the first place, and stop the loop.
             if(json == null){
-                log.logEvent(LogEventLevel.ERROR, "Pulled invalid JSON data, assuming I/O error and skipping page.");
+                log.logEvent(LogEventLevel.ERROR, "Error 04000: Pulled invalid JSON data, assuming I/O error and skipping page.");
                 currentOffset += PAGE_OFFSET_DELTA;
                 failed ++;
                 continue;
@@ -293,7 +293,7 @@ public class DVProcessor extends X34RetrievalProcessor
         do{
             // If we have failed more than 10 pages in a row, assume some kind of critical network error and break loop.
             if(failed > 10){
-                log.logEvent(LogEventLevel.CRITICAL, "Failed 10 pages in a row, assuming critical network error and aborting.");
+                log.logEvent(LogEventLevel.CRITICAL, "Error 15040: Failed 10 pages in a row, assuming critical network error and aborting.");
                 currentOffset = -1;
                 continue;
             }
@@ -305,7 +305,7 @@ public class DVProcessor extends X34RetrievalProcessor
                 // Force the page to length-0, forcing the end-of-page handler, since the server has told us that this is the case.
                 page = "";
             } catch (IOException e){
-                log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
+                log.logEvent(LogEventLevel.ERROR, "Error 04000: Encountered I/O error during page read, skipping page. Exception details below.");
                 log.logEvent(e);
                 currentOffset += PAGE_OFFSET_DELTA;
                 failed ++;
@@ -316,7 +316,7 @@ public class DVProcessor extends X34RetrievalProcessor
             // If the page does not contain the image link marker, assume that we have hit the end of the valid page range
             // or that the tag wasn't valid in the first place, and stop the loop.
             if(page.length() == 0){
-                log.logEvent(LogEventLevel.ERROR, "Pulled data with length of 0, assuming I/O error and skipping page.");
+                log.logEvent(LogEventLevel.ERROR, "Error 04001: Pulled data with length of 0, assuming I/O error and skipping page.");
                 currentOffset += PAGE_OFFSET_DELTA;
                 failed ++;
                 continue;

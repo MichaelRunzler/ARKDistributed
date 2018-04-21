@@ -269,7 +269,7 @@ public class X34Core
                     count ++;
                 }
             }catch (IOException e){
-                log.logEvent(LogEventLevel.ERROR, "Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " encountered critical write error, see below for details.");
+                log.logEvent(LogEventLevel.ERROR, "Error 05031: Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " encountered critical write error, see below for details.");
                 log.logEvent(e);
             }
         }

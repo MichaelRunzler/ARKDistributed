@@ -1,11 +1,12 @@
 package X34.UI.JFX.Managers;
 
 import X34.Core.X34Image;
+import X34.Core.X34Rule;
 import X34.Processors.X34ProcessorRegistry;
 import X34.UI.JFX.Util.RetrievalResultCache;
 import com.sun.istack.internal.Nullable;
 import core.CoreUtil.JFXUtil;
-import core.UI.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 import core.UI.ARKManagerBase;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -13,11 +14,15 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.awt.*;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 
 /**
@@ -26,11 +31,12 @@ import java.util.ArrayList;
 public class X34UIResultDetailManager extends ARKManagerBase
 {
     public static final String DEFAULT_TITLE = "Result Details";
-    public static final int DEFAULT_WIDTH = (int)(150 * JFXUtil.SCALE);
+    public static final int DEFAULT_WIDTH = (int)(175 * JFXUtil.SCALE);
     public static final int DEFAULT_HEIGHT = (int)(300 * JFXUtil.SCALE);
 
     private ListView<X34Image> entries;
     private VBox buttonContainer;
+    private HBox buttonContainerInner1;
     private Button close;
     private Button removeResult;
     private Button undo;
@@ -38,7 +44,6 @@ public class X34UIResultDetailManager extends ARKManagerBase
 
     private Label resultDetail;
 
-    private boolean hasWindowChangeListener;
     private boolean isModified;
     private RetrievalResultCache cached;
 
@@ -49,20 +54,27 @@ public class X34UIResultDetailManager extends ARKManagerBase
         window.setMinWidth(DEFAULT_WIDTH);
         window.setMinHeight(DEFAULT_HEIGHT);
 
-        hasWindowChangeListener = false;
         isModified = false;
         cached = null;
 
         entries = new ListView<>();
         buttonContainer = new VBox();
+        buttonContainerInner1 = new HBox();
         close = new Button("Save & Close");
         removeResult = new Button("Remove");
         undo = new Button("Revert Changes");
         open = new Button("Open");
 
+        buttonContainerInner1.setAlignment(Pos.CENTER);
+        buttonContainerInner1.setSpacing(JFXUtil.DEFAULT_SPACING / 4);
+        buttonContainerInner1.getChildren().addAll(removeResult, open);
+        HBox.setHgrow(open, Priority.ALWAYS);
+        HBox.setHgrow(removeResult, Priority.ALWAYS);
+
         buttonContainer.setAlignment(Pos.CENTER);
         buttonContainer.setSpacing(JFXUtil.DEFAULT_SPACING / 4);
-        buttonContainer.getChildren().addAll(close, removeResult, undo, open);
+        buttonContainer.getChildren().addAll(close, buttonContainerInner1, undo);
+        buttonContainer.setFillWidth(true);
 
         resultDetail = new Label("");
 
@@ -176,28 +188,8 @@ public class X34UIResultDetailManager extends ARKManagerBase
 
     private void repositionElements()
     {
-        if(!hasWindowChangeListener) {
-            layout.widthProperty().addListener(e -> repositionOnReize());
-            layout.heightProperty().addListener(e -> repositionOnReize());
-            hasWindowChangeListener = true;
-        }
-
-        JFXUtil.setElementPositionInGrid(layout, entries, 0, -1, 0, -1);
-        JFXUtil.setElementPositionInGrid(layout, buttonContainer, -1, -1, -1, 0);
-
-        Platform.runLater(this::repositionOnReize);
-    }
-
-    private void repositionOnReize()
-    {
-        JFXUtil.setElementPositionCentered(layout, buttonContainer, true, false);
-
-        entries.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
-        removeResult.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight() - (5 * JFXUtil.SCALE));
-        open.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight() - (5 * JFXUtil.SCALE));
-        close.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight() - (5 * JFXUtil.SCALE));
-        undo.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight() - (5 * JFXUtil.SCALE));
-        entries.setPrefHeight(layout.getHeight() - layout.getPadding().getBottom() - layout.getPadding().getTop() - (JFXUtil.DEFAULT_SPACING * 4));
+        JFXUtil.setElementPositionInGrid(layout, entries, 0, 0, 0, 2.5);
+        JFXUtil.setElementPositionInGrid(layout, buttonContainer, 0, 0, -1, 0);
     }
 
     @Override

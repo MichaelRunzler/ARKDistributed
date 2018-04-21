@@ -13,6 +13,11 @@ import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
+import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialog;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceFileChangeDialog;
+import core.UI.NotificationBanner.UINotificationBannerControl;
 import core.system.ARKAppCompat;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -281,9 +286,9 @@ public class X34UIRuleManager extends ARKManagerBase
             if(externalProcessors.keySet().size() > 0) loadExternalProcessors();
             processors.getItems().addAll(X34ProcessorRegistry.getAvailableProcessorObjects());
         } catch (ClassNotFoundException | IOException e) {
-            log.logEvent(LogEventLevel.ERROR,"Unable to load processor list.");
+            log.logEvent(LogEventLevel.ERROR,"Error 15011: Unable to load processor list.");
             log.logEvent(e);
-            new ARKInterfaceAlert("Error", "Unable to load processor list! Please restart the program and try again.").display();
+            new ARKInterfaceAlert("Error", "Unable to load processor list! Please restart the program and try again (error 15011).").display();
             errored = true;
             hide();
         }

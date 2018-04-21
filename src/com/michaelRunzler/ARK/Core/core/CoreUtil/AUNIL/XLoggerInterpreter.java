@@ -147,6 +147,14 @@ public class XLoggerInterpreter
     }
 
     /**
+     * Gets the currently set verbosity level.
+     * @return the current {@link LogVerbosityLevel}
+     */
+    public LogVerbosityLevel getCurrentVerbosity(){
+        return executor.getVerbosityLevel();
+    }
+
+    /**
      * Logs the specified event to this object's associated {@link XLoggerCore} object.
      * Uses the specified event level instead of this object's implicit event level.
      * @param level the overridden log event level for this event
@@ -233,6 +241,27 @@ public class XLoggerInterpreter
      */
     public long getTimeSinceLastEvent() {
         return System.currentTimeMillis() - lastLogTime;
+    }
+
+    /**
+     * Adds a {@link Callback} object to the internal callback registry of the core module.
+     * Callback objects are called whenever a log entry is written to any log file (collectively,
+     * the <i>log stream</i>), and relay the entry that was just written, along with its severity
+     * and source ID, to the callback object.
+     * @param action the {@link Callback} object to add to the callback registry
+     */
+    public void addStreamCallback(Callback action){
+        executor.streamRegistry.addCallback(action, this);
+    }
+
+    /**
+     * Removes a {@link Callback} object from the callback registry, stopping it from receiving any more relayed log data.
+     * Attempting to remove a {@link Callback} object that was registered by another {@link XLoggerInterpreter} not owned
+     * by the class that is associated with this {@link XLoggerInterpreter} will cause the removal operation to fail.
+     * @param action the {@link Callback} object to remove from the callback registry
+     */
+    public void removeStreamCallback(Callback action){
+        executor.streamRegistry.removeCallback(action, this);
     }
 
     /**

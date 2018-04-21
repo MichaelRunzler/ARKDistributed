@@ -2,8 +2,8 @@ package core;
 
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.IOTools;
-import core.UI.ARKInterfaceAlert;
-import core.UI.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 import com.sun.istack.internal.NotNull;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -25,7 +25,6 @@ import core.system.ARKTransThreadTransportHandler;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;

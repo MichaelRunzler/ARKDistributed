@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import static core.CoreUtil.AUNIL.Callback.checkVerbosityLevel;
+
 /**
  * Part of the ARK Unified Logging System, this class executes log operations passed to it via the {@link XLoggerDelegator}
  * and {@link XLoggerInterpreter} classes. Maintains a registry of associated Interpreters and their caller names.
@@ -35,6 +37,8 @@ public class XLoggerCore
     private XLoggerInterpreter master;
     private DateFormat dateFormat;
     private LogVerbosityLevel verbosity;
+    // Must be package-local to allow direct access from Interpreter classes
+    XLoggerInputStream streamRegistry;
 
     /**
      * Constructs a new instance of this object. Sets its parent directory to a subdirectory of
@@ -48,6 +52,7 @@ public class XLoggerCore
         lockLogWrites = false;
         queue = new ArrayList<>();
         bridges = new HashMap<>();
+        streamRegistry = new XLoggerInputStream();
         internal = new XLoggerInterpreter(this, "Logger Core");
         master = new XLoggerInterpreter(this, "Master Logfile " + this.toString().substring(this.toString().lastIndexOf('@'), this.toString().length()));
         dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
@@ -303,6 +308,14 @@ public class XLoggerCore
     }
 
     /**
+     * Gets the currently set verbosity level.
+     * @return the current {@link LogVerbosityLevel}
+     */
+    LogVerbosityLevel getVerbosityLevel(){
+        return verbosity;
+    }
+
+    /**
      * Logs an event to the system console, and, if file logging is enabled, to its own event log file inside the parent
      * directory set by this object. Checks its file before logging anything to it.
      * @param caller the {@link XLoggerInterpreter Interpreter} that is requesting the logging operation
@@ -383,6 +396,10 @@ public class XLoggerCore
 
         // Write the message to the system console if verbosity settings allow it.
         if(checkVerbosityLevel(verbosity, level)) System.out.println(compiled);
+
+        // Relay a copy of the uncompiled log data to the stream registry manager and let it call any callback classes
+        // Doing this last, since the callbacks could take some time, even with multithreading
+        streamRegistry.logEventToStream(message, caller.friendlyName, level, compiled);
     }
 
     /**
@@ -422,27 +439,6 @@ public class XLoggerCore
      */
     private boolean checkCallerPermissions(XLoggerInterpreter caller) {
         return caller != null && (caller.classID != null && bridges.containsKey(caller));
-    }
-
-    /**
-     * Checks if an event should be logged to the console under the provided {@link LogVerbosityLevel verbosity level}.
-     * @param level the {@link LogVerbosityLevel verbosity level} that this event should be filtered under
-     * @param severity the {@link LogEventLevel event level} to check under the verbosity filter
-     * @return {@code true} if the event should be allow to output to the console, {@code false} if otherwise
-     */
-    private boolean checkVerbosityLevel(LogVerbosityLevel level, LogEventLevel severity)
-    {
-        switch (level)
-        {
-            case STANDARD:
-                return severity != LogEventLevel.DEBUG;
-            case MINIMAL:
-                return severity != LogEventLevel.DEBUG && severity != LogEventLevel.INFO;
-            case DEBUG:
-                return true;
-            default:
-                return false;
-        }
     }
 
     /**

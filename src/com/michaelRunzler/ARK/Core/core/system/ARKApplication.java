@@ -1,6 +1,6 @@
 package core.system;
 
-import core.UI.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 import com.sun.istack.internal.NotNull;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;

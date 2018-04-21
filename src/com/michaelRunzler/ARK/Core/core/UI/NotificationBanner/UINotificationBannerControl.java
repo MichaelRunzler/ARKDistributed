@@ -1,4 +1,4 @@
-package core.UI;
+package core.UI.NotificationBanner;
 
 import core.CoreUtil.JFXUtil;
 import javafx.animation.FadeTransition;

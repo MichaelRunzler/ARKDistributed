@@ -1,4 +1,4 @@
-package core.UI;
+package core.UI.ModeLocal;
 
 /**
  * Used to represent actions that should be taken when an application mode-switch is in progress.

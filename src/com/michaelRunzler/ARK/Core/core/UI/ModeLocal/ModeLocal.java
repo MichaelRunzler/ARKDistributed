@@ -1,4 +1,4 @@
-package core.UI;
+package core.UI.ModeLocal;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;

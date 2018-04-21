@@ -4,20 +4,20 @@ import X34.Core.IO.X34Config;
 import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.IO.X34IndexDelegator;
 import X34.UI.JFX.Util.JFXConfigKeySet;
-import core.UI.ModeLocal;
-import core.UI.ModeSwitchHook;
+import core.UI.ModeLocal.ModeLocal;
+import core.UI.ModeLocal.ModeSwitchController;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
-import core.UI.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 import core.UI.ARKManagerBase;
-import core.UI.UINotificationBannerControl;
+import core.UI.NotificationBanner.UINotificationBannerControl;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Side;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -33,13 +33,9 @@ import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Manages the files used by the X34UI application, including config, index, and log files, and allows the user to view,
@@ -95,12 +91,11 @@ public class X34UIFileManager extends ARKManagerBase
     private XLoggerInterpreter log;
 
     private UINotificationBannerControl notice;
-    private Map<Node, ModeLocal> annotatedNodes;
-    private ArrayList<ModeSwitchHook> modeSwitchHooks;
     private FileManagerTabProperty[] tabs;
+    private ModeSwitchController modeControl;
 
     private boolean linkedSizeListeners;
-    private int mode;
+    private SimpleIntegerProperty newMode;
     private File linkedCurrentDir;
 
     public X34UIFileManager(double x, double y)
@@ -124,10 +119,18 @@ public class X34UIFileManager extends ARKManagerBase
 
         linkedSizeListeners = false;
         linkedCurrentDir = null;
-        mode = 0;
+        newMode = new SimpleIntegerProperty(0);
         config = X34ConfigDelegator.getMainInstance();
         log = new XLoggerInterpreter();
-        modeSwitchHooks = new ArrayList<>();
+
+        try {
+            modeControl = new ModeSwitchController(this);
+        } catch (ClassNotFoundException e) {
+            log.logEvent(LogEventLevel.CRITICAL, "Error 14041: Unable to initialize mode-switch or state-switch controllers due to missing class(es).");
+            log.logEvent(e);
+        }
+
+        newMode.addListener((observable, oldValue, newValue) -> modeControl.switchMode(newMode.get()));
 
         // Initialize tab list. Each tab object contains all necessary metadata to initialize and control its linked JFX Tab object.
         tabs = new FileManagerTabProperty[]{
@@ -182,7 +185,7 @@ public class X34UIFileManager extends ARKManagerBase
         // Add change listener for the type selector to enable bound element updates
         typeSelector.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             if(oldValue.equals(newValue) || newValue.intValue() < 0 || newValue.intValue() >= typeSelector.getTabs().size()) return;
-            mode = newValue.intValue();
+            newMode.set(newValue.intValue());
             computeAvailableFiles();
         });
 
@@ -215,7 +218,7 @@ public class X34UIFileManager extends ARKManagerBase
         close.setOnAction(e -> hide());
 
         openDir.setOnAction(e ->{
-            if(mode < 0 || linkedCurrentDir == null) return;
+            if(newMode.get() < 0 || linkedCurrentDir == null) return;
 
             if(linkedCurrentDir.exists()) {
                 try {
@@ -227,7 +230,7 @@ public class X34UIFileManager extends ARKManagerBase
             }else notice.displayNotice("Unable to open directory; does not exist! Try resetting it using the 'Change' button.", UINotificationBannerControl.Severity.WARNING, 2500);        });
 
         changeDir.setOnAction(e ->{
-            if(mode < 0) return;
+            if(newMode.get() < 0) return;
 
             DirectoryChooser selector = new DirectoryChooser();
             File f = selector.showDialog(window);
@@ -239,7 +242,7 @@ public class X34UIFileManager extends ARKManagerBase
             {
                 File base = linkedCurrentDir.isFile() ? linkedCurrentDir.getParentFile() : linkedCurrentDir;
                 File[] targets = base.listFiles((dir, name) -> {
-                    for(String s : tabs[mode].extensionFilters) if(name.contains(s)) return true;
+                    for(String s : tabs[newMode.get()].extensionFilters) if(name.contains(s)) return true;
                     return false;
                 });
 
@@ -266,13 +269,13 @@ public class X34UIFileManager extends ARKManagerBase
             }
 
             // Store the new directory to the config, call the Callback in the corresponding tab, and force an update of the UI
-            if(tabs[mode].changeAction != null) tabs[mode].changeAction.call(f);
+            if(tabs[newMode.get()].changeAction != null) tabs[newMode.get()].changeAction.call(f);
 
             // If the previous 'directory' was actually a file reference (e.g to a single file used as a template),
             // use the same name as the previous file, but tagged onto the new directory
             if(linkedCurrentDir != null && linkedCurrentDir.isFile()) f = new File(f.getAbsolutePath(), linkedCurrentDir.getName());
 
-            config.storeSetting(tabs[mode].configKey, f);
+            config.storeSetting(tabs[newMode.get()].configKey, f);
             computeAvailableFiles();
             notice.displayNotice("Directory change committed!", UINotificationBannerControl.Severity.INFO, 1500);
         });
@@ -314,18 +317,18 @@ public class X34UIFileManager extends ARKManagerBase
      */
     public void computeAvailableFiles()
     {
-        if(mode < 0) return;
+        if(newMode.get() < 0) return;
 
         // Change UI display mode if necessary
-        switchMode();
+        modeControl.switchMode(newMode.get());
 
-        File f = config.getSettingOrDefault(tabs[mode].configKey, (File)config.getDefaultSetting(tabs[mode].configKey));
+        File f = config.getSettingOrDefault(tabs[newMode.get()].configKey, (File)config.getDefaultSetting(tabs[newMode.get()].configKey));
 
         currentDir.setText(f == null ? "" : f.isFile() ? f.getParentFile().getAbsolutePath() : f.getAbsolutePath());
 
         // Set file list contents from parent based on name filter
         FilenameFilter ff = (dir, name) -> {
-            for(String s : tabs[mode].extensionFilters) if(name.contains(s)) return true;
+            for(String s : tabs[newMode.get()].extensionFilters) if(name.contains(s)) return true;
             return false;
         };
 
@@ -361,7 +364,7 @@ public class X34UIFileManager extends ARKManagerBase
                 // Essentially, we are making it impossible for other nodes to clash with the menu bar.
                 layout.setPadding(new Insets(layout.getPadding().getTop() + typeSelector.getHeight(), layout.getPadding().getRight(), layout.getPadding().getBottom(), layout.getPadding().getLeft()));
                 AnchorPane.setTopAnchor(typeSelector, -1 * layout.getPadding().getTop());
-                open.layoutXProperty().addListener((observable, oldValue, newValue)-> JFXUtil.alignToNode(layout, open, listFunctionsLabel, -10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
+                JFXUtil.bindAlignmentToNode(layout, open, listFunctionsLabel, -10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED);
             });
 
             linkedSizeListeners = true;
@@ -398,76 +401,6 @@ public class X34UIFileManager extends ARKManagerBase
             openDir.setPrefWidth(changeDir.getWidth());
             JFXUtil.setElementPosition(layout, currentDir, changeDir.getLayoutX() + changeDir.getWidth() - layout.getPadding().getLeft(), 0, -1, -1);
         });
-    }
-
-    //todo convert to ModeSwitchController
-    /**
-     * Switches the UI's display mode to the appropriate mode for the currently selected tab.
-     */
-    private void switchMode()
-    {
-        // If a cached copy of the node list is present, use that instead of the full reflection routine.
-        if(annotatedNodes != null)
-        {
-            // Iterate through the list of annotated nodes, setting each one's visibility to the correct state.
-            for(Node n : annotatedNodes.keySet()){
-                ModeLocal ml = annotatedNodes.get(n);
-                boolean visible = ml.invert();
-                for(int i : ml.value()){
-                    if(i == mode){
-                        visible = !visible;
-                        break;
-                    }
-                }
-
-                n.setVisible(visible);
-            }
-        }else{
-            Field[] fields = this.getClass().getDeclaredFields();
-
-            Map<Node, ModeLocal> elements = new HashMap<>();
-
-            // Iterate through the list of this class's declared fields, checking each one for annotations.
-            // Check to see if the field is annotated with ModeLocal. If it is, check its parameters to see if they
-            // match the mode provided. If they do, check that the field is an instance of a Node. If it is,
-            // set the node's visibility to the correct visibility for the invert settings and the mode ID.
-            for (Field f : fields)
-            {
-                ModeLocal ml = f.getAnnotation(ModeLocal.class);
-                if (ml != null)
-                {
-                    Object o;
-                    try {
-                        o = f.get(this);
-                        if (!(o instanceof Node)) continue;
-                    } catch (IllegalAccessException ignored) {
-                        continue;
-                    }
-
-                    boolean visible = ml.invert();
-                    for (int i : ml.value()) {
-                        if (i == mode) {
-                            visible = !visible;
-                            break;
-                        }
-                    }
-
-                    ((Node) o).setVisible(visible);
-                    elements.put((Node) o, ml);
-                }
-            }
-
-            // Cache the node list for future access, since this is a fairly CPU-intensive process, and the results
-            // will always be the same within any given run, due to annotations being a compile-time feature.
-            annotatedNodes = elements;
-        }
-
-        // Execute any mode-switch hooks that are present.
-        if(modeSwitchHooks != null && modeSwitchHooks.size() > 0){
-            for(ModeSwitchHook m : modeSwitchHooks){
-                m.onModeSwitch(mode);
-            }
-        }
     }
 
     private void setElementTooltips()

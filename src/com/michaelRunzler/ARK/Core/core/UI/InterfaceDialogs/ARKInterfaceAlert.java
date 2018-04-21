@@ -1,4 +1,4 @@
-package core.UI;
+package core.UI.InterfaceDialogs;
 
 import core.CoreUtil.JFXUtil;
 import javafx.geometry.Insets;

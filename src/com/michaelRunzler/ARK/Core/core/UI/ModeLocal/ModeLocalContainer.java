@@ -1,4 +1,4 @@
-package core.UI;
+package core.UI.ModeLocal;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

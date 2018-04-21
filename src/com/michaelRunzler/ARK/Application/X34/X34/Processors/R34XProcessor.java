@@ -84,7 +84,7 @@ public class R34XProcessor extends X34RetrievalProcessor
 
             // If we have failed more than 10 pages in a row, assume some kind of critical network error and break loop.
             if(failed > 10){
-                log.logEvent(LogEventLevel.CRITICAL, "Failed 10 pages in a row, assuming critical network error and aborting.");
+                log.logEvent(LogEventLevel.CRITICAL, "Error 15040: Failed 10 pages in a row, assuming critical network error and aborting.");
                 if(errorProperty != null) errorProperty.set("Critical network error");
                 currentPage = -1;
                 continue;
@@ -113,7 +113,7 @@ public class R34XProcessor extends X34RetrievalProcessor
                         else rtlTriggered = true;
                         continue;
                     default:
-                        log.logEvent(LogEventLevel.ERROR, "Encountered I/O error during page read, skipping page. Exception details below.");
+                        log.logEvent(LogEventLevel.ERROR, "Error 04000: Encountered I/O error during page read, skipping page. Exception details below.");
                         log.logEvent(e);
                         currentPage ++;
                         failed ++;
@@ -125,7 +125,7 @@ public class R34XProcessor extends X34RetrievalProcessor
             // If the page contains the end-of-pages marker, assume that we have hit the end of the valid page range
             // or that the tag wasn't valid in the first place, and stop the loop.
             if(page.length() == 0){
-                log.logEvent(LogEventLevel.ERROR, "Pulled data with length of 0, assuming I/O error and skipping page.");
+                log.logEvent(LogEventLevel.ERROR, "Error 04001: Pulled data with length of 0, assuming I/O error and skipping page.");
                 currentPage ++;
                 failed ++;
                 continue;

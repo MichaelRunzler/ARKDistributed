@@ -3,13 +3,18 @@ package X34.UI.JFX.Managers;
 import X34.Core.IO.X34Config;
 import X34.Core.IO.X34ConfigDelegator;
 import X34.UI.JFX.Util.JFXConfigKeySet;
-import core.UI.ModeLocal;
-import core.UI.ModeSwitchHook;
+import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialog;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
+import core.UI.ModeLocal.ModeLocal;
+import core.UI.ModeLocal.ModeSwitchController;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
 import core.UI.*;
+import core.UI.NotificationBanner.UINotificationBannerControl;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -23,10 +28,7 @@ import javafx.stage.Modality;
 import javafx.util.Callback;
 
 import java.io.*;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class X34UIConfigManager extends ARKManagerBase
 {
@@ -90,16 +92,14 @@ public class X34UIConfigManager extends ARKManagerBase
     private XLoggerInterpreter log;
     private X34Config config;
 
-    private int mode;
     private int cachedMode;
     private boolean linkedSizeListeners;
+    private SimpleIntegerProperty mode;
     private ConfigManagerTabProperty[] tabs;
-    private Map<Node, ModeLocal> annotatedNodes;
-    private ArrayList<ModeSwitchHook> modeSwitchHooks;
     private UINotificationBannerControl notice;
+    private ModeSwitchController modeControl;
 
-    //todo: add following settings: global output dir, autodownload, overwrite state, index push,
-
+    //todo: add following settings: global output dir, autodownload, overwrite state, index push, log-to-file
     public X34UIConfigManager(double x, double y)
     {
         super(TITLE, DEFAULT_WIDTH, DEFAULT_HEIGHT, x, y);
@@ -118,9 +118,17 @@ public class X34UIConfigManager extends ARKManagerBase
 
         log = new XLoggerInterpreter();
         config = X34ConfigDelegator.getMainInstance();
-        modeSwitchHooks = new ArrayList<>();
-        mode = 0;
-        cachedMode = mode;
+        mode = new SimpleIntegerProperty(0);
+        cachedMode = mode.get();
+        try {
+            modeControl = new ModeSwitchController(this);
+        } catch (ClassNotFoundException e) {
+            log.logEvent(LogEventLevel.CRITICAL, "Error 14041: Unable to initialize mode-switch controller due to missing class(es).");
+            log.logEvent(e);
+        }
+
+        mode.addListener((observable, oldValue, newValue) -> modeControl.switchMode(newValue.intValue()));
+
         linkedSizeListeners = false;
 
         //
@@ -186,11 +194,11 @@ public class X34UIConfigManager extends ARKManagerBase
 
         categorySelect.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             if(oldValue.equals(newValue) || newValue.intValue() < 0 || newValue.intValue() >= categorySelect.getTabs().size()) return;
-            mode = newValue.intValue();
+            mode.set(newValue.intValue());
             forceSettingsUpdate();
         });
 
-        modeSwitchHooks.add(mode -> {
+        modeControl.addModeSwitchHook(mode -> {
             if(mode == -1 || mode == MODE_SPECIAL) return;
 
             ConfigManagerTabProperty tab = tabs[mode];
@@ -245,7 +253,7 @@ public class X34UIConfigManager extends ARKManagerBase
 
         defaults.setOnAction(e -> {
             if(!new ARKInterfaceDialogYN("Warning", "This will reset all settings in this tab to their original defaults! Proceed?", "Confirm", "Cancel").display()) return;
-            ConfigManagerTabProperty tab = tabs[mode];
+            ConfigManagerTabProperty tab = tabs[mode.get()];
 
             if(tab.dataPairs != null)
                 for(KeyedActionCallback cb : tab.dataPairs)
@@ -255,17 +263,15 @@ public class X34UIConfigManager extends ARKManagerBase
         });
 
         moreOptions.setOnAction(e ->{
-            cachedMode = mode;
-            mode = MODE_SPECIAL;
+            cachedMode = mode.get();
             categorySelect.setDisable(true);
             notice.displayNotice("This menu contains some powerful settings. Be careful!", UINotificationBannerControl.Severity.WARNING, 2000);
-            switchMode();
+            mode.set(MODE_SPECIAL);
         });
 
         returnToMain.setOnAction(e ->{
-            mode = cachedMode;
             categorySelect.setDisable(false);
-            switchMode();
+            mode.set(cachedMode);
         });
 
         saveConfig.setOnAction(e -> exportConfigToFile());
@@ -284,12 +290,12 @@ public class X34UIConfigManager extends ARKManagerBase
         // force an update of the displayed nodes.
         if(config.getCache() == null) config.fillCache();
 
-        switchMode();
+        modeControl.switchMode(mode.get());
 
         // Check to see if the current mode is the advanced options menu mode. If it is, bypass setting updates, since
         // this menu does not have any actively linked nodes.
-        if(mode != MODE_SPECIAL){
-            ConfigManagerTabProperty tab = tabs[mode];
+        if(mode.get() != MODE_SPECIAL){
+            ConfigManagerTabProperty tab = tabs[mode.get()];
             // Call each of the action callbacks in the current tab. These will update any mode-local nodes in the tab.
             if(tab.dataPairs != null)
                 for(KeyedActionCallback e : tab.dataPairs)
@@ -467,76 +473,6 @@ public class X34UIConfigManager extends ARKManagerBase
         } catch (Exception e) { // generic exception block due to the number of exceptions that can be thrown by the ReadObject method, and the lack of specific handling for them in this case
             log.logEvent(LogEventLevel.DEBUG, "Encountered I/O error while attempting to import configuration file, details below.");
             log.logEvent(e);
-        }
-    }
-
-    //todo convert to ModeSwitchController
-    /**
-     * Switches the UI's display mode to the appropriate mode for the currently selected tab.
-     */
-    private void switchMode()
-    {
-        // If a cached copy of the node list is present, use that instead of the full reflection routine.
-        if(annotatedNodes != null)
-        {
-            // Iterate through the list of annotated nodes, setting each one's visibility to the correct state.
-            for(Node n : annotatedNodes.keySet()){
-                ModeLocal ml = annotatedNodes.get(n);
-                boolean visible = ml.invert();
-                for(int i : ml.value()){
-                    if(i == mode){
-                        visible = !visible;
-                        break;
-                    }
-                }
-
-                n.setVisible(visible);
-            }
-        }else{
-            Field[] fields = this.getClass().getDeclaredFields();
-
-            Map<Node, ModeLocal> elements = new HashMap<>();
-
-            // Iterate through the list of this class's declared fields, checking each one for annotations.
-            // Check to see if the field is annotated with ModeLocal. If it is, check its parameters to see if they
-            // match the mode provided. If they do, check that the field is an instance of a Node. If it is,
-            // set the node's visibility to the correct visibility for the invert settings and the mode ID.
-            for (Field f : fields)
-            {
-                ModeLocal ml = f.getAnnotation(ModeLocal.class);
-                if (ml != null)
-                {
-                    Object o;
-                    try {
-                        o = f.get(this);
-                        if (!(o instanceof Node)) continue;
-                    } catch (IllegalAccessException ignored) {
-                        continue;
-                    }
-
-                    boolean visible = ml.invert();
-                    for (int i : ml.value()) {
-                        if (i == mode) {
-                            visible = !visible;
-                            break;
-                        }
-                    }
-
-                    ((Node) o).setVisible(visible);
-                    elements.put((Node) o, ml);
-                }
-            }
-
-            // Cache the node list for future access, since this is a fairly CPU-intensive process, and the results
-            // will always be the same within any given run, due to annotations being a compile-time feature.
-            annotatedNodes = elements;
-        }
-
-        // Execute any mode-switch hooks that are present.
-        if(modeSwitchHooks != null && modeSwitchHooks.size() > 0){
-            for(ModeSwitchHook m : modeSwitchHooks){
-                m.onModeSwitch(mode);
-            }
         }
     }
 

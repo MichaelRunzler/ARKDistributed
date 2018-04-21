@@ -1,27 +1,24 @@
-package core.UI;
+package core.UI.InterfaceDialogs;
 
 import core.CoreUtil.JFXUtil;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-public class ARKInterfaceDialog
+public class ARKInterfaceDialogYN
 {
-
     private Stage window;
     private Label label;
     private Button yesButton, noButton;
-    private TextField input;
     private AnchorPane layout;
     private Scene scene;
 
-    public ARKInterfaceDialog(String title, String message, String yesText, String noText, String textBoxText, int width, int height)
+    public ARKInterfaceDialogYN(String title, String message, String yesText, String noText, int width, int height)
     {
         window = new Stage();
         window.initModality(Modality.APPLICATION_MODAL);
@@ -36,18 +33,13 @@ public class ARKInterfaceDialog
         yesButton = new Button(yesText);
         noButton = new Button(noText);
 
-        input = new TextField();
-        input.setPromptText(textBoxText);
-
         yesButton.setDefaultButton(true);
         noButton.setCancelButton(true);
 
         layout = new AnchorPane();
-        layout.getChildren().addAll(label, yesButton, noButton, input);
+        layout.getChildren().addAll(label, yesButton, noButton);
         layout.setPadding((new Insets(15, 15, 15, 15)));
 
-        AnchorPane.setLeftAnchor(input, 10.0);
-        AnchorPane.setRightAnchor(input, 10.0);
         AnchorPane.setBottomAnchor(yesButton, 0.0);
         AnchorPane.setRightAnchor(yesButton, 0.0);
         AnchorPane.setBottomAnchor(noButton, 0.0);
@@ -56,40 +48,36 @@ public class ARKInterfaceDialog
         AnchorPane.setLeftAnchor(label, 0.0);
         AnchorPane.setRightAnchor(label, 0.0);
 
-        if(width > 0 && height > 0) {
+        if(width > 0 && height > 0)
             scene = new Scene(layout, width, height);
-            AnchorPane.setBottomAnchor(input, height * 0.4);
-        }
         else{
-            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 95 : 95) * JFXUtil.SCALE;
-            scene = new Scene(layout, size, size + JFXUtil.DEFAULT_SPACING * 1.1);
-
-            AnchorPane.setBottomAnchor(input, (double)JFXUtil.DEFAULT_SPACING * 1.1);
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 75 : 75) * JFXUtil.SCALE;
+            scene = new Scene(layout, size, size);
         }
         window.setScene(scene);
     }
 
-    public ARKInterfaceDialog(String title, String message, String yesText, String noText, String textBoxText)
+    public ARKInterfaceDialogYN(String title, String message, String yesText, String noText)
     {
-        this(title, message, yesText, noText, textBoxText, -1, -1);
+        this(title, message, yesText, noText, -1, -1);
     }
 
-    private String answer;
+    boolean answer;
 
-    public String display()
+    public boolean display()
     {
         window.setOnCloseRequest(e -> {
-            answer = "";
+            answer = false;
             e.consume();
             window.close();
         });
 
         yesButton.setOnAction(e -> {
-            answer = input.getText();
+            answer = true;
             window.close();
         });
         noButton.setOnAction(e -> {
-            answer = "";
+            answer = false;
             window.close();
         });
 

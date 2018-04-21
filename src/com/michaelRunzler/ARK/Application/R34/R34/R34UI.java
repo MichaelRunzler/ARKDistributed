@@ -2,8 +2,8 @@ package R34;
 
 import com.sun.istack.internal.NotNull;
 import core.CoreUtil.IOTools;
-import core.UI.ARKInterfaceAlert;
-import core.UI.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Service;

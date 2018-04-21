@@ -1,7 +1,7 @@
 package core.system;
 
-import core.UI.ARKInterfaceAlert;
-import core.UI.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 
 import java.util.Scanner;
 

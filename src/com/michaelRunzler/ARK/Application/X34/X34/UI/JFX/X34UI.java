@@ -11,7 +11,11 @@ import X34.UI.JFX.Util.*;
 import core.CoreUtil.AUNIL.LogEventLevel;
 import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
-import core.UI.*;
+import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
+import core.UI.ModeLocal.ModeLocal;
+import core.UI.ModeLocal.ModeSwitchController;
+import core.UI.NotificationBanner.UINotificationBannerControl;
 import core.system.ARKAppCompat;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -279,7 +283,7 @@ public class X34UI extends Application
 
         layout = new AnchorPane();
         layout.setPadding(new Insets(15, 15, 15, 15));
-        menu = new Scene(layout, 450, 400);
+        menu = new Scene(layout, 600 * JFXUtil.SCALE, 600 * JFXUtil.SCALE);
         window.setScene(menu);
         window.show();
 
@@ -298,24 +302,18 @@ public class X34UI extends Application
         //todo re-add when done with debugging: log.changeLoggerVerbosity(LogVerbosityLevel.STANDARD);
         
         try {
-            modeControl = new ModeSwitchController();
-            stateControl = new ModeSwitchController("State");
+            modeControl = new ModeSwitchController(this);
+            stateControl = new ModeSwitchController(this, "State");
         } catch (ClassNotFoundException e) {
-            log.logEvent(LogEventLevel.FATAL, "Unable to initialize mode-switch or state-switch controllers due to missing class(es).");
+            log.logEvent(LogEventLevel.FATAL, "Error 14041: Unable to initialize mode-switch or state-switch controllers due to missing class(es).");
             log.logEvent(e);
-            System.exit(4041);
+            System.exit(14041);
         }
 
         // Add automatic change listener for the internal state and mode properties
-        state.addListener((observable, oldValue, newValue) -> {
-            if(oldValue.equals(newValue)) return;
-            stateControl.switchMode(newValue.intValue());
-        });
+        state.addListener((observable, oldValue, newValue) -> stateControl.switchMode(newValue.intValue()));
         
-        mode.addListener((observable, oldValue, newValue) -> {
-            if(oldValue.equals(newValue)) return;
-            mode.set(newValue.intValue());
-        });
+        mode.addListener((observable, oldValue, newValue) -> modeControl.switchMode(newValue.intValue()));
 
         //
         // CONFIG
@@ -324,21 +322,6 @@ public class X34UI extends Application
         config = X34ConfigDelegator.getMainInstance();
         config.setTarget(configFile);
         core = new X34Core();
-
-        ruleMgr = new X34UIRuleManager((window.getX() - window.getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
-
-        fileMgr = new X34UIFileManager((window.getX() - window.getWidth() / 2) - X34UIFileManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIFileManager.DEFAULT_HEIGHT / 2);
-
-        configMgr = new X34UIConfigManager((window.getX() - window.getWidth() / 2) - X34UIConfigManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIConfigManager.DEFAULT_HEIGHT / 2);
-
-        logMgr = new X34UIConsoleLogManager(100, 200, window.getX() + window.getWidth(), window.getY());
-
-        detailMgr = new X34UIResultDetailManager((window.getX() - window.getWidth() / 2) - X34UIResultDetailManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIResultDetailManager.DEFAULT_HEIGHT / 2);
-
 
         // Try loading config. If it fails, assume that there is no valid config file, and load defaults instead.
 
@@ -415,6 +398,22 @@ public class X34UI extends Application
         menuBarInit();
         nodePositioningInit();
         setActions();
+
+        // Initialize the managers in a delayed manner, since they rely on calls to other properties that might not have finished init yet.
+        ruleMgr = new X34UIRuleManager((window.getX() - window.getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2,
+                (window.getY() - window.getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
+
+        fileMgr = new X34UIFileManager((window.getX() - window.getWidth() / 2) - X34UIFileManager.DEFAULT_WIDTH / 2,
+                (window.getY() - window.getHeight() / 2) - X34UIFileManager.DEFAULT_HEIGHT / 2);
+
+        configMgr = new X34UIConfigManager((window.getX() - window.getWidth() / 2) - (X34UIConfigManager.DEFAULT_WIDTH / 2),
+                (window.getY() - window.getHeight() / 2) - (X34UIConfigManager.DEFAULT_HEIGHT / 2));
+
+        logMgr = new X34UIConsoleLogManager((int)(200 * JFXUtil.SCALE), (int)(300 * JFXUtil.SCALE), window.getX() + window.getWidth(), window.getY());
+
+        detailMgr = new X34UIResultDetailManager((window.getX() - window.getWidth() / 2) - X34UIResultDetailManager.DEFAULT_WIDTH / 2,
+                (window.getY() - window.getHeight() / 2) - X34UIResultDetailManager.DEFAULT_HEIGHT / 2);
+
         mode.set(delayedMode);
         state.set(STATE_IDLE);
     }
