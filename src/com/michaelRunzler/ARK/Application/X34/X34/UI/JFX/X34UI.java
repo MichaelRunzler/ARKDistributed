@@ -19,6 +19,7 @@ import core.UI.NotificationBanner.UINotificationBannerControl;
 import core.system.ARKAppCompat;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.concurrent.Task;
@@ -34,6 +35,8 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Screen;
@@ -116,19 +119,14 @@ public class X34UI extends Application
 
     @ModeLocal(identifier = "State", value = {STATE_RUNNING, STATE_FINISHED})
     @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
+    private HBox resultActionContainer;
     private Button getResult;
-
-    @ModeLocal(identifier = "State", value = {STATE_RUNNING, STATE_FINISHED})
-    @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private Button resultDetails;
-
-    @ModeLocal(identifier = "State", value = {STATE_RUNNING, STATE_FINISHED})
-    @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private Button dropResult;
 
     // Status fields
 
-    //@ModeLocal(identifier = "State", value = STATE_RUNNING)
+    @ModeLocal(identifier = "State", value = STATE_RUNNING)
     @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private VBox statusContainer;
 
@@ -140,29 +138,25 @@ public class X34UI extends Application
     private ProgressIndicator masterStateIndicator;
 
     private Label ruleStatus;
+    private StackPane ruleProgressContainer;
     private Label ruleProgressLabel;
     private ProgressBar ruleProgressIndicator;
 
     private Label processorStatus;
+    private StackPane processorProgressContainer;
     private Label processorProgressLabel;
     private ProgressBar processorProgressIndicator;
 
     private Label pageStatus;
+    private StackPane pageProgressContainer;
     private Label pageProgressLabel;
     private ProgressBar pageProgressIndicator;
 
     // Result state fields
 
-    @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private VBox resultDetailContainer;
-
-    @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private Label resultTagLabel;
-
-    @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private Label resultIndexSizeLabel;
-
-    @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private Label resultNewCountLabel;
 
     // Download status fields
@@ -172,6 +166,7 @@ public class X34UI extends Application
     private VBox downloadStatusContainer;
 
     private Label downloadStatus;
+    private StackPane downloadProgressContainer;
     private Label downloadProgressLabel;
     private ProgressBar downloadProgressIndicator;
 
@@ -254,7 +249,7 @@ public class X34UI extends Application
     private static final String STATUS_PAGINATION_FULL = "Progress";
 
     private static final String RESULT_TAG_BASE = "Tag: ";
-    private static final String RESULT_SIZE_BASE = "Index Size: ";
+    private static final String RESULT_SIZE_BASE = "Current Index Size: ";
     private static final String RESULT_NEW_BASE = "New Images: ";
 
     //
@@ -292,8 +287,8 @@ public class X34UI extends Application
 
     private void systemInit()
     {
-        state = new SimpleIntegerProperty();
-        mode = new SimpleIntegerProperty();
+        state = new SimpleIntegerProperty(STATE_IDLE);
+        mode = new SimpleIntegerProperty(Integer.MIN_VALUE);
         maxRuleCountProperty = new SimpleIntegerProperty();
         ruleCountProperty = new SimpleIntegerProperty();
 
@@ -313,7 +308,12 @@ public class X34UI extends Application
         // Add automatic change listener for the internal state and mode properties
         state.addListener((observable, oldValue, newValue) -> stateControl.switchMode(newValue.intValue()));
         
-        mode.addListener((observable, oldValue, newValue) -> modeControl.switchMode(newValue.intValue()));
+        mode.addListener((observable, oldValue, newValue) -> {
+            modeControl.switchMode(newValue.intValue());
+            config.storeSetting(KEY_WINDOW_MODE, newValue.intValue());
+            stateControl.switchMode(state.get());
+            checkModeSpecificEnableState();
+        });
 
         //
         // CONFIG
@@ -358,6 +358,14 @@ public class X34UI extends Application
             // RETRIEVE
             delayedMode = config.getSettingOrStore(KEY_WINDOW_MODE, delayedMode);
             configFile = config.getSettingOrStore(KEY_CONFIG_FILE, configFile);
+            X34IndexDelegator.getMainInstance().setParent(config.getSettingOrDefault(KEY_INDEX_DIR, (File)config.getDefaultSetting(KEY_INDEX_DIR)));
+            try {
+                log.requestLoggerDirectoryChange(config.getSettingOrDefault(KEY_LOGGING_DIR, (File)config.getDefaultSetting(KEY_LOGGING_DIR)));
+            } catch (IOException e) {
+                log.logEvent(LogEventLevel.ERROR, "Cannot switch to specified logging directory, using default instead.");
+                log.logEvent(LogEventLevel.ERROR, "Exception details below.");
+                log.logEvent(e);
+            }
         }
 
         //
@@ -384,10 +392,14 @@ public class X34UI extends Application
             }
         }));
 
-        // Add hook for mode-switch disable on retrieval start.
+        // Add hook for mode-switch, result list, and rule/processor list disable on retrieval start.
         stateControl.addModeSwitchHook((mode -> {
+            startRetrieval.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING);
+            autoRuleList.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING);
+            processorList.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING);
             fileMenuModeSelectAdvanced.setDisable(mode == STATE_RUNNING || mode == STATE_BUSY);
             fileMenuModeSelectSimple.setDisable(mode == STATE_RUNNING || mode == STATE_BUSY);
+            results.setDisable(mode != STATE_FINISHED);
         }));
 
         //
@@ -415,7 +427,7 @@ public class X34UI extends Application
                 (window.getY() - window.getHeight() / 2) - X34UIResultDetailManager.DEFAULT_HEIGHT / 2);
 
         mode.set(delayedMode);
-        state.set(STATE_IDLE);
+        checkModeSpecificEnableState();
     }
 
     private void nodeInit()
@@ -466,7 +478,6 @@ public class X34UI extends Application
                     return null;
                 }
             });
-
             processorList.setDisable(true);
         }
 
@@ -501,6 +512,7 @@ public class X34UI extends Application
             cell.setConverter(scp);
             return cell;
         });
+        processorList.setPlaceholder(new Label("No processors available!\nImport some using the\nRule Manager."));
 
         outputDirectoryView.setPromptText("Output directory");
         outputDirectoryView.setEditable(false);
@@ -510,6 +522,7 @@ public class X34UI extends Application
             if(!oldValue.equals(newValue)) checkModeSpecificEnableState();
         });
 
+        resultActionContainer = new HBox();
         results = new ListView<>();
         getResult = new Button("Get");
         resultDetails = new Button("Details");
@@ -528,50 +541,86 @@ public class X34UI extends Application
 
         // Disable the result list if there were no images from the retrieval process, or re-enable it if there are some
         results.itemsProperty().addListener((observable, oldValue, newValue) -> results.setDisable(newValue == null || newValue.size() == 0));
+        results.setPlaceholder(new Label("No results available!"));
 
         results.setEditable(false);
         results.setDisable(true);
-        getResult.setDisable(true);
-        resultDetails.setDisable(true);
-        dropResult.setDisable(true);
+        resultActionContainer.setDisable(true);
+
+        resultActionContainer.setSpacing(JFXUtil.DEFAULT_SPACING / 5);
+        resultActionContainer.setAlignment(Pos.CENTER);
+        resultActionContainer.getChildren().addAll(getResult, resultDetails, dropResult);
 
         // Add listeners for auto-hiding/showing the result statistic fields
         results.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             if(oldValue.equals(newValue)) return;
 
             // If the value is out-of-bounds, hide the status fields. If it is in-bounds, show them.
-            resultDetailContainer.setVisible(newValue.intValue() >= 0 && newValue.intValue() < results.getItems().size());
+            if(newValue.intValue() >= 0 && newValue.intValue() < results.getItems().size()){
+                resultDetailContainer.setVisible(true);
+                RetrievalResultCache result = results.getItems().get(newValue.intValue());
+                int totalSize = 0;
+
+                for(String s : result.sourceRule.getProcessorList()) {
+                    try {
+                        totalSize += X34IndexDelegator.getMainInstance().loadIndex(result.sourceRule.query, s).entries.size();
+                    } catch (IOException e) {
+                        log.logEvent(LogEventLevel.DEBUG, "Could not locate index for size lookup. This is not an error!");
+                        log.logEvent(LogEventLevel.DEBUG, "Exception details provided for completeness.");
+                        log.logEvent(e);
+                    }
+                }
+
+                resultIndexSizeLabel.setText(RESULT_SIZE_BASE + totalSize);
+                resultNewCountLabel.setText(RESULT_NEW_BASE + result.results.size());
+                resultTagLabel.setText(RESULT_TAG_BASE + result.sourceRule.query);
+                resultActionContainer.setDisable(false);
+            }else{
+                resultDetailContainer.setVisible(false);
+                resultActionContainer.setDisable(true);
+            }
         });
         results.disabledProperty().addListener((observable, oldValue, newValue) -> resultDetailContainer.setVisible(!newValue));
 
 
         statusContainer = new VBox();
 
-        masterStatus = new Label(STATUS_MASTER_BASE);
+        masterStatus = new Label(STATUS_MASTER_BASE + "Idle");
         masterStateIndicator = new ProgressIndicator();
 
         ruleStatus = new Label(STATUS_RULE_BASE);
         ruleProgressLabel = new Label("");
         ruleProgressIndicator = new ProgressBar();
+        ruleProgressContainer = new StackPane(ruleProgressIndicator, ruleProgressLabel);
+        ruleProgressContainer.setAlignment(Pos.CENTER);
+        VBox.setMargin(ruleStatus, new Insets(JFXUtil.DEFAULT_SPACING / 2, 0, 0, 0));
 
         processorStatus = new Label(STATUS_PROC_BASE);
         processorProgressLabel = new Label("");
         processorProgressIndicator = new ProgressBar();
+        processorProgressContainer = new StackPane(processorProgressIndicator, processorProgressLabel);
+        processorProgressContainer.setAlignment(Pos.CENTER);
+        VBox.setMargin(processorStatus, new Insets(JFXUtil.DEFAULT_SPACING / 2, 0, 0, 0));
 
         pageStatus = new Label(STATUS_PAGINATION_FULL);
         pageProgressLabel = new Label("");
         pageProgressIndicator = new ProgressBar();
+        pageProgressContainer = new StackPane(pageProgressIndicator, pageProgressLabel);
+        pageProgressContainer.setAlignment(Pos.CENTER);
+        VBox.setMargin(pageStatus, new Insets(JFXUtil.DEFAULT_SPACING / 2, 0, 0, 0));
 
         masterStateIndicator.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
         masterStateIndicator.setVisible(false);
 
         statusContainer.setAlignment(Pos.CENTER);
-        statusContainer.getChildren().addAll(masterStatus, masterStateIndicator, ruleStatus, ruleProgressLabel, ruleProgressIndicator,
-                processorStatus, processorProgressLabel, processorProgressIndicator, pageStatus, pageProgressLabel, pageProgressIndicator);
+        statusContainer.getChildren().addAll(masterStateIndicator, ruleStatus, ruleProgressContainer,
+                processorStatus, processorProgressContainer, pageStatus, pageProgressContainer);
         statusContainer.setVisible(false);
 
+        masterStatus.setAlignment(Pos.CENTER);
+
         // Add listeners and value handlers for the telemetry returned by the core class during retrieval
-        state.addListener((observable, oldValue, newValue) -> {
+        state.addListener((observable, oldValue, newValue) -> Platform.runLater(() ->{
             switch (newValue.intValue()){
                 case STATE_IDLE:
                     masterStatus.setText(STATUS_MASTER_BASE + "Idle");
@@ -590,38 +639,38 @@ public class X34UI extends Application
                     masterStateIndicator.setVisible(false);
                     break;
             }
-        });
+        }));
 
-        core.processorCountProperty().addListener((observable, oldValue, newValue) -> {
-            processorProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : newValue.intValue() + " / ")
-                    + (core.maxProcessorCountProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : core.maxProcessorCountProperty().get()));
+        core.processorCountProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(() ->{
+            processorProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "\u221E" : newValue.intValue() + " / ")
+                    + (core.maxProcessorCountProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "\u221E" : core.maxProcessorCountProperty().get()));
 
             processorProgressIndicator.setProgress((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ||
                     core.maxProcessorCountProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE) ? ProgressIndicator.INDETERMINATE_PROGRESS :
                     (double)newValue.intValue() / (double)core.maxProcessorCountProperty().get());
 
             processorStatus.setText(core.currentProcessorProperty().get() == null ? "" : core.currentProcessorProperty().get());
-        });
+        }));
 
-        core.paginationProperty().addListener((observable, oldValue, newValue) -> {
-            pageProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : newValue.intValue() + " / ")
-                    + (core.maxPaginationProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : core.maxPaginationProperty().get()));
+        core.paginationProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(() ->{
+            pageProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "\u221E" : newValue.intValue() + " / ")
+                    + (core.maxPaginationProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "\u221E" : core.maxPaginationProperty().get()));
 
             pageProgressIndicator.setProgress((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ||
                     core.maxPaginationProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE) ? ProgressIndicator.INDETERMINATE_PROGRESS :
                     (double)newValue.intValue() / (double)core.maxPaginationProperty().get());
-        });
+        }));
 
-        ruleCountProperty.addListener((observable, oldValue, newValue) -> {
-            ruleProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : newValue.intValue() + " / ")
-                    + (maxRuleCountProperty.get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : maxRuleCountProperty.get()));
+        ruleCountProperty.addListener((observable, oldValue, newValue) -> Platform.runLater(() ->{
+            ruleProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "\u221E" : newValue.intValue() + " / ")
+                    + (maxRuleCountProperty.get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "\u221E" : maxRuleCountProperty.get()));
 
             ruleProgressIndicator.setProgress((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ||
                     maxRuleCountProperty.get() == X34Core.INVALID_INT_PROPERTY_VALUE) ? ProgressIndicator.INDETERMINATE_PROGRESS :
                     (double)newValue.intValue() / (double)maxRuleCountProperty.get());
 
             ruleStatus.setText(core.currentQueryProperty().get() == null ? "" : core.currentQueryProperty().get());
-        });
+        }));
 
 
         downloadStatusContainer = new VBox();
@@ -629,10 +678,14 @@ public class X34UI extends Application
         downloadStatus = new Label(STATUS_DOWNLOAD_BASE);
         downloadProgressLabel = new Label("");
         downloadProgressIndicator = new ProgressBar();
+        downloadProgressContainer = new StackPane(downloadProgressIndicator, downloadProgressLabel);
+        downloadProgressContainer.setAlignment(Pos.CENTER);
+        VBox.setMargin(downloadStatus, new Insets(JFXUtil.DEFAULT_SPACING / 2, 0, 0, 0));
 
-        downloadStatusContainer.getChildren().addAll(downloadStatus, downloadProgressLabel, downloadProgressIndicator);
+        downloadStatusContainer.setAlignment(Pos.CENTER);
+        downloadStatusContainer.getChildren().addAll(downloadStatus, downloadProgressContainer);
 
-        core.downloadProgressProperty().addListener((observable, oldValue, newValue) -> {
+        core.downloadProgressProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(() ->{
             downloadProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : newValue.intValue() + " / ")
                     + (core.maxDownloadProgressProperty().get() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : core.maxDownloadProgressProperty().get()));
 
@@ -641,7 +694,7 @@ public class X34UI extends Application
                     (double)newValue.intValue() / (double)core.maxDownloadProgressProperty().get());
 
             downloadStatus.setText(core.currentDownloadProperty().get() == null ? "" : core.currentDownloadProperty().get());
-        });
+        }));
 
 
         resultDetailContainer = new VBox();
@@ -717,6 +770,8 @@ public class X34UI extends Application
         });
 
         autoRuleList.getItems().addAll(config.getSettingOrDefault(KEY_RULE_LIST, new ArrayList<>()));
+        autoRuleList.setPlaceholder(new Label("No rules available!\nAdd some using the\nRule Manager."));
+        autoRuleList.getItems().addListener((InvalidationListener) e -> checkModeSpecificEnableState());
 
 
         startRetrieval = new Button("Start Retrieval");
@@ -725,9 +780,9 @@ public class X34UI extends Application
         stopRetrieval.setVisible(false);
 
         // oh boy here we go...
-        layout.getChildren().addAll(tagInputField, tagInputLabel, processorList, changeOutputDirectory, outputDirectoryView, results, getResult, resultDetails,
-                dropResult, statusContainer, resultDetailContainer, autoRuleList, editRuleListShortcut, ruleIndicatorArrow1, ruleIndicatorArrow2,
-                startRetrieval, stopRetrieval, downloadStatusContainer);
+        layout.getChildren().addAll(tagInputField, tagInputLabel, processorList, changeOutputDirectory, outputDirectoryView, results,
+                resultActionContainer, masterStatus, statusContainer, resultDetailContainer, autoRuleList, editRuleListShortcut, ruleIndicatorArrow1,
+                ruleIndicatorArrow2, startRetrieval, stopRetrieval, downloadStatusContainer);
     }
 
     private void menuBarInit()
@@ -836,7 +891,7 @@ public class X34UI extends Application
         JFXUtil.setElementPositionInGrid(layout, notificationSeparator, 0, -1, 1.25, -1);
         JFXUtil.setElementPositionInGrid(layout, tagInputLabel, 0, -1, 2, -1);
         JFXUtil.setElementPositionInGrid(layout, changeOutputDirectory, 0, -1, 3, -1);
-        JFXUtil.setElementPositionInGrid(layout, processorList, 0, -1, 4, -1);
+        JFXUtil.setElementPositionInGrid(layout, processorList, 0, -1, 4, 4);
 
         Platform.runLater(() ->{
             JFXUtil.bindAlignmentToNode(layout, changeOutputDirectory, outputDirectoryView, 10, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED);
@@ -854,7 +909,7 @@ public class X34UI extends Application
 
         // Auto-mode
 
-        JFXUtil.setElementPositionInGrid(layout, autoRuleList, 0, -1, 2, -1);
+        JFXUtil.setElementPositionInGrid(layout, autoRuleList, 0, -1, 2, 4);
 
         Platform.runLater(() ->{
 
@@ -862,14 +917,31 @@ public class X34UI extends Application
 
         // Common-mode
 
-        JFXUtil.setElementPositionInGrid(layout, startRetrieval, -1, -1, -1, 4);
-        JFXUtil.setElementPositionInGrid(layout, stopRetrieval, -1, -1, -1, 3);
+        JFXUtil.setElementPositionInGrid(layout, masterStatus, -1, -1, 2, -1);
+        JFXUtil.setElementPositionInGrid(layout, statusContainer, -1, -1, 3, -1);
+        JFXUtil.setElementPositionInGrid(layout, downloadStatusContainer, -1, -1, 3, -1);
+        JFXUtil.setElementPositionInGrid(layout, results, -1, 0, 2, 4);
 
-        JFXUtil.setElementPositionInGrid(layout, statusContainer, -1, -1, 2, -1);
+        downloadStatus.prefWidthProperty().bind(downloadProgressIndicator.widthProperty());
+        ruleStatus.prefWidthProperty().bind(ruleProgressIndicator.widthProperty());
+        processorStatus.prefWidthProperty().bind(processorProgressIndicator.widthProperty());
+        pageStatus.prefWidthProperty().bind(pageProgressIndicator.widthProperty());
+
+        masterStatus.setPrefWidth(JFXUtil.DEFAULT_SPACING * 3);
 
         Platform.runLater(() ->{
-            results.heightProperty().addListener((observable, oldValue, newValue) -> JFXUtil.alignToNode(layout, results, resultDetailContainer,
-                    10, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED));
+            JFXUtil.bindAlignmentToNode(layout, results, resultActionContainer,10, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+            JFXUtil.bindAlignmentToNode(layout, resultActionContainer, resultDetailContainer,10, Orientation.VERTICAL, JFXUtil.Alignment.NEGATIVE);
+            JFXUtil.bindAlignmentToNode(layout, statusContainer, startRetrieval, JFXUtil.DEFAULT_SPACING, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+            JFXUtil.bindAlignmentToNode(layout, statusContainer, stopRetrieval, JFXUtil.DEFAULT_SPACING * 2, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+
+            JFXUtil.bindAlignmentToNode(layout, statusContainer, new Rectangle2D(statusContainer.getLayoutX(), statusContainer.getLayoutY(), statusContainer.getWidth(), statusContainer.getHeight()),
+                    ruleIndicatorArrow1, new Rectangle2D(ruleIndicatorArrow1.getX(), ruleIndicatorArrow1.getY(), ruleIndicatorArrow1.boundsInParentProperty().getValue().getWidth(),
+                            ruleIndicatorArrow1.boundsInParentProperty().getValue().getHeight()), -20 * JFXUtil.SCALE, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED);
+
+            JFXUtil.bindAlignmentToNode(layout, statusContainer, new Rectangle2D(statusContainer.getLayoutX(), statusContainer.getLayoutY(), statusContainer.getWidth(), statusContainer.getHeight()),
+                    ruleIndicatorArrow2, new Rectangle2D(ruleIndicatorArrow2.getX(), ruleIndicatorArrow2.getY(), ruleIndicatorArrow2.boundsInParentProperty().getValue().getWidth(),
+                            ruleIndicatorArrow2.boundsInParentProperty().getValue().getHeight()), 25 * JFXUtil.SCALE, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED);
 
             // Manual call to size-change listeners to ensure resizing of all relevant elements even if the layout is not resized.
             onWindowHSizeChange();
@@ -881,7 +953,8 @@ public class X34UI extends Application
     // on height change only
     private void onWindowHSizeChange()
     {
-
+        JFXUtil.setElementPositionCentered(layout, ruleIndicatorArrow1, new Rectangle2D(ruleIndicatorArrow1.getX(), ruleIndicatorArrow1.getY(), ruleIndicatorArrow1.getFitWidth(), ruleIndicatorArrow1.getFitHeight()), false, true);
+        JFXUtil.setElementPositionCentered(layout, ruleIndicatorArrow2, new Rectangle2D(ruleIndicatorArrow2.getX(), ruleIndicatorArrow2.getY(), ruleIndicatorArrow2.getFitWidth(), ruleIndicatorArrow2.getFitHeight()), false, true);
     }
 
     // on width change only
@@ -891,28 +964,19 @@ public class X34UI extends Application
         info.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
         notificationSeparator.setFitWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
 
-        JFXUtil.setElementPositionCentered(layout, startRetrieval, true, false);
-        JFXUtil.setElementPositionCentered(layout, stopRetrieval, true, false);
+        processorList.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
+        autoRuleList.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
+        results.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
 
         JFXUtil.setElementPositionCentered(layout, statusContainer, true, false);
+        JFXUtil.setElementPositionCentered(layout, downloadStatusContainer, true, false);
+        JFXUtil.setElementPositionCentered(layout, masterStatus, true, false);
     }
 
     // on both height and width change, exclusive with both other methods preferably
     private void onWindowSizeChange()
     {
-        processorList.setPrefSize((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3,
-                layout.getHeight() - layout.getPadding().getTop() - layout.getPadding().getBottom() - (JFXUtil.DEFAULT_SPACING * 10));
 
-        autoRuleList.setPrefSize((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3,
-                layout.getHeight() - layout.getPadding().getTop() - layout.getPadding().getBottom() - (JFXUtil.DEFAULT_SPACING * 8));
-
-        JFXUtil.alignToNode(layout, autoRuleList, new Rectangle2D(autoRuleList.getLayoutX(), autoRuleList.getLayoutY(), autoRuleList.getWidth(), autoRuleList.getHeight()),
-                ruleIndicatorArrow1, new Rectangle2D(ruleIndicatorArrow1.getX(), ruleIndicatorArrow1.getY(), ruleIndicatorArrow1.getFitWidth(), ruleIndicatorArrow1.getFitHeight()),
-                5 * JFXUtil.SCALE, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED);
-
-        JFXUtil.alignToNode(layout, results, new Rectangle2D(results.getLayoutX(), results.getLayoutY(), results.getWidth(), results.getHeight()),
-                ruleIndicatorArrow2, new Rectangle2D(ruleIndicatorArrow2.getX(), ruleIndicatorArrow2.getY(), ruleIndicatorArrow2.getFitWidth(), ruleIndicatorArrow2.getFitHeight()),
-                -5 * JFXUtil.SCALE, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED);
     }
 
     private void setActions()
@@ -951,7 +1015,10 @@ public class X34UI extends Application
             chooser.setTitle("Select Output Directory...");
 
             File f = chooser.showDialog(window);
-            if(f != null && f.exists()) config.storeSetting(KEY_OUTPUT_DIR, f);
+            if(f != null && f.exists()){
+                config.storeSetting(KEY_OUTPUT_DIR, f);
+                outputDirectoryView.setText(f.getAbsolutePath());
+            }
         });
 
         // Auto-mode
@@ -960,16 +1027,24 @@ public class X34UI extends Application
 
         // Common-mode
 
-        startRetrieval.setOnAction(e -> retrieve());
+        startRetrieval.setOnAction(e -> {
+            core.cancelledProperty().set(false);
+            retrieve();
+        });
+
         stopRetrieval.setOnAction(e ->{
             // Cancel the core's task and notify all pending and running tasks in the registration index
             core.cancelRetrieval();
-            for(Task t : registeredRetrievalTasks) t.cancel();
+            for (Task t : registeredRetrievalTasks) t.cancel();
+            registeredRetrievalTasks.clear();
         });
 
         getResult.setOnAction(e -> {
             int index = results.getSelectionModel().getSelectedIndex();
-            if(index > 0 && index < results.getItems().size()) downloadSelectedItem(index);
+            if(index >= 0 && index < results.getItems().size()){
+                core.cancelledProperty().set(false);
+                downloadSelectedItem(index);
+            }
         });
         dropResult.setOnAction(e -> {
             int index = results.getSelectionModel().getSelectedIndex();
@@ -979,7 +1054,7 @@ public class X34UI extends Application
         });
         resultDetails.setOnAction(e ->{
             int index = results.getSelectionModel().getSelectedIndex();
-            if(index > 0 && index < results.getItems().size()) {
+            if(index >= 0 && index < results.getItems().size()) {
                 // Cannot be done inline due to potential ConcurrentModificationException in the list
                 RetrievalResultCache temp = detailMgr.editResultEntry(results.getItems().get(index));
                 results.getItems().set(index, temp);
@@ -991,7 +1066,7 @@ public class X34UI extends Application
     {
         registeredRetrievalTasks.clear();
 
-        switch ((int)config.getSetting(KEY_WINDOW_MODE))
+        switch (modeControl.getCurrentMode())
         {
             case MODE_SIMPLE:
                 ArrayList<String> processors = new ArrayList<>();
@@ -1037,13 +1112,12 @@ public class X34UI extends Application
 
                 retrievalTask.setOnCancelled(e ->{
                     notice.displayNotice("Retrieval cancelled.", UINotificationBannerControl.Severity.INFO, 2500);
-                    registeredRetrievalTasks.remove(retrievalTask);
                     ruleCountProperty.set(X34Core.INVALID_INT_PROPERTY_VALUE);
                     maxRuleCountProperty.set(X34Core.INVALID_INT_PROPERTY_VALUE);
                     state.set(STATE_IDLE);
                 });
 
-                ruleCountProperty.set(0);
+                ruleCountProperty.set(1);
                 maxRuleCountProperty.set(1);
 
                 Thread executor = new Thread(retrievalTask);
@@ -1067,16 +1141,33 @@ public class X34UI extends Application
         RetrievalResultCache result = results.getItems().get(index);
         HashMap<X34Rule, File> dirMap = config.getSettingOrDefault(KEY_RULEDIR_MAP, new HashMap<>());
 
-        try {
-            core.writeImagesToFile(result.results, dirMap.get(result.sourceRule) == null ?
-                    config.getSettingOrDefault(KEY_OUTPUT_DIR, ARKAppCompat.getOSSpecificDesktopRoot()) : dirMap.get(result.sourceRule),
-                    config.getSettingOrDefault(KEY_OVERWRITE_EXISTING, false), true);
+        Task<Void> downloadTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                core.writeImagesToFile(result.results, dirMap.get(result.sourceRule) == null ?
+                        config.getSettingOrDefault(KEY_OUTPUT_DIR, ARKAppCompat.getOSSpecificDesktopRoot()) : dirMap.get(result.sourceRule),
+                        config.getSettingOrDefault(KEY_OVERWRITE_EXISTING, false), true);
+                return null;
+            }
+        };
+
+        downloadTask.setOnSucceeded(e -> {
             notice.displayNotice("Result(s) successfully written to file!", UINotificationBannerControl.Severity.INFO, 2500);
-        } catch (IOException e) {
+            if(index < results.getItems().size()) results.getItems().remove(index);
+        });
+
+        downloadTask.setOnFailed(e ->{
             notice.displayNotice("Error while writing one or more output files, see log for details.", UINotificationBannerControl.Severity.WARNING, 2500);
             log.logEvent(LogEventLevel.DEBUG, "I/O error during file write, see below for details.");
-            log.logEvent(e);
-        }
+            log.logEvent((Exception)downloadTask.getException());
+
+            if(new ARKInterfaceDialogYN("Query", "Download incomplete. Remove result entry from the list anyway?", "Yes", "No").display())
+                if(index < results.getItems().size()) results.getItems().remove(index);
+        });
+
+        Thread downloadThread = new Thread(downloadTask);
+        downloadThread.setDaemon(true);
+        downloadThread.start();
     }
 
     // Chain-called from subthreads. Will chain until it runs out of rules.
@@ -1138,8 +1229,6 @@ public class X34UI extends Application
                 state.set(STATE_FINISHED);
                 Platform.runLater(() -> notice.displayNotice("All retrieval processes complete. See results list for more information.", UINotificationBannerControl.Severity.INFO, 4000));
             }
-
-            registeredRetrievalTasks.remove(autoRetrievalTask);
         });
 
         Thread t = new Thread(autoRetrievalTask);
@@ -1171,8 +1260,8 @@ public class X34UI extends Application
 
     private void checkModeSpecificEnableState()
     {
-        if(modeControl.getCurrentMode() == MODE_SIMPLE) startRetrieval.setDisable(checkManualStartEnableState());
-        else if(modeControl.getCurrentMode() == MODE_ADVANCED) startRetrieval.setDisable(checkAutoStartEnableState());
+        if(modeControl.getCurrentMode() == MODE_SIMPLE) startRetrieval.setDisable(!checkManualStartEnableState());
+        else if(modeControl.getCurrentMode() == MODE_ADVANCED) startRetrieval.setDisable(!checkAutoStartEnableState());
     }
 
     private boolean checkManualStartEnableState()
@@ -1190,9 +1279,12 @@ public class X34UI extends Application
 
     private boolean checkAutoStartEnableState()
     {
+        if(autoRuleList.getItems().size() == 0) return false;
+        else if(ruleListValues.size() < autoRuleList.getItems().size()) return true;
+
         boolean isSelected = false;
-        for(SimpleBooleanProperty bp : ruleListValues.values()){
-            if(bp.getValue()){
+        for(X34Rule r : autoRuleList.getItems()){
+            if(ruleListValues.get(r) != null && ruleListValues.get(r).getValue()){
                 isSelected = true;
                 break;
             }

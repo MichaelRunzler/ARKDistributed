@@ -31,7 +31,7 @@ import java.util.ArrayList;
 public class X34UIResultDetailManager extends ARKManagerBase
 {
     public static final String DEFAULT_TITLE = "Result Details";
-    public static final int DEFAULT_WIDTH = (int)(175 * JFXUtil.SCALE);
+    public static final int DEFAULT_WIDTH = (int)(250 * JFXUtil.SCALE);
     public static final int DEFAULT_HEIGHT = (int)(300 * JFXUtil.SCALE);
 
     private ListView<X34Image> entries;
@@ -89,7 +89,7 @@ public class X34UIResultDetailManager extends ARKManagerBase
             }
         });
 
-        layout.getChildren().addAll(buttonContainer, entries);
+        layout.getChildren().addAll(buttonContainer, resultDetail, entries);
 
         setTooltips();
 
@@ -173,7 +173,7 @@ public class X34UIResultDetailManager extends ARKManagerBase
     {
         if(isModified){
             ArrayList<X34Image> temp = new ArrayList<>(entries.getItems());
-            return new RetrievalResultCache(resultDetail.getText(), temp, cached.sourceRule);
+            return new RetrievalResultCache(resultDetail.getText().contains(":") ? resultDetail.getText().substring(resultDetail.getText().indexOf(':') + 2) : resultDetail.getText(), temp, cached.sourceRule);
         }else return cached;
     }
 
@@ -188,7 +188,8 @@ public class X34UIResultDetailManager extends ARKManagerBase
 
     private void repositionElements()
     {
-        JFXUtil.setElementPositionInGrid(layout, entries, 0, 0, 0, 2.5);
+        JFXUtil.setElementPositionInGrid(layout, resultDetail, 0, 0, 0, -1);
+        JFXUtil.setElementPositionInGrid(layout, entries, 0, 0, 1, 2.5);
         JFXUtil.setElementPositionInGrid(layout, buttonContainer, 0, 0, -1, 0);
     }
 

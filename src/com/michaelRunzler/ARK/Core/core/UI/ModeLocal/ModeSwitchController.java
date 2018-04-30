@@ -29,17 +29,8 @@ public class ModeSwitchController
      * instance instead, such as {@link #ModeSwitchController(Object)}.
      * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
      */
-    public ModeSwitchController() throws ClassNotFoundException
-    {
-        annotatedNodes = null;
-        modeSwitchHooks = new ArrayList<>();
-        currentMode = 0;
-        this.identifiers = new String[]{""};
-
-        // Get caller class so that we can directly reference its fields without a passed object reference from it
-        StackTraceElement str = new Exception().getStackTrace()[2];
-        associatedClass = Class.forName(str.getClassName());
-        assocClassInstance = null;
+    public ModeSwitchController() throws ClassNotFoundException {
+        this(null, getCallingClass(new Exception()), new String[]{""});
     }
 
     /**
@@ -50,10 +41,8 @@ public class ModeSwitchController
      * used if the calling class has non-static fields that are annotated with {@link ModeLocal} annotations.
      * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
      */
-    public ModeSwitchController(Object classInstance) throws ClassNotFoundException
-    {
-        this();
-        assocClassInstance = classInstance;
+    public ModeSwitchController(Object classInstance) throws ClassNotFoundException {
+        this(classInstance, getCallingClass(new Exception()), new String[]{""});
     }
 
     /**
@@ -69,10 +58,8 @@ public class ModeSwitchController
      *                    arguments at all will result in identical behavior to {@link #ModeSwitchController()} being used.
      * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
      */
-    public ModeSwitchController(String... identifiers) throws ClassNotFoundException
-    {
-        this();
-        this.identifiers = identifiers == null ? new String[]{""} : identifiers;
+    public ModeSwitchController(String... identifiers) throws ClassNotFoundException {
+        this(null, getCallingClass(new Exception()), identifiers == null ? new String[]{""} : identifiers);
     }
 
     /**
@@ -88,10 +75,26 @@ public class ModeSwitchController
      *                    arguments at all will result in identical behavior to {@link #ModeSwitchController()} being used.
      * @throws ClassNotFoundException if a reference to the calling class cannot be obtained through reflection or exception-tracing
      */
-    public ModeSwitchController(Object classInstance, String... identifiers) throws ClassNotFoundException
+    public ModeSwitchController(Object classInstance, String... identifiers) throws ClassNotFoundException {
+        this(classInstance, getCallingClass(new Exception()), identifiers == null ? new String[]{""} : identifiers);
+    }
+
+    /**
+     * Private constructor, chain-called by the public constructors to allow for class name detection.
+     * @param classInstance the active instance passed by the calling class. May be null.
+     * @param className the name of the calling class, as retrieved by a stack-trace inspection. May not be null.
+     * @param identifiers the list of actively monitored identifier tags, used as a filter for annotation control. May not be null.
+     * @throws ClassNotFoundException if the calling class name does not exist under the current primary class loader instance
+     */
+    private ModeSwitchController(Object classInstance, String className, String... identifiers) throws ClassNotFoundException
     {
-        this(classInstance);
-        this.identifiers = identifiers == null ? new String[]{""} : identifiers;
+        annotatedNodes = null;
+        modeSwitchHooks = new ArrayList<>();
+        currentMode = 0;
+        this.identifiers = identifiers;
+
+        associatedClass = Class.forName(className);
+        assocClassInstance = classInstance;
     }
 
     /**
@@ -258,5 +261,9 @@ public class ModeSwitchController
     {
         annotatedNodes = null;
         if(repopulate) switchMode(currentMode);
+    }
+
+    private static String getCallingClass(Exception e){
+        return e.getStackTrace()[2].getClassName();
     }
 }

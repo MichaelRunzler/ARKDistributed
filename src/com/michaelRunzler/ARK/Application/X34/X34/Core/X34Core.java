@@ -54,6 +54,8 @@ public class X34Core
 
     public static final int INVALID_INT_PROPERTY_VALUE = -1;
 
+    private boolean propertyBypass;
+
     /**
      * Default constructor. Uses the main instance from the {@link X34IndexDelegator}
      * for its reference to the {@link X34Config config} and {@link X34IndexIO} index I/O objects.
@@ -63,6 +65,7 @@ public class X34Core
         log = new XLoggerInterpreter();
         loader = X34IndexDelegator.getMainInstance();
         log.logEvent("Initialization complete.");
+        propertyBypass = false;
         propertyInit();
     }
 
@@ -76,6 +79,7 @@ public class X34Core
         log = new XLoggerInterpreter();
         loader = X34IndexDelegator.getDynamicInstance(IID);
         log.logEvent("Initialization complete.");
+        propertyBypass = false;
         propertyInit();
     }
     
@@ -90,7 +94,7 @@ public class X34Core
         currentDownloadProperty = new SimpleStringProperty();
         maxDownloadProgressProperty = new SimpleIntegerProperty();
         downloadProgressProperty = new SimpleIntegerProperty();
-        pushToIndexProperty = new SimpleBooleanProperty();
+        pushToIndexProperty = new SimpleBooleanProperty(true);
         cancelledProperty = new SimpleBooleanProperty();
 
         Map<Object, ObservableValue> propertyBackingMap = new HashMap<>();
@@ -145,10 +149,12 @@ public class X34Core
 
         config = setSchemaMetadataProperties(config);
 
-        currentQueryProperty.setValue(config.query);
-        currentProcessorProperty.setValue(config.type);
-        maxProcessorCountProperty.setValue(1);
-        processorCountProperty.setValue(1);
+        if(!propertyBypass) {
+            currentQueryProperty.setValue(config.query);
+            currentProcessorProperty.setValue(config.type);
+            maxProcessorCountProperty.setValue(1);
+            processorCountProperty.setValue(1);
+        }
 
         // Run retrieval
         log.logEvent("Retrieving...");
@@ -157,10 +163,12 @@ public class X34Core
         // If the index doesn't have a meta tag indicating processor origin, add it.
         if(!index.metadata.containsKey("processor")) index.metadata.put("processor", processor.getID());
 
-        currentQueryProperty.setValue(null);
-        currentProcessorProperty.setValue(null);
-        maxProcessorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
-        processorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+        if(!propertyBypass) {
+            currentQueryProperty.setValue(null);
+            currentProcessorProperty.setValue(null);
+            maxProcessorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+            processorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+        }
 
         // If the retrieval was cancelled via the property, return an empty array regardless of what we got from the processor.
         // Otherwise, check if we got any new images from the processor. If so, save the index and return them. If not, skip saving
@@ -194,6 +202,8 @@ public class X34Core
         // Check Rule validity
         if(configList == null || !configList.validate()) throw new ValidationException("Rule failed to pass validation.");
         ArrayList<X34Schema> schemas = new ArrayList<>(Arrays.asList(configList.getSchemas()));
+
+        propertyBypass = true;
 
         currentQueryProperty.setValue(configList.query);
         maxProcessorCountProperty.setValue(schemas.size());
@@ -231,6 +241,7 @@ public class X34Core
         currentProcessorProperty.setValue(null);
         maxProcessorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
         processorCountProperty.setValue(INVALID_INT_PROPERTY_VALUE);
+        propertyBypass = false;
 
         return returned;
     }
@@ -259,6 +270,11 @@ public class X34Core
         int count = 0;
         for(int i = 0; i < images.size(); i++)
         {
+            if(cancelledProperty.get()){
+                log.logEvent(LogEventLevel.WARNING, "Download cancelled.");
+                break;
+            }
+
             downloadProgressProperty.set(i + 1);
             X34Image x = images.get(i);
             currentDownloadProperty.set(ARKArrayUtil.byteArrayToHexString(x.hash));
@@ -278,6 +294,7 @@ public class X34Core
 
         maxDownloadProgressProperty.set(INVALID_INT_PROPERTY_VALUE);
         downloadProgressProperty.set(INVALID_INT_PROPERTY_VALUE);
+        currentDownloadProperty.set(null);
     }
 
     // Schema must have been pre-validated

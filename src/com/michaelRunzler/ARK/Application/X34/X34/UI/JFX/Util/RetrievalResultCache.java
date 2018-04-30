@@ -23,6 +23,7 @@ public class RetrievalResultCache
     {
         this.name = "" + (results == null ? 0 : results.size()) + ": " + name;
         this.results = results;
+        this.sourceRule = rule;
     }
 
     public RetrievalResultCache(X34RetrievalProcessor repo, String tag, ArrayList<X34Image> results, X34Rule rule)

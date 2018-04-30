@@ -95,7 +95,7 @@ public class X34UIFileManager extends ARKManagerBase
     private ModeSwitchController modeControl;
 
     private boolean linkedSizeListeners;
-    private SimpleIntegerProperty newMode;
+    private SimpleIntegerProperty mode;
     private File linkedCurrentDir;
 
     public X34UIFileManager(double x, double y)
@@ -119,7 +119,7 @@ public class X34UIFileManager extends ARKManagerBase
 
         linkedSizeListeners = false;
         linkedCurrentDir = null;
-        newMode = new SimpleIntegerProperty(0);
+        mode = new SimpleIntegerProperty(0);
         config = X34ConfigDelegator.getMainInstance();
         log = new XLoggerInterpreter();
 
@@ -130,7 +130,7 @@ public class X34UIFileManager extends ARKManagerBase
             log.logEvent(e);
         }
 
-        newMode.addListener((observable, oldValue, newValue) -> modeControl.switchMode(newMode.get()));
+        mode.addListener((observable, oldValue, newValue) -> modeControl.switchMode(mode.get()));
 
         // Initialize tab list. Each tab object contains all necessary metadata to initialize and control its linked JFX Tab object.
         tabs = new FileManagerTabProperty[]{
@@ -185,7 +185,7 @@ public class X34UIFileManager extends ARKManagerBase
         // Add change listener for the type selector to enable bound element updates
         typeSelector.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
             if(oldValue.equals(newValue) || newValue.intValue() < 0 || newValue.intValue() >= typeSelector.getTabs().size()) return;
-            newMode.set(newValue.intValue());
+            mode.set(newValue.intValue());
             computeAvailableFiles();
         });
 
@@ -218,7 +218,7 @@ public class X34UIFileManager extends ARKManagerBase
         close.setOnAction(e -> hide());
 
         openDir.setOnAction(e ->{
-            if(newMode.get() < 0 || linkedCurrentDir == null) return;
+            if(mode.get() < 0 || linkedCurrentDir == null) return;
 
             if(linkedCurrentDir.exists()) {
                 try {
@@ -230,9 +230,10 @@ public class X34UIFileManager extends ARKManagerBase
             }else notice.displayNotice("Unable to open directory; does not exist! Try resetting it using the 'Change' button.", UINotificationBannerControl.Severity.WARNING, 2500);        });
 
         changeDir.setOnAction(e ->{
-            if(newMode.get() < 0) return;
+            if(mode.get() < 0) return;
 
             DirectoryChooser selector = new DirectoryChooser();
+            selector.setInitialDirectory(linkedCurrentDir);
             File f = selector.showDialog(window);
             if(f == null || !f.exists() || f.equals(linkedCurrentDir)) return;
 
@@ -242,7 +243,7 @@ public class X34UIFileManager extends ARKManagerBase
             {
                 File base = linkedCurrentDir.isFile() ? linkedCurrentDir.getParentFile() : linkedCurrentDir;
                 File[] targets = base.listFiles((dir, name) -> {
-                    for(String s : tabs[newMode.get()].extensionFilters) if(name.contains(s)) return true;
+                    for(String s : tabs[mode.get()].extensionFilters) if(name.contains(s)) return true;
                     return false;
                 });
 
@@ -269,13 +270,13 @@ public class X34UIFileManager extends ARKManagerBase
             }
 
             // Store the new directory to the config, call the Callback in the corresponding tab, and force an update of the UI
-            if(tabs[newMode.get()].changeAction != null) tabs[newMode.get()].changeAction.call(f);
+            if(tabs[mode.get()].changeAction != null) tabs[mode.get()].changeAction.call(f);
 
             // If the previous 'directory' was actually a file reference (e.g to a single file used as a template),
             // use the same name as the previous file, but tagged onto the new directory
             if(linkedCurrentDir != null && linkedCurrentDir.isFile()) f = new File(f.getAbsolutePath(), linkedCurrentDir.getName());
 
-            config.storeSetting(tabs[newMode.get()].configKey, f);
+            config.storeSetting(tabs[mode.get()].configKey, f);
             computeAvailableFiles();
             notice.displayNotice("Directory change committed!", UINotificationBannerControl.Severity.INFO, 1500);
         });
@@ -317,18 +318,18 @@ public class X34UIFileManager extends ARKManagerBase
      */
     public void computeAvailableFiles()
     {
-        if(newMode.get() < 0) return;
+        if(mode.get() < 0) return;
 
         // Change UI display mode if necessary
-        modeControl.switchMode(newMode.get());
+        modeControl.switchMode(mode.get());
 
-        File f = config.getSettingOrDefault(tabs[newMode.get()].configKey, (File)config.getDefaultSetting(tabs[newMode.get()].configKey));
+        File f = config.getSettingOrDefault(tabs[mode.get()].configKey, (File)config.getDefaultSetting(tabs[mode.get()].configKey));
 
         currentDir.setText(f == null ? "" : f.isFile() ? f.getParentFile().getAbsolutePath() : f.getAbsolutePath());
 
         // Set file list contents from parent based on name filter
         FilenameFilter ff = (dir, name) -> {
-            for(String s : tabs[newMode.get()].extensionFilters) if(name.contains(s)) return true;
+            for(String s : tabs[mode.get()].extensionFilters) if(name.contains(s)) return true;
             return false;
         };
 
@@ -349,7 +350,6 @@ public class X34UIFileManager extends ARKManagerBase
         if(!linkedSizeListeners){
             layout.widthProperty().addListener(e ->{
                 repositionOnResize();
-                info.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
             });
 
             layout.heightProperty().addListener(e ->{
@@ -370,7 +370,7 @@ public class X34UIFileManager extends ARKManagerBase
             linkedSizeListeners = true;
         }
 
-        JFXUtil.setElementPositionInGrid(layout, info, 0, -1, 0, -1);
+        JFXUtil.setElementPositionInGrid(layout, info, 0, 0, 0, -1);
         JFXUtil.setElementPositionIgnorePadding(layout, typeSelector, 0, 0, 0, -1);
         JFXUtil.setElementPositionInGrid(layout, close, 0, -1, -1, 0);
 

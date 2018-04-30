@@ -19,6 +19,7 @@ import java.io.IOException;
 /**
  * Displays and manages a copy of the system logger output, viewable in a separate window.
  */
+//todo add support for active log verbosity changes
 public class X34UIConsoleLogManager extends ARKManagerBase
 {
     public static final String DEFAULT_TITLE = "System Log Output";
@@ -100,6 +101,7 @@ public class X34UIConsoleLogManager extends ARKManagerBase
      * Clears the current event log completely, leaving limiting and buffer settings intact.
      */
     public void clearLog(){
+        //todo update
         logView.getItems().clear();
     }
 
@@ -108,6 +110,7 @@ public class X34UIConsoleLogManager extends ARKManagerBase
      * It's not usually necessary to call this externally, but it's here if it is needed for some reason.
      */
     public void trimLog(){
+        //todo update
         if(logView.getItems().size() >= (cacheLimit + bufferSize))
             logView.getItems().remove(0, logView.getItems().size() - cacheLimit);
     }
@@ -152,5 +155,4 @@ public class X34UIConsoleLogManager extends ARKManagerBase
         repositionElements();
         super.display();
     }
-
 }

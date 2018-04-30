@@ -686,6 +686,7 @@ public class X34UIRuleManager extends ARKManagerBase
             }
 
             ruleList.getItems().set(ruleIndex, new X34Rule(r.query, r.getSchemas()[0].metadata, IDs.toArray(new String[0])));
+            ruleList.getSelectionModel().select(ruleIndex);
         }
 
         ruleState = State.FINALIZED;
