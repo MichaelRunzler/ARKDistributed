@@ -1,8 +1,12 @@
 package Misc.STOComponents;
 
+import core.CoreUtil.ARKJsonParser.ARKJsonElement;
+import core.CoreUtil.ARKJsonParser.ARKJsonObject;
+import core.CoreUtil.ARKJsonParser.ARKJsonParser;
 import core.CoreUtil.JFXUtil;
 import core.UI.ARKManagerBase;
 import core.UI.InterfaceDialogs.ARKInterfaceAlert;
+import core.UI.InterfaceDialogs.ARKInterfaceDialog;
 import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
 import core.UI.ModeLocal.ModeLocal;
 import core.UI.ModeLocal.ModeSwitchController;
@@ -14,10 +18,14 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -25,13 +33,16 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
-import java.io.File;
-import java.io.IOException;
+import java.awt.*;
+import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -50,7 +61,9 @@ class STOComponentUI extends ARKManagerBase
     private static final int MODE_CALCULATION_VIEW = 0;
     private static final int MODE_COMPONENT_VIEW = 1;
     private static final int MODE_MATERIAL_VIEW = 2;
+    private static final int MODE_OPTIONS_VIEW = 3;
     private static final File cache = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\STOComponents", "items.stx");
+    private static final File schemaCache = new File(ARKAppCompat.getOSSpecificAppPersistRoot().getAbsolutePath() + "\\STOComponents", "schemas.stc");
 
     private static final String MATERIAL_COST_BASE = "Raw materials: ";
     private static final String COMPONENT_COST_BASE = "Components: ";
@@ -103,8 +116,22 @@ class STOComponentUI extends ARKManagerBase
     private ImageView separator1;
     private ImageView separator2;
 
-    @ModeLocal(invert = true, value = MODE_CALCULATION_VIEW)
+    @ModeLocal(MODE_OPTIONS_VIEW)
+    private ListView<ItemSchema> schemaList;
+
+    @ModeLocal(MODE_OPTIONS_VIEW)
+    private HBox schemaControlContainer;
+    private Label schemaLabel;
+    private Button loadSchema;
+    private Button saveSchema;
+    private Button deleteSchema;
+
+    @ModeLocal(MODE_OPTIONS_VIEW)
+    private VBox registryControlContainer;
+    private Button exportRegistry;
+    private Button importRegistry;
     private Button resetRegistry;
+    private Button openCache;
 
     private Map<Item, ObservableValue<String>> itemValues;
 
@@ -134,12 +161,14 @@ class STOComponentUI extends ARKManagerBase
         Tab calculation = new Tab("Calculate");
         Tab componentView = new Tab("Components");
         Tab materialView = new Tab("Materials");
+        Tab optionsView = new Tab("Settings");
 
         calculation.setGraphic(JFXUtil.generateGraphicFromResource("Misc/STOComponents/assets/gui/icon/energy_credit.png", (int)(15 * JFXUtil.SCALE)));
         componentView.setGraphic(JFXUtil.generateGraphicFromResource(Item.ICON_BASE_PATH + "components/very_rare/isolinear_circuitry.png", (int)(15 * JFXUtil.SCALE)));
         materialView.setGraphic(JFXUtil.generateGraphicFromResource(Item.ICON_BASE_PATH + "materials/rare/tetrazine.png", (int)(15 * JFXUtil.SCALE)));
+        optionsView.setGraphic(JFXUtil.generateGraphicFromResource("core/assets/options.png", (int)(15 * JFXUtil.SCALE)));
 
-        selector = new TabPane(calculation, componentView, materialView);
+        selector = new TabPane(calculation, componentView, materialView, optionsView);
 
         activeContainer = new HBox();
         componentContainer = new HBox();
@@ -147,11 +176,14 @@ class STOComponentUI extends ARKManagerBase
         filterContainer = new HBox();
         resultContainer = new HBox();
         resultContainer2 = new HBox();
+        schemaControlContainer = new HBox();
+        registryControlContainer = new VBox();
 
         materialIndex = new ListView<>();
         componentIndex = new ListView<>();
         activeComponents = new ListView<>();
         activeMaterials = new ListView<>();
+        schemaList = new ListView<>();
         components = new ChoiceBox<>();
         rarityFilter = new ChoiceBox<>();
         specFilter = new ChoiceBox<>();
@@ -161,14 +193,21 @@ class STOComponentUI extends ARKManagerBase
         save = new Button("Save Values");
         add = new Button("Add");
         remove = new Button("Remove Selected Component");
-        resetRegistry = new Button("Reset Component Registries");
+        resetRegistry = new Button("Reset Registries");
+        importRegistry = new Button("Import Registry");
+        exportRegistry = new Button("Export Registry");
+        openCache = new Button("Open Storage Folder");
+        loadSchema = new Button("Load");
+        saveSchema = new Button("Save");
+        deleteSchema = new Button("Delete");
 
         quantity = new TextField("1");
         resultRawCost = new Label(MATERIAL_COST_BASE + "N/A");
         resultComponentCost = new Label(COMPONENT_COST_BASE + "N/A");
         maximumProfitMargin = new Label(PROFIT_MARGIN_BASE + "N/A");
         totalDilQuantity = new Label(": 0");
-        resultExchangePrice = new TextField();
+        schemaLabel = new Label("Schema Controls:");
+        resultExchangePrice = new TextField("0");
 
         resultRawCost.setGraphic(JFXUtil.generateGraphicFromResource("Misc/STOComponents/assets/gui/icon/energy_credit.png", (int)(15 * JFXUtil.SCALE)));
         resultComponentCost.setGraphic(JFXUtil.generateGraphicFromResource("Misc/STOComponents/assets/gui/icon/energy_credit.png", (int)(15 * JFXUtil.SCALE)));
@@ -311,6 +350,10 @@ class STOComponentUI extends ARKManagerBase
         activeMaterials.setCellFactory(factoryA);
         activeComponents.setCellFactory(factoryA);
 
+        activeMaterials.setPlaceholder(new Label("No materials!"));
+        activeComponents.setPlaceholder(new Label("No components selected!"));
+        schemaList.setPlaceholder(new Label("No saved schemas!"));
+
         for(Item i : registry.getByCategory(ItemRegistry.Category.MATERIAL))
             materialIndex.getItems().add(new ItemEntry(i, i.value));
 
@@ -323,6 +366,9 @@ class STOComponentUI extends ARKManagerBase
         specFilter.getSelectionModel().select(Item.Specialization.BEAMS);
         rarityFilter.getSelectionModel().select(Item.Rarity.ALL);
 
+        ItemSchema[] schemas = ItemSchema.loadSchemaList(schemaCache, registry);
+        schemaList.getItems().addAll(schemas == null ? new ItemSchema[0] : schemas);
+
         add.setOnAction(e ->{
             if(components.getValue() == defaultItem || quantity.getText().contains("-") || quantity.getText().equals("0")) return;
 
@@ -333,35 +379,7 @@ class STOComponentUI extends ARKManagerBase
 
             Item current = components.getValue();
 
-            ItemEntry target = null;
-            for(ItemEntry e1 : activeComponents.getItems()){
-                if (e1.item == current) {
-                    target = e1;
-                    break;
-                }
-            }
-
-            if(target == null) activeComponents.getItems().add(new ItemEntry(current, count));
-            else activeComponents.getItems().set(activeComponents.getItems().indexOf(target), new ItemEntry(current, count + target.quantity));
-
-            Map<String, Integer> elements = current.getComponentList();
-
-            for(String s : elements.keySet())
-            {
-                int q = elements.get(s);
-                Item i = registry.getByName(ItemRegistry.Category.MATERIAL, s);
-                if(i == null || q < 1) continue;
-
-                ItemEntry found = null;
-                for(ItemEntry e1 : activeMaterials.getItems())
-                    if (e1.item == i) {
-                        found = e1;
-                        break;
-                    }
-
-                if(found == null) activeMaterials.getItems().add(new ItemEntry(i, q * count));
-                else activeMaterials.getItems().set(activeMaterials.getItems().indexOf(found), new ItemEntry(i, found.quantity + q * count));
-            }
+            this.addComponent(current, count);
         });
 
         remove.setOnAction(e ->{
@@ -369,27 +387,7 @@ class STOComponentUI extends ARKManagerBase
             if(index < 0 | index >= activeComponents.getItems().size()) return;
 
             ItemEntry target = activeComponents.getItems().get(index);
-            Map<String, Integer> elements = target.item.getComponentList();
-
-            for(String s : elements.keySet())
-            {
-                int q = elements.get(s);
-                Item i = registry.getByName(ItemRegistry.Category.MATERIAL, s);
-                if(i == null || q < 1) continue;
-
-                ItemEntry found = null;
-                for(ItemEntry e1 : activeMaterials.getItems())
-                    if (e1.item == i) {
-                        found = e1;
-                        break;
-                    }
-
-                if(found == null) return;
-                else if((q * target.quantity) >= found.quantity) activeMaterials.getItems().remove(found);
-                else activeMaterials.getItems().set(activeMaterials.getItems().indexOf(found), new ItemEntry(i, found.quantity - (q * target.quantity)));
-            }
-
-            activeComponents.getItems().remove(target);
+            this.removeComponent(target);
         });
 
         save.setOnAction(e -> {
@@ -403,13 +401,7 @@ class STOComponentUI extends ARKManagerBase
             }
         });
 
-        reset.setOnAction(e ->{
-            activeComponents.getItems().clear();
-            activeMaterials.getItems().clear();
-            rarityFilter.getSelectionModel().select(Item.Rarity.ALL);
-            specFilter.getSelectionModel().select(Item.Specialization.BEAMS);
-            quantity.setText("1");
-        });
+        reset.setOnAction(e -> resetFields());
 
         calculate.setOnAction(e ->{
             if(activeMaterials.getItems().size() == 0 || activeComponents.getItems().size() == 0) return;
@@ -444,64 +436,234 @@ class STOComponentUI extends ARKManagerBase
                     + " from " + (totalMaterialValue > totalComponentValue ? "components" : "raw materials"));
         });
 
+        saveSchema.setOnAction(e -> {
+            if(activeComponents.getItems().size() == 0 || activeMaterials.getItems().size() == 0){
+                new ARKInterfaceAlert("Notice", "No selected components! Select some and try to save again.").display();
+                return;
+            }
+
+            String name;
+            int index = schemaList.getSelectionModel().getSelectedIndex();
+            if((index >= 0 && index < schemaList.getItems().size()) && new ARKInterfaceDialogYN("Warning", "Overwrite the schema in the current slot?", "Yes", "No").display())
+                    name = schemaList.getItems().get(index).name;
+            else{
+                name = new ARKInterfaceDialog("Query", "Enter a name for the new schema:", "Confirm", "Cancel", "Name...").display();
+                if(name == null || name.length() == 0) return;
+                index = -1;
+            }
+
+            int value;
+            try {
+                value = Integer.parseInt(resultExchangePrice.getText());
+            }catch (NumberFormatException e1){
+                value = 0;
+            }
+
+            ItemSchema schema = new ItemSchema(name, value, activeComponents.getItems().toArray(new ItemEntry[0]));
+            if(index >= 0 && index < schemaList.getItems().size())
+                schemaList.getItems().set(index, schema);
+            else
+                schemaList.getItems().add(schema);
+        });
+
+        loadSchema.setOnAction(e ->{
+            int index = schemaList.getSelectionModel().getSelectedIndex();
+            if(index < 0 || index >= schemaList.getItems().size()) return;
+
+            if(!new ARKInterfaceDialogYN("Warning", "Loading this schema will overwrite the current component choice list. Continue?", "Yes", "No").display())
+                return;
+
+            ItemSchema schema = schemaList.getItems().get(index);
+
+            resetFields();
+            for(ItemEntry i : schema.componentList){
+                addComponent(i.item, i.quantity);
+            }
+
+            resultExchangePrice.setText("" + schema.value);
+
+            new ARKInterfaceAlert("Notice", "Schema loaded.").display();
+        });
+
+        deleteSchema.setOnAction(e ->{
+            int index = schemaList.getSelectionModel().getSelectedIndex();
+            if(index < 0 || index >= schemaList.getItems().size()) return;
+
+            if(new ARKInterfaceDialogYN("Query", "Really delete this schema?", "Yes", "No").display())
+                schemaList.getItems().remove(index);
+        });
+
+        exportRegistry.setOnAction(e ->{
+            FileChooser fch = new FileChooser();
+            fch.setInitialDirectory(cache.getParentFile());
+            fch.getExtensionFilters().add(new FileChooser.ExtensionFilter("ARK Item Registry", "*.stx"));
+            fch.setTitle("Export Registry");
+
+            File f = fch.showSaveDialog(window);
+            if(f == null) return;
+
+            if(f.exists() && !f.delete()){
+                new ARKInterfaceAlert("Error", "Unable to delete existing file. Please try again.").display();
+                return;
+            }
+
+            try {
+                registry.saveRegistry(f);
+                new ARKInterfaceAlert("Notice", "Successfully exported registry data!").display();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+                new ARKInterfaceAlert("Error", "Could not save registry. Try another destination directory.").display();
+            }
+        });
+
+        importRegistry.setOnAction(e ->{
+            FileChooser fch = new FileChooser();
+            fch.setInitialDirectory(cache.getParentFile());
+            fch.getExtensionFilters().add(new FileChooser.ExtensionFilter("ARK Item Registry", "*.stx"));
+            fch.setTitle("Import Registry");
+
+            File f = fch.showOpenDialog(window);
+            if(f == null || !f.exists()) return;
+
+            if(!new ARKInterfaceDialogYN("Warning", "Loading this registry will overwrite all existing registry entries! Continue?", "Continue", "Cancel").display())
+                return;
+
+            if(!registry.loadRegistryFromFile(f)){
+                new ARKInterfaceAlert("Error", "Unable to load registry from file.").display();
+            }else{
+                new ARKInterfaceAlert("Notice", "Registry successfully loaded. Program will now close. Restart to apply changes.").display();
+                onExit();
+            }
+
+        });
+
         resetRegistry.setOnAction(e ->{
             if(new ARKInterfaceDialogYN("WARNING", "   ! REGISTRY RESET !   \n\nWarning! This will reset all stored values and edits to the config file! Proceed?", "Reset", "Cancel").display()){
                 registry.loadDefaultItemSet(ItemRegistry.Category.ALL);
-                new ARKInterfaceAlert("Notice", "Item registry has been reset to defaults. Program will now restart.").display();
+                new ARKInterfaceAlert("Notice", "Item registry has been reset to defaults. Program will now close. Restart to apply changes.").display();
                 onExit();
             }
         });
 
-        activeContainer.getChildren().addAll(activeMaterials, activeComponents);
-        activeContainer.setSpacing(5 * JFXUtil.SCALE);
-        activeContainer.setAlignment(Pos.CENTER);
-        activeContainer.setFillHeight(true);
+        openCache.setOnAction(e ->{
+            try {
+                Desktop.getDesktop().browse(cache.getParentFile().toURI());
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        });
+
+        setupHBox(activeContainer, 5, true, activeMaterials, activeComponents);
         HBox.setHgrow(activeMaterials, Priority.ALWAYS);
         HBox.setHgrow(activeComponents, Priority.ALWAYS);
 
-        componentContainer.getChildren().addAll(componentLabel, components, quantity, add);
-        componentContainer.setSpacing(5 * JFXUtil.SCALE);
-        componentContainer.setAlignment(Pos.CENTER);
-        componentContainer.setFillHeight(false);
+        setupHBox(componentContainer, 5, false, componentLabel, components, quantity, add);
         HBox.setHgrow(componentLabel, Priority.NEVER);
         HBox.setHgrow(components, Priority.ALWAYS);
         HBox.setHgrow(quantity, Priority.NEVER);
         HBox.setHgrow(add, Priority.SOMETIMES);
 
-        actionBarContainer.getChildren().addAll(reset, calculate, save);
-        actionBarContainer.setSpacing(10 * JFXUtil.SCALE);
-        actionBarContainer.setAlignment(Pos.CENTER);
-        actionBarContainer.setFillHeight(false);
-        HBox.setHgrow(calculate, Priority.NEVER);
-        HBox.setHgrow(reset, Priority.NEVER);
-        HBox.setHgrow(save, Priority.NEVER);
+        setupHBox(actionBarContainer, 10, false, reset, calculate, save);
 
-        filterContainer.getChildren().addAll(specFilter, rarityFilter, remove);
-        filterContainer.setSpacing(10 * JFXUtil.SCALE);
-        filterContainer.setAlignment(Pos.CENTER);
-        filterContainer.setFillHeight(false);
+        setupHBox(filterContainer, 10, false, specFilter, rarityFilter, remove);
         HBox.setHgrow(specFilter, Priority.SOMETIMES);
         HBox.setHgrow(rarityFilter, Priority.SOMETIMES);
         HBox.setHgrow(remove, Priority.NEVER);
 
-        resultContainer.getChildren().addAll(resultComponentCost, separator1, resultRawCost);
-        resultContainer.setSpacing(5 * JFXUtil.SCALE);
-        resultContainer.setAlignment(Pos.CENTER);
-        resultContainer.setFillHeight(false);
+        setupHBox(resultContainer, 5, false, resultComponentCost, separator1, resultRawCost);
+        setupHBox(resultContainer2, 5, false, maximumProfitMargin, separator2, totalDilQuantity);
 
-        resultContainer2.getChildren().addAll(maximumProfitMargin, separator2, totalDilQuantity);
-        resultContainer2.setSpacing(5 * JFXUtil.SCALE);
-        resultContainer2.setAlignment(Pos.CENTER);
-        resultContainer2.setFillHeight(false);
+        setupHBox(schemaControlContainer, 5, false, schemaLabel, saveSchema, loadSchema, deleteSchema);
+
+        registryControlContainer.getChildren().addAll(openCache, importRegistry, exportRegistry, resetRegistry);
+        registryControlContainer.setSpacing(10 * JFXUtil.SCALE);
+        registryControlContainer.setFillWidth(true);
+        registryControlContainer.setAlignment(Pos.CENTER);
 
         layout.getChildren().addAll(selector, materialIndex, componentIndex, activeContainer, componentContainer, actionBarContainer,
-                filterContainer, resultContainer, resultContainer2, resultExchangePrice, resetRegistry);
+                filterContainer, resultContainer, resultContainer2, resultExchangePrice, schemaControlContainer, schemaList, registryControlContainer);
 
         setTooltips();
 
         positionElements();
 
         modeController.switchMode(MODE_CALCULATION_VIEW);
+    }
+
+    private void setupHBox(HBox node, int spacing, boolean fillHeight, Node... children)
+    {
+        node.getChildren().addAll(children);
+        node.setSpacing(spacing * JFXUtil.SCALE);
+        node.setFillHeight(fillHeight);
+        node.setAlignment(Pos.CENTER);
+    }
+
+    private void addComponent(Item current, int count)
+    {
+        ItemEntry target = null;
+        for(ItemEntry e1 : activeComponents.getItems()){
+            if (e1.item == current) {
+                target = e1;
+                break;
+            }
+        }
+
+        if(target == null) activeComponents.getItems().add(new ItemEntry(current, count));
+        else activeComponents.getItems().set(activeComponents.getItems().indexOf(target), new ItemEntry(current, count + target.quantity));
+
+        Map<String, Integer> elements = current.getComponentList();
+
+        for(String s : elements.keySet())
+        {
+            int q = elements.get(s);
+            Item i = registry.getByName(ItemRegistry.Category.MATERIAL, s);
+            if(i == null || q < 1) continue;
+
+            ItemEntry found = null;
+            for(ItemEntry e1 : activeMaterials.getItems())
+                if (e1.item == i) {
+                    found = e1;
+                    break;
+                }
+
+            if(found == null) activeMaterials.getItems().add(new ItemEntry(i, q * count));
+            else activeMaterials.getItems().set(activeMaterials.getItems().indexOf(found), new ItemEntry(i, found.quantity + q * count));
+        }
+    }
+
+    private void removeComponent(ItemEntry target)
+    {
+        Map<String, Integer> elements = target.item.getComponentList();
+
+        for(String s : elements.keySet())
+        {
+            int q = elements.get(s);
+            Item i = registry.getByName(ItemRegistry.Category.MATERIAL, s);
+            if(i == null || q < 1) continue;
+
+            ItemEntry found = null;
+            for(ItemEntry e1 : activeMaterials.getItems())
+                if (e1.item == i) {
+                    found = e1;
+                    break;
+                }
+
+            if(found == null) return;
+            else if((q * target.quantity) >= found.quantity) activeMaterials.getItems().remove(found);
+            else activeMaterials.getItems().set(activeMaterials.getItems().indexOf(found), new ItemEntry(i, found.quantity - (q * target.quantity)));
+        }
+
+        activeComponents.getItems().remove(target);
+    }
+
+    private void resetFields()
+    {
+        activeComponents.getItems().clear();
+        activeMaterials.getItems().clear();
+        rarityFilter.getSelectionModel().select(Item.Rarity.ALL);
+        specFilter.getSelectionModel().select(Item.Specialization.BEAMS);
+        quantity.setText("1");
+        resultExchangePrice.setText("0");
     }
 
     private void positionElements()
@@ -515,8 +677,8 @@ class STOComponentUI extends ARKManagerBase
             AnchorPane.setTopAnchor(selector, -1 * layout.getPadding().getTop());
         });
 
-        JFXUtil.setElementPositionInGrid(layout, materialIndex, 0, 0, 0, 1);
-        JFXUtil.setElementPositionInGrid(layout, componentIndex, 0, 0, 0, 1);
+        JFXUtil.setElementPositionInGrid(layout, materialIndex, 0, 0, 0, 0);
+        JFXUtil.setElementPositionInGrid(layout, componentIndex, 0, 0, 0, 0);
 
         JFXUtil.setElementPositionInGrid(layout, filterContainer, 0, 0, 0, -1);
         JFXUtil.setElementPositionInGrid(layout, componentContainer, 0, -1, 1, -1);
@@ -527,9 +689,14 @@ class STOComponentUI extends ARKManagerBase
         JFXUtil.setElementPositionInGrid(layout, resultContainer2, 0, 0, -1, 1);
         JFXUtil.setElementPositionInGrid(layout, resultExchangePrice, -1, -1, -1, 2);
 
-        JFXUtil.setElementPositionInGrid(layout, resetRegistry, -1, -1, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, schemaList, 0, 2, 0, 2);
 
-        Platform.runLater(this::positionOnWResize);
+        JFXUtil.setElementPositionInGrid(layout, registryControlContainer, -1, 0, 0, -1);
+
+        Platform.runLater(() -> {
+            positionOnWResize();
+            JFXUtil.bindAlignmentToNode(layout, schemaList, schemaControlContainer, 5, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+        });
     }
 
     private void positionOnWResize()
@@ -537,12 +704,11 @@ class STOComponentUI extends ARKManagerBase
         selector.setPrefWidth(layout.getWidth());
         JFXUtil.setElementPositionCentered(layout, actionBarContainer, true, false);
         JFXUtil.setElementPositionCentered(layout, resultExchangePrice, true, false);
-        JFXUtil.setElementPositionCentered(layout, resetRegistry, true ,false);
     }
 
     private void setTooltips()
     {
-        selector.setTooltip(new Tooltip("Calculate: Calculate profitability margins from material and component data.\nComponents: Manage the prices of various components.\nMaterials: Manage the pricing of raw materials."));
+        selector.setTooltip(new Tooltip("Calculate: Calculate profitability margins from material and component data.\nComponents: Manage the prices of various components.\nMaterials: Manage the pricing of raw materials.\nSettings: View and change registry and schematic settings."));
         calculate.setTooltip(new Tooltip("Calculate profitability margins for the currently set parameters."));
         reset.setTooltip(new Tooltip("Clear any currently set components and materials,\nand reset all fields to default."));
         save.setTooltip(new Tooltip("Save the current pricing data for materials and components."));
@@ -562,16 +728,26 @@ class STOComponentUI extends ARKManagerBase
         materialIndex.setTooltip(new Tooltip("The index of all available raw materials.\nDouble-click (or press Enter) on an item to edit its market value.\nWhen done, press Enter to save, or Escape to cancel."));
         componentIndex.setTooltip(new Tooltip("The index of all available components.\nDouble-click (or press Enter) on an item to edit its market value.\nWhen done, press Enter to save, or Escape to cancel."));
         resetRegistry.setTooltip(new Tooltip("Reset all items in the registry to their default values,\nand remove any edits to the config file. Be careful!"));
+        importRegistry.setTooltip(new Tooltip("Load a registry from an exported file,\noverwriting the current registry in the process."));
+        exportRegistry.setTooltip(new Tooltip("Export the current item values to a file for later use."));
+        openCache.setTooltip(new Tooltip("Open the folder containing the live copy of\nthe current item registry and any saved schemas."));
+        saveSchema.setTooltip(new Tooltip("Save any current component selections and other fields\nto disk, so that it may be loaded at a later time."));
+        loadSchema.setTooltip(new Tooltip("Load the selected schema into memory,\noverwriting any selected components and field data."));
+        deleteSchema.setTooltip(new Tooltip("Delete the currently selected schema from the list."));
+        schemaList.setTooltip(new Tooltip("The list of item schematics (schemas for short).\nSchemas allow for quick loading of preset field values\nand component lists."));
     }
 
     private void onExit()
     {
         try {
             cache.getParentFile().mkdirs();
+            schemaCache.getParentFile().mkdirs();
             registry.saveRegistry(cache);
+            if(!ItemSchema.saveSchemaList(schemaCache, schemaList.getItems().toArray(new ItemSchema[0])))
+                throw new IOException("Unable to save schematic data!");
         } catch (IOException e1) {
             e1.printStackTrace();
-            if(!new ARKInterfaceDialogYN("Warning", "Could not save value data for item registry! Close anyway?", "Yes", "No").display())
+            if(!new ARKInterfaceDialogYN("Warning", "Could not save value data for item or schema registry! Close anyway?", "Yes", "No").display())
                 return;
         }
 
@@ -778,5 +954,117 @@ class ItemEntry
     @Override
     public String toString() {
         return this.item.name + ": " + quantity;
+    }
+}
+
+@SuppressWarnings("WeakerAccess")
+class ItemSchema
+{
+    public static final String KEY_SCHEMA_NAME = "schema-name";
+    public static final String KEY_SCHEMA_VALUE = "schema-value";
+    public static final String KEY_SCHEMA_COMPONENTS = "schema-components";
+    public static final String KEY_SCHEMA_LIST = "schema-list";
+
+    public String name;
+    public int value;
+    public ItemEntry[] componentList;
+
+    public ItemSchema(String name, int value, ItemEntry... components) {
+        this.name = name;
+        this.value = value;
+        this.componentList = components;
+    }
+
+    public static ARKJsonElement serialize(ItemSchema source)
+    {
+        ARKJsonElement result = new ARKJsonElement(null, false, null);
+        result.addSubElement(new ARKJsonElement(KEY_SCHEMA_NAME, false, source.name));
+        result.addSubElement(new ARKJsonElement(KEY_SCHEMA_VALUE, false, "" + source.value));
+
+        ARKJsonElement components = new ARKJsonElement(KEY_SCHEMA_COMPONENTS, false, null);
+        result.addSubElement(components);
+
+        if(source.componentList == null) return result;
+
+        for(ItemEntry i : source.componentList)
+            components.addSubElement(new ARKJsonElement(i.item.name, false, "" + i.quantity));
+
+        return result;
+    }
+
+    public static ItemSchema deserialize(ARKJsonElement source, ItemRegistry registry)
+    {
+        ArrayList<ItemEntry> components = new ArrayList<>();
+        String name = source.getSubElementByName(KEY_SCHEMA_NAME).getDeQuotedValue();
+
+        int value;
+        try{
+            value = Integer.parseInt(source.getSubElementByName(KEY_SCHEMA_VALUE).getDeQuotedValue());
+        }catch (NumberFormatException e1){
+            value = 0;
+        }
+
+        for(ARKJsonElement e : source.getSubElementByName(KEY_SCHEMA_COMPONENTS).getSubElements())
+        {
+            int quantity;
+            try{
+                quantity = Integer.parseInt(e.getDeQuotedValue());
+            }catch (NumberFormatException e1){
+                quantity = 1;
+            }
+
+            components.add(new ItemEntry(registry.getByName(ItemRegistry.Category.ALL, e.getName()), quantity));
+        }
+
+        return new ItemSchema(name, value, components.toArray(new ItemEntry[0]));
+    }
+
+    public static boolean saveSchemaList(File dest, ItemSchema... source)
+    {
+        try {
+            if((!dest.exists() || dest.delete()) && !dest.createNewFile()) return false;
+            BufferedWriter br = new BufferedWriter(new FileWriter(dest));
+
+            ARKJsonObject obj = new ARKJsonObject("{\r\n}");
+            obj.parse();
+            ARKJsonElement main = new ARKJsonElement(KEY_SCHEMA_LIST, true, null);
+
+            for(ItemSchema s : source){
+                main.addSubElement(serialize(s));
+            }
+
+            obj.getArrayMap().add(main);
+            br.write(obj.getJSONText());
+            br.flush();
+            br.close();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static ItemSchema[] loadSchemaList(File source, ItemRegistry registry)
+    {
+        if(!source.exists()) return null;
+        ARKJsonObject obj;
+
+        try {
+            obj = ARKJsonParser.loadFromFile(source);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        ARKJsonElement main = obj.getArrayByName(KEY_SCHEMA_LIST);
+        ArrayList<ItemSchema> dest = new ArrayList<>();
+
+        for(ARKJsonElement e : main.getSubElements()) dest.add(deserialize(e, registry));
+        return dest.toArray(new ItemSchema[0]);
+    }
+
+    @Override
+    public String toString(){
+        return this.name;
     }
 }

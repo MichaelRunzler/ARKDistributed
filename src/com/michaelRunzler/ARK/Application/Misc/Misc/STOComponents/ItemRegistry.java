@@ -67,6 +67,9 @@ public class ItemRegistry
     @SuppressWarnings("unchecked")
     public boolean loadRegistryFromFile(File source)
     {
+        materialRegistry.clear();
+        componentRegistry.clear();
+
         try {
             ARKJsonObject obj = ARKJsonParser.loadFromFile(source);
 
@@ -77,7 +80,7 @@ public class ItemRegistry
 
             for(ARKJsonElement item : components.getSubElements()) componentRegistry.add(decompileItemJSON(item));
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
