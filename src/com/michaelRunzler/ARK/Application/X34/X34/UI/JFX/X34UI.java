@@ -88,6 +88,10 @@ public class X34UI extends Application
     private MenuItem windowMenuFileManager;
     private MenuItem windowLogDisplayManager;
 
+    private MenuItem helpMenuHelp;
+    private MenuItem helpMenuUpdate;
+    private MenuItem helpMenuAbout;
+
     //
     // MODE-LOCAL NODES
     //
@@ -250,7 +254,7 @@ public class X34UI extends Application
 
     private static final String RESULT_TAG_BASE = "Tag: ";
     private static final String RESULT_SIZE_BASE = "Current Index Size: ";
-    private static final String RESULT_NEW_BASE = "New Images: ";
+    private static final String RESULT_NEW_BASE = "New Files: ";
 
     //
     // PRIMARY METHODS
@@ -268,7 +272,7 @@ public class X34UI extends Application
         window.setMinWidth(600 * JFXUtil.SCALE);
         window.setX((Screen.getPrimary().getBounds().getWidth() / 2) - (window.getMinWidth() / 2));
         window.setY((Screen.getPrimary().getBounds().getHeight() / 2) - (window.getMinHeight() / 2));
-        window.setTitle("ARK Extensible Repository Manager");
+        window.setTitle("ARK X34 MDI Utility");
         window.getIcons().add(new Image("X34/assets/x34-main.png"));
 
         window.setOnCloseRequest(e -> {
@@ -811,6 +815,10 @@ public class X34UI extends Application
         windowMenuFileManager = new MenuItem();
         windowLogDisplayManager = new MenuItem();
 
+        helpMenuHelp = new MenuItem();
+        helpMenuUpdate = new MenuItem();
+        helpMenuAbout = new MenuItem();
+
         //
         // TEXT AND APPEARANCE
         //
@@ -833,6 +841,10 @@ public class X34UI extends Application
         windowMenuRuleManager.setText("Show Rule Manager...");
         windowLogDisplayManager.setText("Show/Hide System Log");
 
+        helpMenuHelp.setText("Program Manual");
+        helpMenuUpdate.setText("Check for Updates...");
+        helpMenuAbout.setText("About...");
+
         //
         // SHORTCUTS AND ACCELERATORS
         //
@@ -847,6 +859,8 @@ public class X34UI extends Application
         setMenuItemKeyModifierDefaults(windowMenuRuleManager, "R");
         setMenuItemKeyModifierDefaults(windowLogDisplayManager, "L");
 
+        setMenuItemKeyModifierDefaults(helpMenuHelp, "H");
+
         //
         // ASSEMBLY
         //
@@ -854,13 +868,17 @@ public class X34UI extends Application
         fileMenuModeSwitch.getItems().addAll(fileMenuModeSelectSimple, fileMenuModeSelectAdvanced);
         fileMenu.getItems().addAll(fileMenuModeSwitch, fileMenuExit);
 
-        functionsMenu.getItems().addAll(functionsMenuStartRetrieval);
-        functionsMenu.getItems().addAll(functionsMenuStopRetrieval);
+        functionsMenu.getItems().add(functionsMenuStartRetrieval);
+        functionsMenu.getItems().add(functionsMenuStopRetrieval);
 
-        windowMenu.getItems().addAll(windowMenuFileManager);
-        windowMenu.getItems().addAll(windowMenuOptionsManager);
-        windowMenu.getItems().addAll(windowMenuRuleManager);
-        windowMenu.getItems().addAll(windowLogDisplayManager);
+        windowMenu.getItems().add(windowMenuFileManager);
+        windowMenu.getItems().add(windowMenuOptionsManager);
+        windowMenu.getItems().add(windowMenuRuleManager);
+        windowMenu.getItems().add(windowLogDisplayManager);
+
+        helpMenu.getItems().add(helpMenuHelp);
+        helpMenu.getItems().add(helpMenuUpdate);
+        helpMenu.getItems().add(helpMenuAbout);
 
         mainMenuBar.getMenus().addAll(fileMenu, functionsMenu, windowMenu, helpMenu);
 
@@ -1006,6 +1024,14 @@ public class X34UI extends Application
         windowLogDisplayManager.setOnAction(e -> {
             if(logMgr.getVisibilityState()) logMgr.hide();
             else logMgr.display();
+        });
+
+        helpMenuAbout.setOnAction(e ->{
+            //todo change to more complex UI with inline links
+            new ARKInterfaceAlert("About", "ARK X34 Modular Database Interface (MDI) Utility\n" +
+                    "\nVersion " + PROGRAM_VERSION + "\n" +
+                    "\nAll rights reserved." +
+                    "\nIntellectual property information available here.").display();
         });
 
         // Manual-mode

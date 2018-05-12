@@ -179,10 +179,10 @@ public class X34UIResultDetailManager extends ARKManagerBase
 
     private void setTooltips()
     {
-        entries.setTooltip(new Tooltip("The list of images contained in this result cache"));
+        entries.setTooltip(new Tooltip("The list of files contained in this result cache"));
         close.setTooltip(new Tooltip("Save any changes and close this window"));
-        removeResult.setTooltip(new Tooltip("Remove the selected image(s) from the list"));
-        open.setTooltip(new Tooltip("Open the selected image(s) in your default web browser.\n This does NOT use Incognito mode (or its equivalent), beware!"));
+        removeResult.setTooltip(new Tooltip("Remove the selected file(s) from the list"));
+        open.setTooltip(new Tooltip("Open the selected file(s) in your default web browser.\n This does NOT use Incognito mode (or its equivalent), beware!"));
         undo.setTooltip(new Tooltip("Undo any changes made to this result cache"));
     }
 

@@ -11,6 +11,8 @@ package core.CoreUtil.ARKJsonParser;
  */
 public class ARKJsonElement
 {
+    private static final String ILLEGAL_CHARACTERS = ".*['./*, :;].*";
+
     private ARKJsonElement[] subElements;
     private String name;
     private String value;
@@ -172,7 +174,7 @@ public class ARKJsonElement
         if(!this.hasSubElements()){
             str.append(spacer);
             if(this.name != null) str.append("\"").append(this.name).append("\"").append(": ");
-            str.append(this.value == null ? "" : value);
+            str.append(this.value == null ? "" : this.value.matches(ILLEGAL_CHARACTERS) ? "\"" + this.value + "\"" : this.value);
             if(!isFinal) str.append(",");
             str.append(ARKJsonParser.LINE_SEPARATOR);
             return str.toString();

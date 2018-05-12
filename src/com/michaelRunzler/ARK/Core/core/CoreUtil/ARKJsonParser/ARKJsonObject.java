@@ -68,18 +68,18 @@ public class ARKJsonObject
 
     /**
      * Gets the current top-level element map (does not include arrays).
-     * @return a copy of the current element map
+     * @return the current element map
      */
     public ArrayList<ARKJsonElement> getElementMap() {
-        return new ArrayList<>(elements);
+        return elements;
     }
 
     /**
      * Gets the current top-level array map (does not include normal elements).
-     * @return a copy of the current array map
+     * @return the current array map
      */
     public ArrayList<ARKJsonElement> getArrayMap() {
-        return new ArrayList<>(arrays);
+        return arrays;
     }
 
     /**
@@ -147,7 +147,7 @@ public class ARKJsonObject
      * @param name the name of the element to get
      * @return the first element with the specified name, or null if the element does not exist in the object map
      */
-    public  ARKJsonElement getElementByNameInEntireMap(String name)
+    public ARKJsonElement getElementByNameInEntireMap(String name)
     {
         if(!hasLoaded) parse();
 

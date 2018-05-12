@@ -264,6 +264,6 @@ public class ModeSwitchController
     }
 
     private static String getCallingClass(Exception e){
-        return e.getStackTrace()[2].getClassName();
+        return e.getStackTrace()[1].getClassName();
     }
 }

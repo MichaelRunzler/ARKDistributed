@@ -13,6 +13,8 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 
+import java.util.regex.Pattern;
+
 /**
  * Provides utility methods for JFX-based classes and applications.
  */
@@ -428,23 +430,38 @@ public class JFXUtil
         AnchorPane.setBottomAnchor(element, null);
     }
 
+    private static final Pattern p = Pattern.compile("\\d+(\\.\\d+)?");
+
     /**
      * Limits a {@link TextField} to numerical entry only (only the digits 0-9, no spaces or other separators).
      * Will also limit the total length of the digits in the field to the specified number, unless that number is 0 or less.
      * Auto-scales the provided {@link TextField} to the correct width for the input length limit specified if a limit
      * is being imposed.
+     * Input to the field from any non-user source (i.e direct method calls, edit name generation via internal logic, etc.)
+     * will also be subjected to these parameters.
+     * If the field's content somehow includes an illegal character, the only allowed actions will be (1) clearing the field,
+     * or (2) deleting one or more characters from the field's contents.
      * @param node the {@link TextField} to limit input to
      * @param maxDigits the maximum number of digits in the input field at any given time. Will not impose a limit
      *                  if the provided value is 0 or less.
+     * @return the {@link ChangeListener} that was linked to the provided text field, to aid in delimiting the field later on
+     * if desired.
      */
-    public static void limitTextFieldToNumerical(@NotNull TextField node, int maxDigits)
+    public static ChangeListener<? extends String> limitTextFieldToNumerical(@NotNull TextField node, int maxDigits)
     {
         node.setPrefWidth((15 * maxDigits) * SCALE);
-        node.textProperty().addListener((observable, oldValue, newValue) -> {
-            if(!newValue.matches("\\d*") || newValue.length() > maxDigits){
+        ChangeListener<String> listener = (observable, oldValue, newValue) -> {
+            // Ignore change if the new value is shorter to prevent the field from locking up if there are already invalid
+            // characters in it and the user tries to delete some.
+            if(oldValue.length() > newValue.length()) return;
+
+            if(!p.matcher(newValue).matches() || newValue.length() > maxDigits){
                 node.setText(oldValue);
             }
-        });
+        };
+
+        node.textProperty().addListener(listener);
+        return listener;
     }
 
     /**

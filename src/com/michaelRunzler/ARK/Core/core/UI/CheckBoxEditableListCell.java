@@ -1,6 +1,8 @@
-package X34.UI.JFX.Util;
+package core.UI;
 
 import com.sun.istack.internal.NotNull;
+import core.CoreUtil.JFXUtil;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
@@ -16,9 +18,11 @@ import javafx.util.StringConverter;
  */
 public class CheckBoxEditableListCell<T> extends CheckBoxListCell<T>
 {
-    private TextField editField;
-    private Node superclassGraphicStorage;
-    private String superclassStringStorage;
+    private ChangeListener<? extends String> numericListener;
+
+    protected TextField editField;
+    protected Node superclassGraphicStorage;
+    protected String superclassStringStorage;
 
     private KeyCodeCombination editKey;
     private KeyCodeCombination cancelKey;
@@ -65,6 +69,7 @@ public class CheckBoxEditableListCell<T> extends CheckBoxListCell<T>
 
     private void setupInitialValues()
     {
+        this.numericListener = null;
         editField = null;
         superclassGraphicStorage = null;
         superclassStringStorage = null;
@@ -177,5 +182,34 @@ public class CheckBoxEditableListCell<T> extends CheckBoxListCell<T>
      */
     public KeyCodeCombination getCancelKey() {
         return cancelKey;
+    }
+
+    /**
+     * Limits or delimits this cell's editing field. Limited editing fields will only accept numbers, minus signs, and
+     * decimal points, and will enforce a maximum character limit specified with the limit parameter. Any input not
+     * conforming to these parameters will be blocked from entering the field.
+     * Input to the field from any non-user source (i.e direct method calls, edit name generation via internal logic, etc.)
+     * will also be subjected to these parameters.
+     * If the field's content somehow includes an illegal character, the only allowed actions will be (1) clearing the field,
+     * or (2) deleting one or more characters from the field's contents.
+     * @param numeric if this is {@code true}, the field will be limited to numeric entry only (including minus signs
+     *                and decimal points). If {@code false}, the field will be delimited if it is currently limited,
+     *                and no action will be taken if it is not limited.
+     * @param limit the maximum number of characters that can be present in the field at any given time, including
+     *                       punctuation and signing, if this field is set to be numeric-only
+     */
+    public void setEditFieldNumeric(boolean numeric, int limit)
+    {
+        if(numeric){
+            this.numericListener = JFXUtil.limitTextFieldToNumerical(this.editField, limit);
+            return;
+        }
+
+        if(this.numericListener != null)
+        {
+            //noinspection unchecked
+            this.editField.textProperty().removeListener((ChangeListener<String>)numericListener);
+            this.numericListener = null;
+        }
     }
 }

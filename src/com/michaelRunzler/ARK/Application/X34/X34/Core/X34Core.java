@@ -177,10 +177,10 @@ public class X34Core
             log.logEvent(LogEventLevel.WARNING, "Retrieval cancelled.");
             return new ArrayList<>();
         }else if(newImages == null || newImages.size() == 0){
-            log.logEvent("No new images available from processor.");
+            log.logEvent("No new files available from processor.");
             return new ArrayList<>();
         }else{
-            log.logEvent("New image" + (newImages.size() > 1 ? "s" : "") + " available." + (pushToIndexProperty.get() ?  " Saving index..." : " Index save DISABLED."));
+            log.logEvent("New file" + (newImages.size() > 1 ? "s" : "") + " available." + (pushToIndexProperty.get() ?  " Saving index..." : " Index save DISABLED."));
             if(pushToIndexProperty.get()){
                 loader.saveIndex(index);
                 log.logEvent("Index save successful.");
@@ -263,7 +263,7 @@ public class X34Core
         if(images == null || images.size() == 0) return;
         if(createDirs && !parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create parent directory");
 
-        log.logEvent("Attempting to write " + images.size() + " image" + (images.size() == 1 ? "" : "s" ) + " to disk...");
+        log.logEvent("Attempting to write " + images.size() + " file" + (images.size() == 1 ? "" : "s" ) + " to disk...");
 
         maxDownloadProgressProperty.set(images.size());
 
@@ -279,18 +279,18 @@ public class X34Core
             X34Image x = images.get(i);
             currentDownloadProperty.set(ARKArrayUtil.byteArrayToHexString(x.hash));
             try {
-                if(x.writeToFile(parent, overwriteExisting)) log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " already exists.");
+                if(x.writeToFile(parent, overwriteExisting)) log.logEvent("File " + ARKArrayUtil.byteArrayToHexString(x.hash) + " already exists.");
                 else{
-                    log.logEvent("Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " written successfully.");
+                    log.logEvent("File " + ARKArrayUtil.byteArrayToHexString(x.hash) + " written successfully.");
                     count ++;
                 }
             }catch (IOException e){
-                log.logEvent(LogEventLevel.ERROR, "Error 05031: Image " + ARKArrayUtil.byteArrayToHexString(x.hash) + " encountered critical write error, see below for details.");
+                log.logEvent(LogEventLevel.ERROR, "Error 05031: File " + ARKArrayUtil.byteArrayToHexString(x.hash) + " encountered critical write error, see below for details.");
                 log.logEvent(e);
             }
         }
 
-        log.logEvent(count + " of " + images.size() + " image" + (images.size() == 1 ? "" : "s") + " written successfully.");
+        log.logEvent(count + " of " + images.size() + " file" + (images.size() == 1 ? "" : "s") + " written successfully.");
 
         maxDownloadProgressProperty.set(INVALID_INT_PROPERTY_VALUE);
         downloadProgressProperty.set(INVALID_INT_PROPERTY_VALUE);

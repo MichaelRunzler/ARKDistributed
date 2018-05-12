@@ -5,7 +5,7 @@ import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.X34Rule;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
-import X34.UI.JFX.Util.CheckBoxEditableListCell;
+import core.UI.CheckBoxEditableListCell;
 import X34.UI.JFX.Util.JFXConfigKeySet;
 import com.sun.istack.internal.Nullable;
 import core.UI.*;
@@ -535,7 +535,7 @@ public class X34UIRuleManager extends ARKManagerBase
         changeOutputDirectory.setOnAction(e ->{
             File original = ruleDirMap.get(ruleList.getSelectionModel().getSelectedItem());
 
-            ARKInterfaceFileChangeDialog fch = new ARKInterfaceFileChangeDialog("Change Rule Image Dest.", "Current rule image download destination directory:");
+            ARKInterfaceFileChangeDialog fch = new ARKInterfaceFileChangeDialog("Change Rule Download Dest.", "Current rule file download destination directory:");
             fch.setChoiceMode(ARKInterfaceFileChangeDialog.ChoiceMode.DIR_SELECT);
             fch.setInitialDirectory(original);
             fch.setValue(original);

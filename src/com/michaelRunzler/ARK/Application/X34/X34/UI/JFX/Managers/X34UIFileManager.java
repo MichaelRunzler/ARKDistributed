@@ -64,6 +64,7 @@ public class X34UIFileManager extends ARKManagerBase
     private Button openDir;
     private Button changeDir;
     private Button close;
+    private Button refresh;
     private ImageView directorySeparator;
     private ImageView fileListSeparator;
 
@@ -166,6 +167,7 @@ public class X34UIFileManager extends ARKManagerBase
         openDir = new Button("Open");
         delete = new Button("Delete");
         open = new Button("Open");
+        refresh = new Button();
 
         info = new Label("");
         fileListLabel = new Label("- Relevant Files -");
@@ -192,6 +194,8 @@ public class X34UIFileManager extends ARKManagerBase
         currentDir.setEditable(false);
         openDir.setDefaultButton(true);
 
+        refresh.setGraphic(JFXUtil.generateGraphicFromResource("X34/assets/GUI/icon/ic_arrow_dual_circular_128px.png", (int)(15 * JFXUtil.SCALE)));
+
         info.setWrapText(true);
         notice = new UINotificationBannerControl(info);
 
@@ -209,7 +213,7 @@ public class X34UIFileManager extends ARKManagerBase
             }
         });
 
-        layout.getChildren().addAll(typeSelector, info, currentDir, changeDir, openDir, close, fileList, fileListLabel, open, delete, listFunctionsLabel, directorySeparator, fileListSeparator);
+        layout.getChildren().addAll(typeSelector, info, currentDir, changeDir, openDir, close, refresh, fileList, fileListLabel, open, delete, listFunctionsLabel, directorySeparator, fileListSeparator);
 
         //
         // NODE ACTIONS
@@ -310,6 +314,8 @@ public class X34UIFileManager extends ARKManagerBase
                 }
             }
         });
+
+        refresh.setOnAction(e -> computeAvailableFiles());
     }
 
     /**
@@ -381,6 +387,7 @@ public class X34UIFileManager extends ARKManagerBase
         JFXUtil.setElementPositionInGrid(layout, directorySeparator, 0, 0, 3, -1);
         JFXUtil.setElementPositionInGrid(layout, fileListSeparator, 2, -1, -1, 0);
 
+        JFXUtil.setElementPositionInGrid(layout, refresh, -1, 0, 3.25, -1);
         JFXUtil.setElementPositionInGrid(layout, fileList, 2.5, 0, 4, 1);
         JFXUtil.setElementPositionInGrid(layout, delete, -1, 0, -1, 0);
 

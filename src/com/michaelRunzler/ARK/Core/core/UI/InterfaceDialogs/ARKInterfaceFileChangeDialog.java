@@ -35,7 +35,6 @@ public class ARKInterfaceFileChangeDialog
     private AnchorPane layout;
 
     private File cachedFile;
-    private File homeDir;
     private File defaultState;
     private ChoiceMode mode;
     private boolean automaticSizingEnabled;
@@ -70,7 +69,6 @@ public class ARKInterfaceFileChangeDialog
         window.getIcons().addAll(new Image("core/assets/info.png"));
 
         cachedFile = null;
-        this.homeDir = homeDir;
         this.defaultState = defaultState;
         this.mode = mode;
         fChooser = new FileChooser();

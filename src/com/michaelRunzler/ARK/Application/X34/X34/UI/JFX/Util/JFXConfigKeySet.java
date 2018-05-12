@@ -41,6 +41,9 @@ public class JFXConfigKeySet
 
     @Owner(JFXConfigKeySet.class)
     public static final long MAJOR_CONFIG_VERSION = 1000L;
+
+    @Owner(X34UI.class)
+    public static final long PROGRAM_VERSION = 3450;
 }
 
 
