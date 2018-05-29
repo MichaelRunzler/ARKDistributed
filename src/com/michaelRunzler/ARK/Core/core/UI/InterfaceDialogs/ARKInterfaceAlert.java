@@ -39,18 +39,14 @@ public class ARKInterfaceAlert
         layout.getChildren().addAll(label, closeButton);
         layout.setPadding((new Insets(15, 15, 15, 15)));
 
-        AnchorPane.setBottomAnchor(closeButton, 0.0);
-        AnchorPane.setLeftAnchor(closeButton, 0.0);
-        AnchorPane.setRightAnchor(closeButton, 0.0);
-        AnchorPane.setTopAnchor(label, 0.0);
-        AnchorPane.setLeftAnchor(label, 0.0);
-        AnchorPane.setRightAnchor(label, 0.0);
+        JFXUtil.setElementPositionInGrid(layout, closeButton, 0, 0, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, label, 0, 0, 0, 1);
 
         if(width > 0 && height > 0)
             scene = new Scene(layout, width, height);
         else{
             double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 75 : 75) * JFXUtil.SCALE;
-            scene = new Scene(layout, size, size);
+            scene = new Scene(layout, size, size + JFXUtil.DEFAULT_SPACING);
         }
         window.setScene(scene);
     }

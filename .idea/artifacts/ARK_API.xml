@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="ARK_API">
+    <output-path>$PROJECT_DIR$/artifacts/ARK_API</output-path>
+    <root id="archive" name="ARK_API.jar">
+      <element id="module-output" name="Core" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/artifacts/ARK_API/META-INF/MANIFEST.MF" />
+      </element>
+    </root>
+  </artifact>
+</component>

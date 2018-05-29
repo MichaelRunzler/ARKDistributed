@@ -152,7 +152,7 @@ Code: 14011
     A timeout state was reached while attempting to communicate with a service, worker thread, server, or driver resource
     integral to program operations.
 
-        5040 > Sub-code:
+        5040 > Sub-codes:
             5041: Network Timeout
                   An active network operation has encountered a timeout condition while waiting for a TCP/IP response over
                   a network connection, and cannot continue.

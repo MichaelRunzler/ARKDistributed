@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ARK_ALL">
+    <output-path>$PROJECT_DIR$/artifacts/ARK_ALL</output-path>
+    <root id="archive" name="ARK_ALL.jar">
+      <element id="module-output" name="ARK Distributed Application System" />
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/artifacts/ARK_ALL/META-INF/MANIFEST.MF" />
+      </element>
+    </root>
+  </artifact>
+</component>

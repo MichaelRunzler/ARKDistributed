@@ -2,12 +2,14 @@ package core.UI.InterfaceDialogs;
 
 import core.CoreUtil.JFXUtil;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -17,6 +19,7 @@ public class ARKInterfaceDialog
     private Stage window;
     private Label label;
     private Button yesButton, noButton;
+    private HBox buttonContainer;
     private TextField input;
     private AnchorPane layout;
     private Scene scene;
@@ -28,6 +31,8 @@ public class ARKInterfaceDialog
         window.setTitle(title);
         window.setResizable(false);
         window.getIcons().addAll(new Image("core/assets/info.png"));
+
+        buttonContainer = new HBox();
 
         label = new Label();
         label.setText(message);
@@ -42,29 +47,25 @@ public class ARKInterfaceDialog
         yesButton.setDefaultButton(true);
         noButton.setCancelButton(true);
 
+        buttonContainer.setSpacing(10 * JFXUtil.SCALE);
+        buttonContainer.setAlignment(Pos.CENTER);
+        buttonContainer.setFillHeight(false);
+        buttonContainer.getChildren().addAll(yesButton, noButton);
+
         layout = new AnchorPane();
-        layout.getChildren().addAll(label, yesButton, noButton, input);
+        layout.getChildren().addAll(label, buttonContainer, input);
         layout.setPadding((new Insets(15, 15, 15, 15)));
 
-        AnchorPane.setLeftAnchor(input, 10.0);
-        AnchorPane.setRightAnchor(input, 10.0);
-        AnchorPane.setBottomAnchor(yesButton, 0.0);
-        AnchorPane.setRightAnchor(yesButton, 0.0);
-        AnchorPane.setBottomAnchor(noButton, 0.0);
-        AnchorPane.setLeftAnchor(noButton, 0.0);
-        AnchorPane.setTopAnchor(label, 0.0);
-        AnchorPane.setLeftAnchor(label, 0.0);
-        AnchorPane.setRightAnchor(label, 0.0);
+        JFXUtil.setElementPositionInGrid(layout, label, 0, 0, 0, 2);
+        JFXUtil.setElementPositionInGrid(layout, buttonContainer, 0, 0, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, input, 0, 0, -1, 1);
 
         if(width > 0 && height > 0) {
             scene = new Scene(layout, width, height);
-            AnchorPane.setBottomAnchor(input, height * 0.4);
-        }
-        else{
-            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 95 : 95) * JFXUtil.SCALE;
-            scene = new Scene(layout, size, size + JFXUtil.DEFAULT_SPACING * 1.1);
-
-            AnchorPane.setBottomAnchor(input, (double)JFXUtil.DEFAULT_SPACING * 1.1);
+        }else{
+            double size = (message.length() > 25 ? Math.sqrt(message.length() / 25) * 75 : 75) * JFXUtil.SCALE;
+            double buttonSize = (((yesText.length() + 2) * 6) + ((noText.length() + 2) * 6) + 40) * JFXUtil.SCALE;
+            scene = new Scene(layout, size > buttonSize ? size : buttonSize, size + JFXUtil.DEFAULT_SPACING * 2);
         }
         window.setScene(scene);
     }

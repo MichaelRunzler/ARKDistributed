@@ -1,10 +1,7 @@
-package IP;
+package com.michaelRunzler.ARK.Deprecated.Module.IP;
 
 import core.CoreUtil.ARKArrayUtil;
 import core.CoreUtil.IOTools;
-import org.icmp4j.IcmpPingRequest;
-import org.icmp4j.IcmpPingResponse;
-import org.icmp4j.IcmpPingUtil;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -70,11 +67,11 @@ public class IPSearch
         Collections.addAll(arguments, args);
 
         //check for the IP argument
-        if(iterateArgumentListContentWildCard("IP") < 0){
+        if(iterateArgumentListContentWildCard("com/michaelRunzler/ARK/Deprecated/Module/IP") < 0){
             System.out.println("Missing argument: IP block");
             System.exit(11);
         }else{
-            block = getArgument("IP");
+            block = getArgument("com/michaelRunzler/ARK/Deprecated/Module/IP");
         }
 
         if(iterateArgumentListContentWildCard("log") >= 0){
@@ -266,6 +263,8 @@ public class IPSearch
                                 System.out.print("Testing IP " + IP + "... ");
                                 for(int m = 0; m < count; m++)
                                 {
+                                    // Commented to remove reliance on library classes
+                                    /*
                                     long startPTime = System.currentTimeMillis();
                                     try {
                                         IcmpPingRequest rq = IcmpPingUtil.createIcmpPingRequest();
@@ -273,14 +272,15 @@ public class IPSearch
                                         rq.setTimeout(timeout);
                                         IcmpPingResponse response = IcmpPingUtil.executePingRequest(rq);
                                         if(response.getSuccessFlag()) {
-                                            System.out.print("IP " + IP + " responded.\n");
+                                            System.out.print("com/michaelRunzler/ARK/Deprecated/Module/IP " + IP + " responded.\n");
                                             results.add(IP);
                                             break;
                                         }else{
-                                            System.out.print("IP " + IP + " did not respond.\n");
+                                            System.out.print("com/michaelRunzler/ARK/Deprecated/Module/IP " + IP + " did not respond.\n");
                                         }
                                     }catch(RuntimeException ignored){}
                                     pingTimeList[totalIPs - 1] = System.currentTimeMillis() - startPTime;
+                                    */
                                 }
                                 if(delay > 0) try{System.out.println("Waiting " + delay + "ms...");Thread.sleep(delay);}catch(Exception ignored){}
                                 processTimeList[totalIPs - 1] = System.currentTimeMillis() - startTime;

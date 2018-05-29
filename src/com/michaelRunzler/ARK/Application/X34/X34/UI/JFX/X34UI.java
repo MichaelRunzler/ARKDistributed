@@ -34,10 +34,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -117,7 +114,6 @@ public class X34UI extends Application
 
     // Result caching controls
 
-    @ModeLocal(identifier = "State", value = {STATE_RUNNING, STATE_FINISHED})
     @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private ListView<RetrievalResultCache> results;
 
@@ -165,7 +161,7 @@ public class X34UI extends Application
 
     // Download status fields
 
-    @ModeLocal(identifier = "State", value = STATE_FINISHED)
+    @ModeLocal(identifier = "State", value = STATE_DOWNLOADING)
     @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private VBox downloadStatusContainer;
 
@@ -173,6 +169,7 @@ public class X34UI extends Application
     private StackPane downloadProgressContainer;
     private Label downloadProgressLabel;
     private ProgressBar downloadProgressIndicator;
+    private Button cancelDownload;
 
     // Auto-mode controls
 
@@ -182,11 +179,11 @@ public class X34UI extends Application
     @ModeLocal({MODE_ADVANCED})
     private Button editRuleListShortcut;
 
-    @ModeLocal(identifier = "State", invert = true, value = {STATE_IDLE})
+    @ModeLocal(identifier = "State", value = {STATE_RUNNING})
     @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private ImageView ruleIndicatorArrow1;
 
-    @ModeLocal(identifier = "State", invert = true, value = {STATE_IDLE})
+    @ModeLocal(identifier = "State", value = {STATE_RUNNING})
     @ModeLocal({MODE_SIMPLE, MODE_ADVANCED})
     private ImageView ruleIndicatorArrow2;
 
@@ -245,6 +242,7 @@ public class X34UI extends Application
     private static final int STATE_BUSY = -101;
     private static final int STATE_RUNNING = -102;
     private static final int STATE_FINISHED = -103;
+    private static final int STATE_DOWNLOADING = -104;
 
     private static final String STATUS_MASTER_BASE = "Status: ";
     private static final String STATUS_RULE_BASE = "Rule ";
@@ -398,12 +396,12 @@ public class X34UI extends Application
 
         // Add hook for mode-switch, result list, and rule/processor list disable on retrieval start.
         stateControl.addModeSwitchHook((mode -> {
-            startRetrieval.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING);
+            startRetrieval.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING || mode == STATE_DOWNLOADING);
             autoRuleList.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING);
             processorList.setDisable(mode == STATE_BUSY || mode == STATE_RUNNING);
             fileMenuModeSelectAdvanced.setDisable(mode == STATE_RUNNING || mode == STATE_BUSY);
             fileMenuModeSelectSimple.setDisable(mode == STATE_RUNNING || mode == STATE_BUSY);
-            results.setDisable(mode != STATE_FINISHED);
+            results.setDisable(mode == STATE_DOWNLOADING);
         }));
 
         //
@@ -620,6 +618,13 @@ public class X34UI extends Application
         statusContainer.getChildren().addAll(masterStateIndicator, ruleStatus, ruleProgressContainer,
                 processorStatus, processorProgressContainer, pageStatus, pageProgressContainer);
         statusContainer.setVisible(false);
+        statusContainer.setFillWidth(true);
+        VBox.setVgrow(masterStateIndicator, Priority.NEVER);
+        VBox.setVgrow(ruleProgressContainer, Priority.ALWAYS);
+        VBox.setVgrow(processorStatus, Priority.ALWAYS);
+        VBox.setVgrow(processorProgressContainer, Priority.ALWAYS);
+        VBox.setVgrow(pageStatus, Priority.ALWAYS);
+        VBox.setVgrow(pageProgressContainer, Priority.ALWAYS);
 
         masterStatus.setAlignment(Pos.CENTER);
 
@@ -640,6 +645,10 @@ public class X34UI extends Application
                     break;
                 case STATE_FINISHED:
                     masterStatus.setText(STATUS_MASTER_BASE + "Finished!");
+                    masterStateIndicator.setVisible(false);
+                    break;
+                case STATE_DOWNLOADING:
+                    masterStatus.setText(STATUS_MASTER_BASE + "Downloading");
                     masterStateIndicator.setVisible(false);
                     break;
             }
@@ -683,11 +692,13 @@ public class X34UI extends Application
         downloadProgressLabel = new Label("");
         downloadProgressIndicator = new ProgressBar();
         downloadProgressContainer = new StackPane(downloadProgressIndicator, downloadProgressLabel);
+        cancelDownload = new Button("Cancel Download");
         downloadProgressContainer.setAlignment(Pos.CENTER);
         VBox.setMargin(downloadStatus, new Insets(JFXUtil.DEFAULT_SPACING / 2, 0, 0, 0));
+        VBox.setMargin(cancelDownload, new Insets(JFXUtil.DEFAULT_SPACING / 2, 0, 0, 0));
 
         downloadStatusContainer.setAlignment(Pos.CENTER);
-        downloadStatusContainer.getChildren().addAll(downloadStatus, downloadProgressContainer);
+        downloadStatusContainer.getChildren().addAll(downloadStatus, downloadProgressContainer, cancelDownload);
 
         core.downloadProgressProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(() ->{
             downloadProgressLabel.setText((newValue.intValue() == X34Core.INVALID_INT_PROPERTY_VALUE ? "" : newValue.intValue() + " / ")
@@ -883,6 +894,9 @@ public class X34UI extends Application
         mainMenuBar.getMenus().addAll(fileMenu, functionsMenu, windowMenu, helpMenu);
 
         layout.getChildren().addAll(mainMenuBar);
+
+        stopRetrieval.visibleProperty().addListener(e -> functionsMenuStopRetrieval.setDisable(!stopRetrieval.isVisible()));
+        functionsMenuStartRetrieval.disableProperty().bind(startRetrieval.disabledProperty());
     }
 
     private void nodePositioningInit()
@@ -945,7 +959,18 @@ public class X34UI extends Application
         processorStatus.prefWidthProperty().bind(processorProgressIndicator.widthProperty());
         pageStatus.prefWidthProperty().bind(pageProgressIndicator.widthProperty());
 
-        masterStatus.setPrefWidth(JFXUtil.DEFAULT_SPACING * 3);
+        // Unused as of now, too buggy
+        /*
+        autoRuleList.widthProperty().addListener(e -> JFXUtil.alignToNode(layout, autoRuleList, new Rectangle2D(autoRuleList.getLayoutX(), autoRuleList.getLayoutY(), autoRuleList.getWidth(), autoRuleList.getHeight()),
+                ruleIndicatorArrow1, new Rectangle2D(ruleIndicatorArrow1.getLayoutX(), ruleIndicatorArrow1.getLayoutY(), ruleIndicatorArrow1.boundsInParentProperty().getValue().getWidth(),
+                        ruleIndicatorArrow1.boundsInParentProperty().getValue().getHeight()), 10 * JFXUtil.SCALE, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
+
+        results.widthProperty().addListener(e -> JFXUtil.alignToNode(layout, results, new Rectangle2D(results.getLayoutX(), results.getLayoutY(), results.getWidth(), results.getHeight()),
+                ruleIndicatorArrow2, new Rectangle2D(ruleIndicatorArrow2.getLayoutX(), ruleIndicatorArrow2.getLayoutY(), ruleIndicatorArrow2.boundsInParentProperty().getValue().getWidth(),
+                        ruleIndicatorArrow2.boundsInParentProperty().getValue().getHeight()), -10 * JFXUtil.SCALE, Orientation.HORIZONTAL, JFXUtil.Alignment.CENTERED));
+       */
+
+        masterStatus.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
 
         Platform.runLater(() ->{
             JFXUtil.bindAlignmentToNode(layout, results, resultActionContainer,10, Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
@@ -971,8 +996,7 @@ public class X34UI extends Application
     // on height change only
     private void onWindowHSizeChange()
     {
-        JFXUtil.setElementPositionCentered(layout, ruleIndicatorArrow1, new Rectangle2D(ruleIndicatorArrow1.getX(), ruleIndicatorArrow1.getY(), ruleIndicatorArrow1.getFitWidth(), ruleIndicatorArrow1.getFitHeight()), false, true);
-        JFXUtil.setElementPositionCentered(layout, ruleIndicatorArrow2, new Rectangle2D(ruleIndicatorArrow2.getX(), ruleIndicatorArrow2.getY(), ruleIndicatorArrow2.getFitWidth(), ruleIndicatorArrow2.getFitHeight()), false, true);
+
     }
 
     // on width change only
@@ -981,6 +1005,7 @@ public class X34UI extends Application
         mainMenuBar.setPrefWidth(layout.getWidth());
         info.setPrefWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
         notificationSeparator.setFitWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
+        masterStatus.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
 
         processorList.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
         autoRuleList.setPrefWidth((layout.getWidth() - layout.getPadding().getRight() - layout.getPadding().getLeft()) * 0.3);
@@ -1006,7 +1031,8 @@ public class X34UI extends Application
         fileMenuModeSelectSimple.setOnAction(e -> mode.set(MODE_SIMPLE));
         fileMenuModeSelectAdvanced.setOnAction(e -> mode.set(MODE_ADVANCED));
 
-        functionsMenuStartRetrieval.setOnAction(e -> retrieve());
+        functionsMenuStartRetrieval.setOnAction(e -> startRetrieval.onActionProperty().get().handle(e));
+        functionsMenuStopRetrieval.setOnAction(e -> stopRetrieval.onActionProperty().get().handle(e));
 
         windowMenuRuleManager.setOnAction(e -> {
             ruleMgr.setWorkingList(config.getSettingOrDefault(KEY_RULE_LIST, new ArrayList<>()));
@@ -1086,8 +1112,15 @@ public class X34UI extends Application
                 results.getItems().set(index, temp);
             }
         });
+        cancelDownload.setOnAction(e -> {
+            if(state.get() != STATE_DOWNLOADING) return;
+            core.cancelledProperty().set(true);
+            notice.displayNotice("Cancelling download...", UINotificationBannerControl.Severity.INFO, 2000);
+        });
     }
 
+    // Caching variable for rules slated for use in the MT retrieval routine
+    private ArrayList<X34Rule> ruleQueue;
     private void retrieve()
     {
         registeredRetrievalTasks.clear();
@@ -1155,8 +1188,18 @@ public class X34UI extends Application
 
             case MODE_ADVANCED:
                 state.set(STATE_RUNNING);
-                maxRuleCountProperty.set(autoRuleList.getItems().size());
-                final Iterator<X34Rule> iterator = autoRuleList.getItems().iterator();
+
+                // Filter by selection state
+                ruleQueue = new ArrayList<>();
+                for(X34Rule r : autoRuleList.getItems()) if (ruleListValues.get(r).get()) ruleQueue.add(r);
+
+                if(ruleQueue.size() == 0){
+                    state.setValue(STATE_IDLE);
+                    return;
+                }
+
+                maxRuleCountProperty.set(ruleQueue.size());
+                final Iterator<X34Rule> iterator = ruleQueue.iterator();
                 runMTRetrieval(iterator);
                 break;
         }
@@ -1178,8 +1221,14 @@ public class X34UI extends Application
         };
 
         downloadTask.setOnSucceeded(e -> {
-            notice.displayNotice("Result(s) successfully written to file!", UINotificationBannerControl.Severity.INFO, 2500);
-            if(index < results.getItems().size()) results.getItems().remove(index);
+            if(core.cancelledProperty().get()) {
+                notice.displayNotice("Download cancelled. Results not modified.", UINotificationBannerControl.Severity.WARNING, 4000);
+            }else{
+                notice.displayNotice("Result(s) successfully written to file!", UINotificationBannerControl.Severity.INFO, 2500);
+                if (index < results.getItems().size()) results.getItems().remove(index);
+            }
+
+            state.set(STATE_FINISHED);
         });
 
         downloadTask.setOnFailed(e ->{
@@ -1189,10 +1238,12 @@ public class X34UI extends Application
 
             if(new ARKInterfaceDialogYN("Query", "Download incomplete. Remove result entry from the list anyway?", "Yes", "No").display())
                 if(index < results.getItems().size()) results.getItems().remove(index);
+            state.set(STATE_FINISHED);
         });
 
         Thread downloadThread = new Thread(downloadTask);
         downloadThread.setDaemon(true);
+        state.set(STATE_DOWNLOADING);
         downloadThread.start();
     }
 
@@ -1216,7 +1267,7 @@ public class X34UI extends Application
 
         final X34Rule rule = ruleSource.next();
 
-        ruleCountProperty.set(autoRuleList.getItems().indexOf(rule) + 1);
+        ruleCountProperty.set(ruleQueue.indexOf(rule) + 1);
 
         Task<ArrayList<X34Image>> autoRetrievalTask = new Task<ArrayList<X34Image>>() {
             @Override
@@ -1292,6 +1343,8 @@ public class X34UI extends Application
 
     private boolean checkManualStartEnableState()
     {
+        if(state.get() == STATE_DOWNLOADING) return false;
+
         boolean isSelected = false;
         for(SimpleBooleanProperty bp : processorListValues.values()){
             if(bp.getValue()){
@@ -1305,7 +1358,7 @@ public class X34UI extends Application
 
     private boolean checkAutoStartEnableState()
     {
-        if(autoRuleList.getItems().size() == 0) return false;
+        if(autoRuleList.getItems().size() == 0 || state.get() == STATE_DOWNLOADING) return false;
         else if(ruleListValues.size() < autoRuleList.getItems().size()) return true;
 
         boolean isSelected = false;

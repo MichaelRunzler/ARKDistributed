@@ -1,6 +1,9 @@
 package core.UI.InterfaceDialogs;
 
 import core.CoreUtil.JFXUtil;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -105,14 +108,15 @@ public class ARKInterfaceFileChangeDialog
 
         container = new VBox();
         layout = new AnchorPane();
+        layout.setPadding((new Insets(15, 15, 15, 15)));
+
         container.setAlignment(Pos.CENTER);
-        container.setSpacing(JFXUtil.DEFAULT_SPACING / 4);
+        container.setSpacing(5 * JFXUtil.SCALE);
         container.getChildren().addAll(description, currentFile, change, reset, close);
-        container.setPadding((new Insets(15, 15, 15, 15)));
 
         layout.getChildren().add(container);
 
-        JFXUtil.setElementPositionInGrid(layout, container, 0, -1, 0, -1);
+        JFXUtil.setElementPositionInGrid(layout, container, 0, 0, 0, -1);
 
         if(width <= 0 || height <= 0) {
             // set to temporary oversized values util we can determine the necessary size of the Vbox and size the window to that
@@ -120,7 +124,7 @@ public class ARKInterfaceFileChangeDialog
             height = (int)(200 * JFXUtil.SCALE);
         }
 
-        description.setMaxWidth(width - container.getPadding().getLeft() - container.getPadding().getRight());
+        description.setMaxWidth(width - layout.getPadding().getLeft() - layout.getPadding().getRight());
 
         scene = new Scene(layout, width, height);
 
@@ -251,19 +255,12 @@ public class ARKInterfaceFileChangeDialog
             }
         });
 
-        container.layout();
-
-        // auto-resize the window if manual sizing has not been enforced, or if the manually-set sizes are too small
-        // for the window's contents
-        if(container.getWidth() > 0 && container.getHeight() > 0){
-            if(automaticSizingEnabled){
-                window.setWidth(container.getWidth());
-                window.setHeight(container.getHeight());
-            }else{
-                if(window.getWidth() < container.getWidth()) window.setWidth(container.getWidth());
-                if(window.getHeight() < container.getHeight()) window.setHeight(container.getHeight());
-            }
-        }
+        container.widthProperty().addListener((observable, oldValue, newValue) -> {
+            if(newValue.intValue() > 0) window.setWidth(container.getWidth() + layout.getPadding().getRight() * 4);
+        });
+        container.heightProperty().addListener((observable, oldValue, newValue) -> {
+            if(newValue.intValue() > 0) window.setHeight(container.getHeight() + layout.getPadding().getTop() * 4);
+        });
 
         window.showAndWait();
 

@@ -1,4 +1,4 @@
-package RPLanner;
+package Misc.RPLanner;
 
 import java.io.Serializable;
 

@@ -49,9 +49,9 @@ public class UINotificationBannerControl
 
         icons = new HashMap<>();
         icons.put(Severity.DEBUG, null);
-        icons.put(Severity.INFO, JFXUtil.generateGraphicFromResource("Core/assets/info.png", 15));
-        icons.put(Severity.WARNING, JFXUtil.generateGraphicFromResource("Core/assets/warning.png", 15));
-        icons.put(Severity.ERROR, JFXUtil.generateGraphicFromResource("Core/assets/error.png", 15));
+        icons.put(Severity.INFO, JFXUtil.generateGraphicFromResource("core/assets/info.png", 15));
+        icons.put(Severity.WARNING, JFXUtil.generateGraphicFromResource("core/assets/warning.png", 15));
+        icons.put(Severity.ERROR, JFXUtil.generateGraphicFromResource("core/assets/error.png", 15));
     }
 
     /**

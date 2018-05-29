@@ -53,6 +53,8 @@ public class JFXUtil
 
     /**
      * The default spacing in pixels between UI nodes in a grid-type UI arrangement.
+     * Note that this is the default <i>vertical</i> spacing - the default <i>horizontal</i> spacing is equivalent
+     * to this value times 2.
      * For example, this value is used by the {@link #setElementPositionInGrid(AnchorPane, Node, double, double, double, double)} method for spacing its nodes.
      * This value is auto-scaled using {@link #SCALE}.
      */
