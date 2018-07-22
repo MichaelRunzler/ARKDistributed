@@ -1,5 +1,6 @@
 package X34.UI.JFX.Util;
 
+import X34.Core.X34Core;
 import X34.UI.JFX.Managers.X34UIRuleManager;
 import X34.UI.JFX.X34UI;
 
@@ -37,7 +38,16 @@ public class JFXConfigKeySet
     public static final String KEY_LOGGING_DIR = "master_log_dir";
 
     @Owner(X34UI.class)
+    public static final String KEY_DO_FILE_LOGGING = "file_logging";
+
+    @Owner(X34UI.class)
     public static final String KEY_OVERWRITE_EXISTING = "overwrite_existing_images";
+
+    @Owner(X34Core.class)
+    public static final String KEY_PUSH_TO_INDEX = "push_to_index";
+
+    @Owner(X34UI.class)
+    public static final String KEY_AUTO_DOWNLOAD = "auto_download_all";
 
     @Owner(JFXConfigKeySet.class)
     public static final long MAJOR_CONFIG_VERSION = 1000L;

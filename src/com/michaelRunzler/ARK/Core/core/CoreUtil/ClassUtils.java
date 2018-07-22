@@ -162,7 +162,10 @@ public class ClassUtils
         File f;
         try {
             URI ju = new URI(jarURL.toString().replaceFirst("[.]jar[!].*", ".jar"));
-            f = new File(ju);
+            String juS = ju.toString();
+            // Remove the leading 'jar:file:' from the URI
+            juS = juS.substring(juS.lastIndexOf(':') + 1, juS.length());
+            f = new File(juS);
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage());
         }

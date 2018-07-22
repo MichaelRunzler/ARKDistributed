@@ -335,6 +335,10 @@ public class X34UI extends Application
         config.setDefaultSetting(KEY_INDEX_DIR, X34IndexDelegator.getMainInstance().getParent());
         config.setDefaultSetting(KEY_LOGGING_DIR, log.getLogDirectory());
         config.setDefaultSetting(KEY_OUTPUT_DIR, ARKAppCompat.getOSSpecificDesktopRoot());
+        config.setDefaultSetting(KEY_OVERWRITE_EXISTING, false);
+        config.setDefaultSetting(KEY_AUTO_DOWNLOAD, false);
+        config.setDefaultSetting(KEY_DO_FILE_LOGGING, true);
+        config.setDefaultSetting(KEY_PUSH_TO_INDEX, true);
 
         try{
             // LOAD
@@ -362,6 +366,7 @@ public class X34UI extends Application
             configFile = config.getSettingOrStore(KEY_CONFIG_FILE, configFile);
             X34IndexDelegator.getMainInstance().setParent(config.getSettingOrDefault(KEY_INDEX_DIR, (File)config.getDefaultSetting(KEY_INDEX_DIR)));
             try {
+                log.setFileLoggingEnableState(config.getSettingOrDefault(KEY_DO_FILE_LOGGING, (Boolean)config.getDefaultSetting(KEY_DO_FILE_LOGGING)));
                 log.requestLoggerDirectoryChange(config.getSettingOrDefault(KEY_LOGGING_DIR, (File)config.getDefaultSetting(KEY_LOGGING_DIR)));
             } catch (IOException e) {
                 log.logEvent(LogEventLevel.ERROR, "Cannot switch to specified logging directory, using default instead.");
@@ -414,19 +419,19 @@ public class X34UI extends Application
         setActions();
 
         // Initialize the managers in a delayed manner, since they rely on calls to other properties that might not have finished init yet.
-        ruleMgr = new X34UIRuleManager((window.getX() - window.getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
+        ruleMgr = new X34UIRuleManager((window.getX() + window.getWidth() / 2) - X34UIRuleManager.DEFAULT_WIDTH / 2,
+                (window.getY() + window.getHeight() / 2) - X34UIRuleManager.DEFAULT_HEIGHT / 2);
 
-        fileMgr = new X34UIFileManager((window.getX() - window.getWidth() / 2) - X34UIFileManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIFileManager.DEFAULT_HEIGHT / 2);
+        fileMgr = new X34UIFileManager((window.getX() + window.getWidth() / 2) - X34UIFileManager.DEFAULT_WIDTH / 2,
+                (window.getY() + window.getHeight() / 2) - X34UIFileManager.DEFAULT_HEIGHT / 2);
 
-        configMgr = new X34UIConfigManager((window.getX() - window.getWidth() / 2) - (X34UIConfigManager.DEFAULT_WIDTH / 2),
-                (window.getY() - window.getHeight() / 2) - (X34UIConfigManager.DEFAULT_HEIGHT / 2));
+        configMgr = new X34UIConfigManager((window.getX() + window.getWidth() / 2) - (X34UIConfigManager.DEFAULT_WIDTH / 2),
+                (window.getY() + window.getHeight() / 2) - (X34UIConfigManager.DEFAULT_HEIGHT / 2));
 
         logMgr = new X34UIConsoleLogManager((int)(200 * JFXUtil.SCALE), (int)(300 * JFXUtil.SCALE), window.getX() + window.getWidth(), window.getY());
 
-        detailMgr = new X34UIResultDetailManager((window.getX() - window.getWidth() / 2) - X34UIResultDetailManager.DEFAULT_WIDTH / 2,
-                (window.getY() - window.getHeight() / 2) - X34UIResultDetailManager.DEFAULT_HEIGHT / 2);
+        detailMgr = new X34UIResultDetailManager((window.getX() + window.getWidth() / 2) - X34UIResultDetailManager.DEFAULT_WIDTH / 2,
+                (window.getY() + window.getHeight() / 2) - X34UIResultDetailManager.DEFAULT_HEIGHT / 2);
 
         mode.set(delayedMode);
         checkModeSpecificEnableState();
@@ -1053,7 +1058,7 @@ public class X34UI extends Application
         });
 
         helpMenuAbout.setOnAction(e ->{
-            //todo change to more complex UI with inline links
+            //todo change to more complex UI with inline links, using Hyperlink class
             new ARKInterfaceAlert("About", "ARK X34 Modular Database Interface (MDI) Utility\n" +
                     "\nVersion " + PROGRAM_VERSION + "\n" +
                     "\nAll rights reserved." +
@@ -1125,6 +1130,9 @@ public class X34UI extends Application
     {
         registeredRetrievalTasks.clear();
 
+        // Set the index-push property, since it is not updated live from the config manager
+        core.pushToIndexProperty().set((Boolean)config.getSettingOrDefault(KEY_PUSH_TO_INDEX, config.getDefaultSetting(KEY_PUSH_TO_INDEX)));
+
         switch (modeControl.getCurrentMode())
         {
             case MODE_SIMPLE:
@@ -1153,8 +1161,13 @@ public class X34UI extends Application
                     if(result == null || result.size() == 0){
                         state.set(STATE_IDLE);
                     }else {
-                        results.getItems().add(new RetrievalResultCache(rule, result));
+                        RetrievalResultCache rtc = new RetrievalResultCache(rule, result);
+                        results.getItems().add(rtc);
                         state.set(STATE_FINISHED);
+
+                        // Auto-download results if set to do so
+                        if((Boolean)config.getSettingOrDefault(KEY_AUTO_DOWNLOAD, config.getDefaultSetting(KEY_AUTO_DOWNLOAD)))
+                            downloadSelectedItem(results.getItems().indexOf(rtc));
                     }
                 });
 
@@ -1257,8 +1270,24 @@ public class X34UI extends Application
                 Platform.runLater(() -> notice.displayNotice("No results available from retrieval. Results list hidden.", UINotificationBannerControl.Severity.WARNING, 4000));
             }else{
                 state.set(STATE_FINISHED);
-                Platform.runLater(() -> notice.displayNotice("All retrieval processes complete. See results list for more information.", UINotificationBannerControl.Severity.INFO, 4000));
+                boolean auto = (Boolean)config.getSettingOrDefault(KEY_AUTO_DOWNLOAD, config.getDefaultSetting(KEY_AUTO_DOWNLOAD));
+                Platform.runLater(() -> {
+                    notice.displayNotice("All retrieval processes complete. See results list for more information.", UINotificationBannerControl.Severity.INFO, 4000);
+                    if(auto) notice.displayNotice("Auto-downloading result(s)...", UINotificationBannerControl.Severity.INFO, 5000);
+                });
+
+                // Auto-download results if set to do so
+                if(auto){
+                    // This must be done instead of direct iteration to avoid a ConcurrentModificationException, since the results
+                    // are removed when the download is finished. We could just pull from index 0 each time, but that risks infinite
+                    // recursion if the result is not removed for some reason.
+                    ArrayList<RetrievalResultCache> caches = new ArrayList<>(results.getItems());
+                    for(RetrievalResultCache rc : caches){
+                        downloadSelectedItem(results.getItems().indexOf(rc));
+                    }
+                }
             }
+
 
             ruleCountProperty.set(X34Core.INVALID_INT_PROPERTY_VALUE);
             maxRuleCountProperty.set(X34Core.INVALID_INT_PROPERTY_VALUE);

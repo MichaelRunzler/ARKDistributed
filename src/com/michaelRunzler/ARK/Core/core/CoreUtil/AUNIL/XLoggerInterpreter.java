@@ -233,6 +233,24 @@ public class XLoggerInterpreter
     }
 
     /**
+     * Gets whether or not global filesystem event processing is active. Note that this is the <i>global</i> setting,
+     * and does not take into account individual {@link XLoggerInterpreter interpreters'} settings.
+     * @return {@code true} if global file logging is enabled, {@code false} if otherwise
+     */
+    public boolean isFileLoggingEnabled() {
+        return executor.fileLoggingEnabled(this);
+    }
+
+    /**
+     * Enables or disables global filesystem event processing (whether or not active {@link XLoggerInterpreter interpreters} will
+     * log their events to their associated log file on disk).
+     * @param enable the desired enable state for global file logging
+     */
+    public void setFileLoggingEnableState(boolean enable) {
+        executor.setGlobalFileLoggingEnable(this, enable);
+    }
+
+    /**
      * Gets the time in milliseconds since the last call to {@link XLoggerInterpreter#logEvent(LogEventLevel, String) logEvent()} or any of its overloaded
      * variants. A <i>successful</i> event log is not required, simply a call to it. If no calls to these methods
      * have been made yet, returns the time since the constructor was called.

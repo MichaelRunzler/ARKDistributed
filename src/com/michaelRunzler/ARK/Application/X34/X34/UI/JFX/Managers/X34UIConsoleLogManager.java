@@ -136,7 +136,7 @@ public class X34UIConsoleLogManager extends ARKManagerBase
 
     private void setNodeTooltips()
     {
-        logView.setTooltip(new Tooltip("The current system log output, filtered by the\nverbosity setting set below."));
+        //logView.setTooltip(new Tooltip("The current system log output, filtered by the\nverbosity setting set below."));
         verbositySetting.setTooltip(new Tooltip("The log verbosity level.\nChanging this will affect what types of events\nshow up in the log view."));
         showLogFolder.setTooltip(new Tooltip("Open the currently set system log folder,\nwhere you can view and copy logged data."));
     }

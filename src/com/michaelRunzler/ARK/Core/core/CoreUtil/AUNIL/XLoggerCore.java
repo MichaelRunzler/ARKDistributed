@@ -316,6 +316,38 @@ public class XLoggerCore
     }
 
     /**
+     * Gets whether or not global filesystem event processing is active. Note that this is the <i>global</i> setting,
+     * and does not take into account individual {@link XLoggerInterpreter interpreters'} settings.
+     * @param caller the {@link XLoggerInterpreter} that is requesting this information
+     * @return {@code true} if global file logging is enabled, {@code false} if otherwise
+     */
+    boolean fileLoggingEnabled(XLoggerInterpreter caller)
+    {
+        if(!checkCallerPermissions(caller)){
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter \"" + caller.friendlyName + "\" attempted to check metadata while disassociated.");
+            throw new SecurityException("Caller does not have permission to perform this operation.");
+        }else return this.fileWrite;
+    }
+
+    /**
+     * Enables or disables global filesystem event processing (whether or not active {@link XLoggerInterpreter interpreters} will
+     * log their events to their associated log file on disk).
+     * @param caller the {@link XLoggerInterpreter} that is requesting this change
+     * @param doFileLogging the desired enable state for global file logging
+     */
+    synchronized void setGlobalFileLoggingEnable(XLoggerInterpreter caller, boolean doFileLogging)
+    {
+        if(!checkCallerPermissions(caller)){
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter \"" + caller.friendlyName + "\" attempted to change file logging state while disassociated.");
+            throw new SecurityException("Caller does not have permission to perform this operation.");
+        }else {
+            this.fileWrite = doFileLogging;
+            internal.logEvent(LogEventLevel.DEBUG, "Interpreter \"" + caller.friendlyName + "\" changed file write status to " + (doFileLogging ? "ENABLED" : "DISABLED"));
+            internal.logEvent(LogEventLevel.INFO, "File event logging " + (doFileLogging ? "enabled" : "disabled") + ".");
+        }
+    }
+
+    /**
      * Logs an event to the system console, and, if file logging is enabled, to its own event log file inside the parent
      * directory set by this object. Checks its file before logging anything to it.
      * @param caller the {@link XLoggerInterpreter Interpreter} that is requesting the logging operation

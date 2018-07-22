@@ -6,6 +6,7 @@ import X34.UI.JFX.Util.JFXConfigKeySet;
 import core.UI.InterfaceDialogs.ARKInterfaceAlert;
 import core.UI.InterfaceDialogs.ARKInterfaceDialog;
 import core.UI.InterfaceDialogs.ARKInterfaceDialogYN;
+import core.UI.InterfaceDialogs.ARKInterfaceFileChangeDialog;
 import core.UI.ModeLocal.ModeLocal;
 import core.UI.ModeLocal.ModeSwitchController;
 import core.CoreUtil.AUNIL.LogEventLevel;
@@ -13,15 +14,18 @@ import core.CoreUtil.AUNIL.XLoggerInterpreter;
 import core.CoreUtil.JFXUtil;
 import core.UI.*;
 import core.UI.NotificationBanner.UINotificationBannerControl;
+import core.system.ARKAppCompat;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -72,12 +76,35 @@ public class X34UIConfigManager extends ARKManagerBase
     private VBox optionsContainer;
 
     //
+    // TABBED NODES
+    //
+
+    // Mode-0
+    private HBox globalOutputDirContainer;
+    private Button globalOutputDirSelect;
+    private TextField globalOutputDir;
+
+    private CheckBox autoDownload;
+    private CheckBox overwriteExisting;
+
+    // Mode-1
+    private CheckBox pushToIndex;
+
+    // Mode-2
+    private CheckBox logToFile;
+
+    private HBox logLocationContainer;
+    private Button logLocationSelect;
+    private TextField logLocation;
+
+    //
     // JFX NODES
     //
 
     private TabPane categorySelect;
 
     private Button close;
+    private HBox configFunctionsContainer;
     private Button save;
     private Button revert;
 
@@ -99,7 +126,6 @@ public class X34UIConfigManager extends ARKManagerBase
     private UINotificationBannerControl notice;
     private ModeSwitchController modeControl;
 
-    //todo: add following settings: global output dir, autodownload, overwrite state, index push, log-to-file
     public X34UIConfigManager(double x, double y)
     {
         super(TITLE, DEFAULT_WIDTH, DEFAULT_HEIGHT, x, y);
@@ -139,6 +165,12 @@ public class X34UIConfigManager extends ARKManagerBase
 
         options = new ScrollPane();
         optionsContainer = new VBox();
+        configFunctionsContainer = new HBox();
+
+        options.setPadding(new Insets(10 * JFXUtil.SCALE, 10 * JFXUtil.SCALE, 10 * JFXUtil.SCALE, 10 * JFXUtil.SCALE));
+        optionsContainer.setSpacing(10 * JFXUtil.SCALE);
+        optionsContainer.setAlignment(Pos.TOP_LEFT);
+        optionsContainer.setFillWidth(true);
 
         close = new Button("Close");
         save = new Button("Save Changes");
@@ -151,6 +183,76 @@ public class X34UIConfigManager extends ARKManagerBase
         loadConfig = new Button("Import config from file...");
         returnToMain = new Button("Back");
 
+        // TABBED NODE INIT
+
+        // Mode-0
+        autoDownload = new CheckBox("Auto-download");
+        overwriteExisting = new CheckBox("Always overwrite existing");
+
+        globalOutputDirSelect = new Button("Change Download Directory");
+        globalOutputDir = new TextField();
+        globalOutputDirContainer = new HBox(globalOutputDirSelect, globalOutputDir);
+
+        globalOutputDirContainer.setFillHeight(false);
+        globalOutputDirContainer.setSpacing(5 * JFXUtil.SCALE);
+        globalOutputDirContainer.setAlignment(Pos.CENTER);
+
+        autoDownload.setOnAction(e -> config.storeSetting(JFXConfigKeySet.KEY_AUTO_DOWNLOAD, autoDownload.isSelected()));
+        overwriteExisting.setOnAction(e -> config.storeSetting(JFXConfigKeySet.KEY_OVERWRITE_EXISTING, overwriteExisting.isSelected()));
+
+        globalOutputDirSelect.setOnAction(e -> {
+            ARKInterfaceFileChangeDialog display = new ARKInterfaceFileChangeDialog("Download Location", "Change global image download destination");
+            display.setChoiceMode(ARKInterfaceFileChangeDialog.ChoiceMode.DIR_SELECT);
+            File current = (File)config.getDefaultSetting(JFXConfigKeySet.KEY_OUTPUT_DIR);
+            display.setDefaultValue(current);
+            display.setValue((File)config.getSetting(JFXConfigKeySet.KEY_OUTPUT_DIR));
+            display.setInitialDirectory(ARKAppCompat.getOSSpecificDesktopRoot());
+
+            File result = display.display();
+            if(result == null || result == current) return;
+
+            config.storeSetting(JFXConfigKeySet.KEY_OUTPUT_DIR, result);
+            globalOutputDir.setText(result.getAbsolutePath());
+        });
+        globalOutputDir.setEditable(false);
+
+        // Mode-1
+
+        pushToIndex = new CheckBox("Push updates to index");
+        pushToIndex.setOnAction(e -> config.storeSetting(JFXConfigKeySet.KEY_PUSH_TO_INDEX, pushToIndex.isSelected()));
+
+        // Mode-2
+
+        logToFile = new CheckBox("Log events to file");
+        logToFile.setOnAction(e -> config.storeSetting(JFXConfigKeySet.KEY_DO_FILE_LOGGING, logToFile.isSelected()));
+        logToFile.selectedProperty().addListener(e -> logLocationContainer.setDisable(!logToFile.isSelected()));
+
+        logLocationSelect = new Button("Change Logfile Location");
+        logLocation = new TextField();
+        logLocationContainer = new HBox(logLocationSelect, logLocation);
+
+        logLocationContainer.setFillHeight(false);
+        logLocationContainer.setSpacing(5 * JFXUtil.SCALE);
+        logLocationContainer.setAlignment(Pos.CENTER);
+
+        logLocationSelect.setOnAction(e ->{
+            ARKInterfaceFileChangeDialog display = new ARKInterfaceFileChangeDialog("Logfile Location", "Change system event logging location");
+            display.setChoiceMode(ARKInterfaceFileChangeDialog.ChoiceMode.DIR_SELECT);
+            File current = (File)config.getDefaultSetting(JFXConfigKeySet.KEY_LOGGING_DIR);
+            display.setDefaultValue(current);
+            display.setValue((File)config.getSetting(JFXConfigKeySet.KEY_LOGGING_DIR));
+            display.setInitialDirectory(ARKAppCompat.getOSSpecificAppCacheRoot());
+
+            File result = display.display();
+            if(result == null || result == current) return;
+
+            config.storeSetting(JFXConfigKeySet.KEY_LOGGING_DIR, result);
+            logLocation.setText(result.getAbsolutePath());
+        });
+        logLocation.setEditable(false);
+
+        // END TABBED NODES
+
         moreOptions.setGraphic(JFXUtil.generateGraphicFromResource("X34/assets/GUI/icon/ic_arrow_right_256px.png", 15));
         returnToMain.setGraphic(JFXUtil.generateGraphicFromResource("X34/assets/GUI/icon/ic_arrow_left_256px.png", 15));
 
@@ -162,16 +264,48 @@ public class X34UIConfigManager extends ARKManagerBase
 
         notificationSeparator = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_horiz_256x4.png"));
 
+        configFunctionsContainer.getChildren().addAll(save, revert);
+        configFunctionsContainer.setAlignment(Pos.CENTER);
+        configFunctionsContainer.setSpacing(JFXUtil.SCALE * 5);
+        configFunctionsContainer.setFillHeight(false);
+
         //
         // TABS
         //
 
-        //todo add actual tabs
-        ConfigManagerTabProperty tab1 = new ConfigManagerTabProperty("Tab 1");
-        ConfigManagerTabProperty tab2 = new ConfigManagerTabProperty("Tab 2");
-        ConfigManagerTabProperty tab3 = new ConfigManagerTabProperty("Tab 3");
+        ConfigManagerTabProperty dnld = new ConfigManagerTabProperty("Downloads");
+        ConfigManagerTabProperty ret = new ConfigManagerTabProperty("Retrieval");
+        ConfigManagerTabProperty logs = new ConfigManagerTabProperty("Logging");
 
-        tabs = new ConfigManagerTabProperty[]{tab1, tab2, tab3};
+        dnld.addAction(JFXConfigKeySet.KEY_OUTPUT_DIR, param -> {
+            globalOutputDir.setText(((File)param.data).getAbsolutePath());
+            return null;
+        }, globalOutputDirContainer);
+        dnld.addAction(JFXConfigKeySet.KEY_AUTO_DOWNLOAD, param -> {
+            autoDownload.setSelected((Boolean)param.data);
+            return null;
+        }, autoDownload);
+        dnld.addAction(JFXConfigKeySet.KEY_OVERWRITE_EXISTING, param -> {
+            overwriteExisting.setSelected((Boolean)param.data);
+            return null;
+        }, overwriteExisting);
+
+        ret.addAction(JFXConfigKeySet.KEY_PUSH_TO_INDEX, param -> {
+            pushToIndex.setSelected((Boolean)param.data);
+            return null;
+        }, pushToIndex);
+
+        logs.addAction(JFXConfigKeySet.KEY_DO_FILE_LOGGING, param -> {
+            logToFile.setSelected((Boolean)param.data);
+            logLocationContainer.setDisable(!logToFile.isSelected());
+            return null;
+        }, logToFile);
+        logs.addAction(JFXConfigKeySet.KEY_LOGGING_DIR, param -> {
+            logLocation.setText(((File)param.data).getAbsolutePath());
+            return null;
+        }, logLocationContainer);
+
+        tabs = new ConfigManagerTabProperty[]{dnld, ret, logs};
 
         for(ConfigManagerTabProperty tab : tabs) categorySelect.getTabs().add(new Tab(tab.name));
 
@@ -210,7 +344,7 @@ public class X34UIConfigManager extends ARKManagerBase
 
         setElementTooltips();
 
-        layout.getChildren().addAll(categorySelect, close, save, revert, defaults, globalDefaults, info, saveConfig, loadConfig, additionalOptionsDesc, notificationSeparator, returnToMain, options);
+        layout.getChildren().addAll(categorySelect, close, configFunctionsContainer, defaults, globalDefaults, info, saveConfig, loadConfig, additionalOptionsDesc, notificationSeparator, returnToMain, options);
 
         //
         // NODE ACTIONS
@@ -238,6 +372,7 @@ public class X34UIConfigManager extends ARKManagerBase
                 config.commitCache();
                 notice.displayNotice("Settings changes discarded.", UINotificationBannerControl.Severity.INFO, 2000);
                 config.fillCache();
+                forceSettingsUpdate();
             }
         });
 
@@ -247,7 +382,9 @@ public class X34UIConfigManager extends ARKManagerBase
                 notice.displayNotice("Reset aborted.", UINotificationBannerControl.Severity.INFO, 1000);
             }else{
                 config.loadAllDefaults();
+                config.clearCache();
                 notice.displayNotice("All settings reset to global defaults!", UINotificationBannerControl.Severity.WARNING, 4000);
+                forceSettingsUpdate();
             }
         });
 
@@ -333,12 +470,11 @@ public class X34UIConfigManager extends ARKManagerBase
         }
 
         JFXUtil.setElementPositionInGrid(layout, close, -1, 0, -1, 0);
-        JFXUtil.setElementPositionInGrid(layout, moreOptions, 2.75, -1, -1, 0);
-        JFXUtil.setElementPositionInGrid(layout, save, 1.5, -1, -1, 0);
-        JFXUtil.setElementPositionInGrid(layout, revert, 0, -1, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, moreOptions, -1, 0.75, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, configFunctionsContainer, 0, -1, -1, 0);
         JFXUtil.setElementPositionInGrid(layout, defaults, 0, -1, -1, 1);
 
-        JFXUtil.setElementPositionInGrid(layout, returnToMain, 2.75, -1, -1, 0);
+        JFXUtil.setElementPositionInGrid(layout, returnToMain, -1, 0.75, -1, 0);
         JFXUtil.setElementPositionInGrid(layout, additionalOptionsDesc, -1, -1, 1.25, -1);
         JFXUtil.setElementPositionInGrid(layout, saveConfig, 0, -1, 2, -1);
         JFXUtil.setElementPositionInGrid(layout, loadConfig, 0, -1, 3, -1);
@@ -362,6 +498,8 @@ public class X34UIConfigManager extends ARKManagerBase
     {
         info.setMaxWidth(layout.getWidth() - layout.getPadding().getLeft());
         notificationSeparator.setFitWidth(layout.getWidth() - layout.getPadding().getLeft() - layout.getPadding().getRight());
+        moreOptions.setLayoutX(close.getLayoutX() - (10 * JFXUtil.SCALE));
+        returnToMain.setLayoutX(close.getLayoutX() - (10 * JFXUtil.SCALE));
     }
 
     private void setElementTooltips()
@@ -544,7 +682,8 @@ class KeyedActionCallback
     }
 
     void call(){
-        action.call(new KeyedNodeBundle<>(X34ConfigDelegator.getMainInstance().getSetting(key), boundNode));
+        action.call(new KeyedNodeBundle<>(X34ConfigDelegator.getMainInstance().getSettingOrDefault(key,
+                X34ConfigDelegator.getMainInstance().getDefaultSetting(key)), boundNode));
     }
 }
 
