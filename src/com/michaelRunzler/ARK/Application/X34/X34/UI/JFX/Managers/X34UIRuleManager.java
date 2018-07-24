@@ -82,6 +82,7 @@ public class X34UIRuleManager extends ARKManagerBase
     private Button addProcessor;
     private Button removeProcessor;
     private Button changeOutputDirectory;
+    private Button processorInfo;
 
     private ImageView arrow;
     private ImageView divider1;
@@ -106,12 +107,14 @@ public class X34UIRuleManager extends ARKManagerBase
 
     private XLoggerInterpreter log;
     private X34Config config;
+    private X34UIProcessorInfoManager infoMgr;
 
     private boolean modified;
     private boolean errored;
     private State ruleState;
     private State enableState;
     private boolean linkedSizeListeners;
+    private String lastProcessorInfoSelection;
 
     public X34UIRuleManager(double x, double y)
     {
@@ -130,6 +133,7 @@ public class X34UIRuleManager extends ARKManagerBase
         modified = false;
         errored = false;
         linkedSizeListeners = false;
+        lastProcessorInfoSelection = "";
 
         window.initModality(Modality.APPLICATION_MODAL);
         window.getIcons().set(0, new Image("core/assets/options.png"));
@@ -141,6 +145,13 @@ public class X34UIRuleManager extends ARKManagerBase
         PROCESSOR_STORAGE_DIR = config.getSettingOrStore(KEY_PROCESSOR_DIR, PROCESSOR_STORAGE_DIR);
         externalProcessors = config.getSettingOrDefault(KEY_PROCESSOR_LIST, new HashMap<>());
         ruleDirMap = config.getSettingOrDefault(KEY_RULEDIR_MAP, new HashMap<>());
+
+        config.addListener(KEY_PROCESSOR_DIR, param -> {
+            PROCESSOR_STORAGE_DIR = (File)param.newValue();
+            return null;
+        });
+
+        infoMgr = new X34UIProcessorInfoManager(x + DEFAULT_WIDTH + (5 * JFXUtil.SCALE), y);
 
         //
         // NODE INIT
@@ -155,6 +166,7 @@ public class X34UIRuleManager extends ARKManagerBase
         addProcessor = new Button("Import Processor(s)...");
         removeProcessor = new Button("Remove Processor");
         changeOutputDirectory = new Button("Download Location...");
+        processorInfo = new Button("Processor Info");
         arrow = JFXUtil.generateGraphicFromResource("X34/assets/GUI/icon/ic_arrow_right_256px.png", 25);
         divider1 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
         divider2 = new ImageView(new Image("X34/assets/GUI/decorator/ic_line_rounded_vert_256x8.png", 8, 128, true, true));
@@ -279,7 +291,7 @@ public class X34UIRuleManager extends ARKManagerBase
         // Add selection update listener for the rule list, link it to the processor list
         ruleList.getSelectionModel().selectedIndexProperty().addListener(e -> onIndexChange());
 
-        layout.getChildren().addAll(close, discard, ruleList, processors, addRule, removeRule, ruleUp, ruleDown, info, addProcessor, removeProcessor, changeOutputDirectory);
+        layout.getChildren().addAll(close, discard, ruleList, processors, addRule, removeRule, ruleUp, ruleDown, info, addProcessor, removeProcessor, changeOutputDirectory, processorInfo);
 
         // Load processors from registry. If that fails, the dialog is essentially useless, so hide it.
         try {
@@ -306,6 +318,7 @@ public class X34UIRuleManager extends ARKManagerBase
                 ruleList.getItems().clear();
                 // Shallow clone is OK here, since the setWorkingList method runs a deep clone anyway. We have to do a shallow
                 // clone instead of a direct pass to avoid ConcurrentModificationExceptions during the deep clone.
+                //noinspection unchecked
                 setWorkingList((ArrayList<X34Rule>)fallback.clone());
                 notice.displayNotice("Changes discarded.", UINotificationBannerControl.Severity.INFO, 2500);
             }
@@ -545,6 +558,20 @@ public class X34UIRuleManager extends ARKManagerBase
             File f = fch.display();
 
             if(f != null && !f.equals(original)) ruleDirMap.replace(ruleList.getSelectionModel().getSelectedItem(), original, f);
+        });
+
+        processorInfo.setOnAction(e ->{
+            int index = processors.getSelectionModel().getSelectedIndex();
+
+            if(infoMgr.getVisibilityState() && lastProcessorInfoSelection.equals(processors.getItems().get(index).getID())
+                    || (index < 0 || index >= processors.getItems().size())){
+                infoMgr.hide();
+                return;
+            }
+
+            lastProcessorInfoSelection = processors.getItems().get(index).getID();
+            infoMgr.setDisplayedInfo(processors.getItems().get(index).getProcessorMetadata());
+            infoMgr.display();
         });
     }
 
@@ -818,6 +845,7 @@ public class X34UIRuleManager extends ARKManagerBase
             addRule.prefWidthProperty().bind(removeRule.widthProperty());
 
             JFXUtil.bindAlignmentToNode(layout, ruleList, changeOutputDirectory, (JFXUtil.DEFAULT_SPACING * 2) + (10 * JFXUtil.SCALE), Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
+            JFXUtil.bindAlignmentToNode(layout, processors, processorInfo, (JFXUtil.DEFAULT_SPACING * 2) + (10 * JFXUtil.SCALE), Orientation.VERTICAL, JFXUtil.Alignment.CENTERED);
 
             linkedSizeListeners = true;
         }
@@ -936,6 +964,7 @@ public class X34UIRuleManager extends ARKManagerBase
             modified = false;
             // Force-trip the selection listener to make sure that all rule entries are up-to-date.
             ruleList.getSelectionModel().select(ruleList.getSelectionModel().getSelectedIndex() == 0 ? 1 : 0);
+            infoMgr.hide();
             window.hide();
         }
     }

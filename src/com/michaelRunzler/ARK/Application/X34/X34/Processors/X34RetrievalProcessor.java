@@ -58,4 +58,11 @@ public abstract class X34RetrievalProcessor
      * @return the filename of the image file in the provided URL, or null if a filename could not be found
      */
     public abstract String getFilenameFromURL(URL source);
+
+    /**
+     * Gets this processor's metadata information. Said information packet contains non-programmatically important
+     * information, such as author attributions, support information, and descriptions.
+     * @return a {@link ProcessorMetadataPacket} containing this processor's descriptor metadata information
+     */
+    public abstract ProcessorMetadataPacket getProcessorMetadata();
 }

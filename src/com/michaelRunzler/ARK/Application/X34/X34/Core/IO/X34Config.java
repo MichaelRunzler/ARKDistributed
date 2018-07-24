@@ -1,6 +1,7 @@
 package X34.Core.IO;
 
 import com.sun.istack.internal.NotNull;
+import javafx.util.Callback;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,17 +25,14 @@ public class X34Config
     private HashMap<String, Object> defaults;
     private HashMap<String, Object> cache;
     private HashMap<String, Boolean> tempFlags;
+    private HashMap<String, Callback<ConfigChange<Object>, Void>> onEditFlags;
     private File target;
 
     /**
      * Constructs a new instance of this object with an empty internal registry and null file target.
      */
     public X34Config() {
-        storage = new HashMap<>();
-        defaults = new HashMap<>();
-        tempFlags = new HashMap<>();
-        target = null;
-        cache = null;
+        this(null);
     }
 
     /**
@@ -45,6 +43,7 @@ public class X34Config
         storage = new HashMap<>();
         defaults = new HashMap<>();
         tempFlags = new HashMap<>();
+        onEditFlags = new HashMap<>();
         this.target = target;
         cache = null;
     }
@@ -173,6 +172,24 @@ public class X34Config
      * @param key the key to search for in the settings index
      */
     public void removeSetting(String key) {
+        if(onEditFlags.containsKey(key)){
+            onEditFlags.get(key).call(new ConfigChange<Object>() {
+                @Override
+                public Object originalValue() {
+                    return getSetting(key);
+                }
+
+                @Override
+                public Object newValue() {
+                    return null;
+                }
+
+                @Override
+                public boolean wasRemoved() {
+                    return true;
+                }
+            });
+        }
         storage.remove(key);
     }
 
@@ -200,6 +217,25 @@ public class X34Config
     {
         if(key.isEmpty()) throw new IllegalArgumentException("Key cannot be zero-length");
         if(value != null && !(value instanceof Serializable)) throw new IllegalArgumentException("Object must be serializable");
+
+        if(onEditFlags.containsKey(key)){
+            onEditFlags.get(key).call(new ConfigChange<Object>() {
+                @Override
+                public Object originalValue() {
+                    return getSetting(key);
+                }
+
+                @Override
+                public Object newValue() {
+                    return value;
+                }
+
+                @Override
+                public boolean wasRemoved() {
+                    return false;
+                }
+            });
+        }
 
         boolean retV = false;
         if(storage.containsKey(key)) {
@@ -241,15 +277,36 @@ public class X34Config
 
         for(String key : settings.keySet()) {
             storage.remove(key);
-            storage.put(key, settings.get(key));
+            // Catch not-serializable error if present, ignore key if thrown
+            try{storeSetting(key, settings.get(key));}catch (IllegalArgumentException ignored){}
         }
     }
 
     /**
      * Clears the internal settings index completely.
      * Also clears the defaults store, temporary flag registry, and cache.
+     * Does not clear the on-edit action list.
      */
     public void clearStorage() {
+        for(String k : onEditFlags.keySet()){
+            onEditFlags.get(k).call(new ConfigChange<Object>() {
+                @Override
+                public Object originalValue() {
+                    return getSetting(k);
+                }
+
+                @Override
+                public Object newValue() {
+                    return null;
+                }
+
+                @Override
+                public boolean wasRemoved() {
+                    return true;
+                }
+            });
+        }
+
         storage = new HashMap<>();
         cache = new HashMap<>();
         tempFlags = new HashMap<>();
@@ -380,6 +437,25 @@ public class X34Config
     {
         if(cache == null) return;
 
+        for(String k : onEditFlags.keySet()){
+            onEditFlags.get(k).call(new ConfigChange<Object>() {
+                @Override
+                public Object originalValue() {
+                    return getSetting(k);
+                }
+
+                @Override
+                public Object newValue() {
+                    return cache.get(k);
+                }
+
+                @Override
+                public boolean wasRemoved() {
+                    return cache.get(k) == null;
+                }
+            });
+        }
+
         storage = new HashMap<>();
         storage.putAll(cache);
         cache = null;
@@ -443,9 +519,7 @@ public class X34Config
 
         if(!(defaults.containsKey(key))) return;
 
-        storage.remove(key);
-
-        storage.put(key, defaults.get(key));
+        storeSetting(key, defaults.get(key));
     }
 
     /**
@@ -473,7 +547,7 @@ public class X34Config
         Iterator<String> itr = defaults.keySet().iterator();
         for(int i = 0; i < defaults.keySet().size(); i++){
             String key = itr.next();
-            storage.put(key, defaults.get(key));
+            loadDefault(key);
         }
     }
 
@@ -498,5 +572,31 @@ public class X34Config
      */
     public void clearDefaults() {
         defaults = new HashMap<>();
+    }
+
+    /**
+     * Adds a change listener to a specified key in the index.
+     * This listener will fire whenever the object associated with the specified key is added, changed, removed,
+     * or cleared.
+     * If a change listener already exists on the specified key, an {@link IllegalStateException} will be thrown.
+     * @param key the key to listen for changes to
+     * @param action a {@link Callback} object that takes a {@link ConfigChange} object as an argument. This object will
+     *               fire its {@link Callback#call(Object)} method every time a change takes place, with a {@link ConfigChange}
+     *               object representing the change.
+     */
+    public void addListener(String key, Callback<ConfigChange<Object>, Void> action){
+        if(!onEditFlags.containsKey(key)) onEditFlags.put(key, action);
+        else throw new IllegalStateException("Listener for specified key already present.");
+    }
+
+    /**
+     * Removes the change listener from the specified key, if it exists.
+     * Be careful with how you use this, as it can remove change listeners from other classes, not just the calling class.
+     * A good idea would be to check if a listener exists on the key in question first, and if it does, check to see if the listener
+     * was issued by the class that is calling this method.
+     * @param key the key to remove the change listener from
+     */
+    public void removeListener(String key){
+        onEditFlags.remove(key);
     }
 }

@@ -25,6 +25,42 @@ public class R34PProcessor extends X34RetrievalProcessor
     private final String ID = "R34P";
     private final String INF = "Rule34 Paheal";
 
+    private final ProcessorMetadataPacket metadata = new ProcessorMetadataPacket() {
+        @Override
+        public URL[] getSupportedSites() {
+            try {
+                return new URL[]{new URL("http://rule34.paheal.net/")};
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String getDescription() {
+            return "Retrieves images from the Rule34 Paheal image repository. " +
+                    "Pulls pages directly from the server, since no public API is available.";
+        }
+
+        @Override
+        public String getAuthor() {
+            return "Michael Runzler";
+        }
+
+        @Override
+        public URL getSupportURL() {
+            try {
+                return new URL("https://github.com/MichaelRunzler/ARKDistributed");
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String getCopyrightInfo() {
+            return "© 2016-2019 ARK Software, IRC";
+        }
+    };
+
     private final String PAGESRV_ROOT       = "http://rule34.paheal.net/post/list/";
     private final String PAGESRV_PID_PREFIX = "/";
     private final String IMG_SECTION_START  = "<section id='imagelist'>";
@@ -236,5 +272,10 @@ public class R34PProcessor extends X34RetrievalProcessor
     public String getFilenameFromURL(URL source) {
         String res = source.toString();
         return res.substring(res.lastIndexOf('/') + 1, res.length());
+    }
+
+    @Override
+    public ProcessorMetadataPacket getProcessorMetadata() {
+        return metadata;
     }
 }

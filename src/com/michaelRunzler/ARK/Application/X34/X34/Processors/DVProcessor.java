@@ -41,6 +41,45 @@ public class DVProcessor extends X34RetrievalProcessor
     private final String LINK_HASH_START    = "<img data-sigil=\"torpedo-img\" src=\"https://t00.deviantart.net/";
     private final String LINK_HASH_END      = "=";
 
+    private final ProcessorMetadataPacket metadata = new ProcessorMetadataPacket() {
+        @Override
+        public URL[] getSupportedSites() {
+            try {
+                return new URL[]{new URL("http://www.deviantart.com/")};
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String getDescription() {
+            return "Retrieves images and videos from DeviantArt. " +
+                    "Uses the DeviantArt developer JSON deviation request API backend. " +
+                    "Currently severely speed-limited due to restrictions put in place by " +
+                    "the DeviantArt server system. Usage on tags that have more than " +
+                    "about 500 entries is not advisable.";
+        }
+
+        @Override
+        public String getAuthor() {
+            return "Michael Runzler";
+        }
+
+        @Override
+        public URL getSupportURL() {
+            try {
+                return new URL("https://github.com/MichaelRunzler/ARKDistributed");
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String getCopyrightInfo() {
+            return "© 2016-2019 ARK Software, IRC";
+        }
+    };
+
     @Override
     public ArrayList<X34Image> process(X34Index index, X34Schema schema) throws ValidationException
     {
@@ -427,5 +466,10 @@ public class DVProcessor extends X34RetrievalProcessor
     public String getFilenameFromURL(URL source) {
         String res = source.toString();
         return res.substring(res.lastIndexOf('/') + 1, res.length());
+    }
+
+    @Override
+    public ProcessorMetadataPacket getProcessorMetadata() {
+        return metadata;
     }
 }

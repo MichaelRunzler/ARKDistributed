@@ -151,7 +151,7 @@ public class X34UIFileManager extends ARKManagerBase
                         log.logEvent(e);
                     }
                     return null;
-                })
+                }), new FileManagerTabProperty("Loaded Processors", JFXConfigKeySet.KEY_PROCESSOR_DIR, ".jar")
         };
 
         //

@@ -33,6 +33,42 @@ public class R34XProcessor extends X34RetrievalProcessor
     private final String LINK_HASH_SEPARATOR= "/";
     private final String LINK_HASH_END      = ".";
 
+    private final ProcessorMetadataPacket metadata = new ProcessorMetadataPacket() {
+        @Override
+        public URL[] getSupportedSites() {
+            try {
+                return new URL[]{new URL("https://rule34.xxx/")};
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String getDescription() {
+            return "Retrieves images from the Rule 34 image repository. " +
+                    "Uses the site's public XML image request API to pull pages.";
+        }
+
+        @Override
+        public String getAuthor() {
+            return "Michael Runzler";
+        }
+
+        @Override
+        public URL getSupportURL() {
+            try {
+                return new URL("https://github.com/MichaelRunzler/ARKDistributed");
+            } catch (MalformedURLException e) {
+                return null;
+            }
+        }
+
+        @Override
+        public String getCopyrightInfo() {
+            return "© 2016-2019 ARK Software, IRC";
+        }
+    };
+
     @Override
     public ArrayList<X34Image> process(X34Index index, X34Schema schema) throws ValidationException
     {
@@ -233,5 +269,10 @@ public class R34XProcessor extends X34RetrievalProcessor
     public String getFilenameFromURL(URL source) {
         String res = source.toString();
         return res.substring(res.lastIndexOf('/') + 1, res.length());
+    }
+
+    @Override
+    public ProcessorMetadataPacket getProcessorMetadata() {
+        return metadata;
     }
 }

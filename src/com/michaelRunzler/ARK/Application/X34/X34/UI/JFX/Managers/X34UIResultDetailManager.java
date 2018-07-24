@@ -30,9 +30,17 @@ import java.util.ArrayList;
  */
 public class X34UIResultDetailManager extends ARKManagerBase
 {
+    //
+    // CONSTANTS
+    //
+
     public static final String DEFAULT_TITLE = "Result Details";
     public static final int DEFAULT_WIDTH = (int)(250 * JFXUtil.SCALE);
     public static final int DEFAULT_HEIGHT = (int)(300 * JFXUtil.SCALE);
+
+    //
+    // JFX NODES
+    //
 
     private ListView<X34Image> entries;
     private VBox buttonContainer;

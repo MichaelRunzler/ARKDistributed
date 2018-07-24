@@ -4,6 +4,7 @@ import X34.Core.*;
 import X34.Core.IO.X34ConfigDelegator;
 import X34.Core.IO.X34Config;
 import X34.Core.IO.X34IndexDelegator;
+import X34.Processors.ProcessorMetadataPacket;
 import X34.Processors.X34ProcessorRegistry;
 import X34.Processors.X34RetrievalProcessor;
 import X34.UI.JFX.Managers.*;
@@ -85,6 +86,7 @@ public class X34UI extends Application
     private MenuItem windowMenuFileManager;
     private MenuItem windowLogDisplayManager;
 
+    private MenuItem helpMenuQuickStart;
     private MenuItem helpMenuHelp;
     private MenuItem helpMenuUpdate;
     private MenuItem helpMenuAbout;
@@ -484,6 +486,9 @@ public class X34UI extends Application
                 public String getFilenameFromURL(URL source) {
                     return null;
                 }
+
+                @Override
+                public ProcessorMetadataPacket getProcessorMetadata() { return null; }
             });
             processorList.setDisable(true);
         }
@@ -831,6 +836,7 @@ public class X34UI extends Application
         windowMenuFileManager = new MenuItem();
         windowLogDisplayManager = new MenuItem();
 
+        helpMenuQuickStart = new MenuItem();
         helpMenuHelp = new MenuItem();
         helpMenuUpdate = new MenuItem();
         helpMenuAbout = new MenuItem();
@@ -857,6 +863,7 @@ public class X34UI extends Application
         windowMenuRuleManager.setText("Show Rule Manager...");
         windowLogDisplayManager.setText("Show/Hide System Log");
 
+        helpMenuQuickStart.setText("Quick-Start Guide");
         helpMenuHelp.setText("Program Manual");
         helpMenuUpdate.setText("Check for Updates...");
         helpMenuAbout.setText("About...");
