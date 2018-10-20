@@ -341,6 +341,7 @@ public class X34UI extends Application
         config.setDefaultSetting(KEY_AUTO_DOWNLOAD, false);
         config.setDefaultSetting(KEY_DO_FILE_LOGGING, true);
         config.setDefaultSetting(KEY_PUSH_TO_INDEX, true);
+        config.setDefaultSetting(KEY_FAST_RETRIEVAL, false);
 
         try{
             // LOAD
@@ -1354,7 +1355,7 @@ public class X34UI extends Application
     {
         // If there are uncommitted results, warn the user before exiting, as they will not be saved on exit.
         if(results.getItems().size() > 0 && new ARKInterfaceDialogYN("Warning", "Uncommitted results will be discarded and become unavailable " +
-                "for download in future! Continue with exit?", "Exit", "Cancel").display()) return;
+                "for download in future! Continue with exit?", "Cancel", "Exit").display()) return;
 
         try {
             // If the user has (intentionally or unintentionally) deleted the config file, do NOT save settings, as this would make

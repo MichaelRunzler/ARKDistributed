@@ -49,6 +49,9 @@ public class JFXConfigKeySet
     @Owner(X34UI.class)
     public static final String KEY_AUTO_DOWNLOAD = "auto_download_all";
 
+    @Owner(X34Core.class)
+    public static final String KEY_FAST_RETRIEVAL = "intelligent_page_scan";
+
     @Owner(JFXConfigKeySet.class)
     public static final long MAJOR_CONFIG_VERSION = 1000L;
 

@@ -89,6 +89,7 @@ public class X34UIConfigManager extends ARKManagerBase
 
     // Mode-1
     private CheckBox pushToIndex;
+    private CheckBox fastRetrieval;
 
     // Mode-2
     private CheckBox logToFile;
@@ -220,6 +221,8 @@ public class X34UIConfigManager extends ARKManagerBase
 
         pushToIndex = new CheckBox("Push updates to index");
         pushToIndex.setOnAction(e -> config.storeSetting(JFXConfigKeySet.KEY_PUSH_TO_INDEX, pushToIndex.isSelected()));
+        fastRetrieval = new CheckBox("Fast Retrieval"); //todo implement in processors/core
+        fastRetrieval.setOnAction(e -> config.storeSetting(JFXConfigKeySet.KEY_FAST_RETRIEVAL, fastRetrieval.isSelected()));
 
         // Mode-2
 
@@ -294,6 +297,10 @@ public class X34UIConfigManager extends ARKManagerBase
             pushToIndex.setSelected((Boolean)param.data);
             return null;
         }, pushToIndex);
+        ret.addAction(JFXConfigKeySet.KEY_FAST_RETRIEVAL, param -> {
+            fastRetrieval.setSelected((Boolean)param.data);
+            return null;
+        }, fastRetrieval);
 
         logs.addAction(JFXConfigKeySet.KEY_DO_FILE_LOGGING, param -> {
             logToFile.setSelected((Boolean)param.data);

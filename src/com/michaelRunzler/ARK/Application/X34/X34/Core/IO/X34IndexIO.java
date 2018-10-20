@@ -6,6 +6,8 @@ import com.sun.istack.internal.Nullable;
 import core.system.ARKAppCompat;
 
 import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 
 /**
  * Loads and saves {@link X34Index indexes}.
@@ -13,8 +15,10 @@ import java.io.*;
 public class X34IndexIO
 {
     public final String INDEX_FILE_EXTENSION = ".x34i";
+    public final String INDEX_REPORT_FILE_EXTENSION = ".index-changes";
 
     private File parent;
+    private final DateFormat df = new SimpleDateFormat("YYYY-MM-DD HH:mm");
 
     /**
      * Default constructor. Sets the parent directory to the default value as specified by the expression
@@ -95,6 +99,10 @@ public class X34IndexIO
         // If a processor ID is present, it and the index ID will be separated by a percent sign.
         File target = assembleIndexFileDescriptor(index.id, index.metadata.get("processor"));
 
+        // Generate changelog filename to match index file.
+        File changelog = new File(target.getAbsolutePath() + INDEX_REPORT_FILE_EXTENSION);
+
+        boolean isIndexNew = !target.exists();
         if(target.exists() && !target.delete()) throw new IOException("Unable to delete existing index file");
         if(!target.createNewFile()) throw new IOException("Unable to create new index file");
         if(!target.canWrite()) throw new IOException("Unable to obtain write lock for specified index file");
@@ -103,8 +111,34 @@ public class X34IndexIO
         ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(target));
         if(index.entries == null || index.entries.size() == 0) os.write(7);
         else os.writeObject(index);
-        os.flush();
         os.close();
+
+        // Write change data to the changelog file, create it if it does not exist.
+        boolean isNew = false;
+        if(!changelog.exists()){
+            changelog.createNewFile();
+            isNew = true;
+        }
+
+        // If the file does not already exist, and cannot be created, return without writing change data.
+        if(!changelog.exists()) return;
+
+        BufferedWriter br = new BufferedWriter(new FileWriter(changelog, true));
+
+        if(isNew) {
+            br.write("=== START OF INDEX CHANGE TRACKING LOG ===");
+            br.newLine();
+            br.write("Name: " + index.id);
+            br.newLine();
+            br.write("Processor ID: " + (index.metadata.get("processor") == null ? "None" : index.metadata.get("processor")));
+            br.newLine();
+            br.write("========");
+        }
+
+        String currentTime = df.format(System.currentTimeMillis());
+        br.newLine();
+        br.write(String.format(isIndexNew ? "%s: Index created with %d entries." : "%s: Entries added to index. New size: %d", currentTime, index.entries.size()));
+        br.close();
     }
 
     /**

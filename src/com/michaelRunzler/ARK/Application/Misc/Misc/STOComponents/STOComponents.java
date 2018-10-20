@@ -147,8 +147,8 @@ class STOComponentUI extends ARKManagerBase
         window.setMinHeight(height);
         window.setMinWidth(width);
 
-        if(x < 0) window.setX((Screen.getPrimary().getBounds().getWidth() / 2) - width);
-        if(y < 0) window.setY((Screen.getPrimary().getBounds().getHeight() / 2) - height);
+        if(x < 0) window.setX((Screen.getPrimary().getBounds().getWidth() / 2) - (width / 2));
+        if(y < 0) window.setY((Screen.getPrimary().getBounds().getHeight() / 2) - (height / 2));
 
         itemValues = new HashMap<>();
 
