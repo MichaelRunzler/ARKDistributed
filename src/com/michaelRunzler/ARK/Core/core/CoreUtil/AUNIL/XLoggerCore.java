@@ -63,8 +63,27 @@ public class XLoggerCore
         // Java 9 removed the Sun Misc package from the standard classpath. Check if it's present, and if not, issue a warning and disable
         // the shutdown hook.
         try {
-            SharedSecrets.getJavaLangAccess().registerShutdownHook(2, true, this::shutDown);
-            internal.logEvent(LogEventLevel.DEBUG, "JVM version looks good, shutdown hook registered.");
+            InternalError ex = null;
+            int start = 2;
+            int tries = 0;
+            int maxTries = 10;
+            do {
+                try {
+                    SharedSecrets.getJavaLangAccess().registerShutdownHook(start + tries, true, this::shutDown);
+                } catch (InternalError e) {
+                    ex = e;
+                }
+                tries ++;
+            }while (ex != null && tries <= maxTries);
+
+            if(tries == maxTries)
+                internal.logEvent(LogEventLevel.CRITICAL, "Unable to register shutdown hook because something else is taking up all\r\n" +
+                        "of the available hook slots. Please note that this is suboptimal,\r\n" +
+                        "and may result in undefined behavior. Among other things, this logging system will be\r\n" +
+                        "unable to automatically shut down its core loggers when the program exits, possibly resulting\r\n" +
+                        "in log data loss.");
+            else
+                internal.logEvent(LogEventLevel.DEBUG, "JVM version looks good, shutdown hook registered.");
         }catch (NoClassDefFoundError e){
             internal.logEvent(LogEventLevel.CRITICAL, "You appear to be running a nonstandard JRE or JDK (possibly Java 9 or higher)\r\n" +
                                                               "without access to the Sun miscellaneous libraries. Please note that this is suboptimal,\r\n" +
