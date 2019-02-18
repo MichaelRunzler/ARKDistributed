@@ -54,44 +54,13 @@ public class XLoggerCore
         bridges = new HashMap<>();
         streamRegistry = new XLoggerInputStream();
         internal = new XLoggerInterpreter(this, "Logger Core");
-        master = new XLoggerInterpreter(this, "Master Logfile " + this.toString().substring(this.toString().lastIndexOf('@'), this.toString().length()));
+        master = new XLoggerInterpreter(this, "Master Logfile " + this.toString().substring(this.toString().lastIndexOf('@')));
         dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
         verbosity = LogVerbosityLevel.DEBUG;
         internal.associate();
         master.associate();
 
-        // Java 9 removed the Sun Misc package from the standard classpath. Check if it's present, and if not, issue a warning and disable
-        // the shutdown hook.
-        try {
-            InternalError ex = null;
-            int start = 2;
-            int tries = 0;
-            int maxTries = 10;
-            do {
-                try {
-                    SharedSecrets.getJavaLangAccess().registerShutdownHook(start + tries, true, this::shutDown);
-                } catch (InternalError e) {
-                    ex = e;
-                }
-                tries ++;
-            }while (ex != null && tries <= maxTries);
-
-            if(tries == maxTries)
-                internal.logEvent(LogEventLevel.CRITICAL, "Unable to register shutdown hook because something else is taking up all\r\n" +
-                        "of the available hook slots. Please note that this is suboptimal,\r\n" +
-                        "and may result in undefined behavior. Among other things, this logging system will be\r\n" +
-                        "unable to automatically shut down its core loggers when the program exits, possibly resulting\r\n" +
-                        "in log data loss.");
-            else
-                internal.logEvent(LogEventLevel.DEBUG, "JVM version looks good, shutdown hook registered.");
-        }catch (NoClassDefFoundError e){
-            internal.logEvent(LogEventLevel.CRITICAL, "You appear to be running a nonstandard JRE or JDK (possibly Java 9 or higher)\r\n" +
-                                                              "without access to the Sun miscellaneous libraries. Please note that this is suboptimal,\r\n" +
-                                                              "and may result in undefined behavior. Among other things, this logging system will be\r\n" +
-                                                              "unable to automatically shut down its core loggers when the program exits, possibly resulting\r\n" +
-                                                              "in log data loss. Please run this program with a standard JRE or JDK if possible.");
-            internal.logEvent(LogEventLevel.CRITICAL, "Recommended Java versions are: JRE 8u113-8u151 x86/x64, JDK 8u58-8u151 x64");
-        }
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutDown));
 
         internal.logEvent(LogEventLevel.DEBUG, "Initialization finished.");
         internal.logEvent(LogEventLevel.DEBUG, "File write enabled: " + fileWrite);
@@ -127,11 +96,11 @@ public class XLoggerCore
             master.disassociate();
         }
 
-        internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " is requesting association.");
+        internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + getObjectID(caller) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " is requesting association.");
 
         // If file write is disabled, add to registry with 'null' as the file write entry and return.
         if(!fileWrite){
-            internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
+            internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + getObjectID(caller) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
             bridges.put(caller, null);
             return;
         }
@@ -148,7 +117,7 @@ public class XLoggerCore
             if(value == null) throw new IOException("File creation failed");
             f = new File(parent, value);
         } catch (IOException e) {
-            internal.logEvent(LogEventLevel.WARNING, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter " + getObjectID(caller) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
             bridges.put(caller, null);
         }
@@ -156,10 +125,10 @@ public class XLoggerCore
         try {
             bridges.put(caller, new XLoggerFileWriteEntry(new BufferedWriter(new FileWriter(f)), f, true));
         } catch (IOException e) {
-            internal.logEvent(LogEventLevel.WARNING, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
+            internal.logEvent(LogEventLevel.WARNING, "Interpreter " + getObjectID(caller) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated, but file writing is offline due to an IO error, detailed below.");
             internal.logEvent(e);
         }
-        internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + caller.toString().substring(caller.toString().lastIndexOf("@") + 1) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
+        internal.logEvent(LogEventLevel.DEBUG, "Interpreter " + getObjectID(caller) + " with informal name " + caller.friendlyName + " and class ID " + caller.classID + " associated with core.");
     }
 
     /**
@@ -477,9 +446,8 @@ public class XLoggerCore
 
         // Force disassociation on all associated interpreters.
         // This will also cause the core writers to shut down through the disassociate method's internal hooks.
-        for(XLoggerInterpreter x : bridges.keySet()){
-            x.disassociate();
-        }
+        XLoggerInterpreter[] interpreters = bridges.keySet().toArray(new XLoggerInterpreter[0]);
+        for(XLoggerInterpreter x : interpreters) x.disassociate();
     }
 
     /**
@@ -530,5 +498,12 @@ public class XLoggerCore
             else return null;
         }
         return f.createNewFile() ? f.getName() : null;
+    }
+
+    private String getObjectID(Object o)
+    {
+        if(o.toString().contains("@"))
+            return o.toString().substring(o.toString().lastIndexOf("@") + 1);
+        else return o.toString();
     }
 }
