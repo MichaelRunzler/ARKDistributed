@@ -100,7 +100,7 @@ public class ARKJsonObject
         {
             ARKJsonElement e = elements.get(i);
 
-            output.append(e.toJSON(ARKJsonParser.INDENT_SPACING_COUNT, i == elements.size() - 1));
+            output.append(e.toJSON(ARKJsonParser.INDENT_SPACING_COUNT, ((i == elements.size() - 1) && arrays.size() == 0)));
         }
 
         // Add all standalone arrays.

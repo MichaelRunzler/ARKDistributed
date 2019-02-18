@@ -174,7 +174,7 @@ public class ARKJsonElement
         if(!this.hasSubElements()){
             str.append(spacer);
             if(this.name != null) str.append("\"").append(this.name).append("\"").append(": ");
-            str.append(this.value == null ? "" : this.value.matches(ILLEGAL_CHARACTERS) ? "\"" + this.value + "\"" : this.value);
+            str.append(this.value == null ? "" : "\"" + this.value + "\"");
             if(!isFinal) str.append(",");
             str.append(ARKJsonParser.LINE_SEPARATOR);
             return str.toString();
