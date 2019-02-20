@@ -166,7 +166,7 @@ public class XLoggerCore
 
         // If the registry only contains the internal Interpreter, it means that all others have disassociated.
         // In that case, log this and disassociate the internal and master Interpreters as well.
-        if(bridges.keySet().size() == 1 && bridges.keySet().contains(internal)){
+        if(bridges.keySet().size() == 2 && (bridges.keySet().contains(internal) || bridges.keySet().contains(master))){
             internal.logEvent("No registered Interpreters remain. Shutting down logger core until further notice.");
             master.disassociate();
             internal.disassociate();
