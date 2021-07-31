@@ -5,13 +5,11 @@
       <module fileurl="file://$PROJECT_DIR$/ARK Distributed Application System.iml" filepath="$PROJECT_DIR$/ARK Distributed Application System.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Application.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Application.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Bin2Pix/Bin2Pix.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Bin2Pix/Bin2Pix.iml" />
-      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Bin2Pix/Bin2Pix.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Bin2Pix/Bin2Pix.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Core/Core.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Core/Core.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Deprecated/Deprecated.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Deprecated/Deprecated.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Misc/Misc.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Misc/Misc.iml" />
-      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Misc/Misc.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/Misc/Misc.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/R34/R34.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/R34/R34.iml" />
-      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/X34/X34.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/X34/X34.iml" />
+      <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/RMan/RMan.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/RMan/RMan.iml" />
       <module fileurl="file://$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/X34/X34.iml" filepath="$PROJECT_DIR$/src/com/michaelRunzler/ARK/Application/X34/X34.iml" />
     </modules>
   </component>
