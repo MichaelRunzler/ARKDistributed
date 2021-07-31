@@ -53,7 +53,7 @@ public class ShoppingListEntry extends NamedObject implements Serializable
      */
     public ShoppingListEntry(boolean isChecked, Component... parents)
     {
-        if(parents == null || parents.length == 0) throw new NullPointerException();
+        if(parents.length == 0) throw new IllegalArgumentException("Parent component list is empty.");
 
         this.isChecked = isChecked;
         this.name = parents[0].name;

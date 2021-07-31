@@ -110,7 +110,7 @@ public class ListGenerator
     public boolean regenerateElement(int index)
     {
         // Check index bounds
-        if(index >= list.size() || index < 0) throw new IllegalArgumentException("Index out of range.");
+        if(index >= list.size() || index < 0) throw new IndexOutOfBoundsException();
 
         // Cache the card set as in generateList()
         ArrayList<Card> cardSetCache = new ArrayList<>(this.cardSet);
@@ -144,8 +144,6 @@ public class ListGenerator
      */
     public void updateCardSet(CardManager manager, Category... categories)
     {
-        if(manager == null) throw new NullPointerException();
-
         // Update category list
         if(categories == null) this.cats = new Category[0];
         else this.cats = categories;
@@ -175,9 +173,41 @@ public class ListGenerator
      */
     public void importList(List list)
     {
-        if(list == null) throw new NullPointerException();
-
         this.list = list.cards;
         this.len = list.cards.size();
+    }
+
+    /**
+     * Adds the provided Card to the internal list and updates the list's generation length.
+     * This can be done directly by accessing {@link #list}, but this bypasses the length update.
+     */
+    public void addCard(Card c)
+    {
+        this.len++;
+        this.list.add(c);
+    }
+
+    /**
+     * Removes the Card at the specified index from the internal list and updates the list's generation length.
+     * This can be done directly by accessing {@link #list}, but this bypasses the length update and the bounds checks.
+     */
+    public void removeCard(int index)
+    {
+        if(index >= this.list.size() || index < 0) throw new IndexOutOfBoundsException();
+
+        this.len--;
+        this.list.remove(index);
+    }
+
+    /**
+     * Removes the specified Card from the internal list and updates the list's generation length.
+     * This can be done directly by accessing {@link #list}, but this bypasses the length update and the existence check.
+     */
+    public void removeCard(Card c)
+    {
+        if(!this.list.contains(c)) throw new IllegalArgumentException("Provided Card isn't in this List");
+
+        this.len--;
+        this.list.remove(c);
     }
 }

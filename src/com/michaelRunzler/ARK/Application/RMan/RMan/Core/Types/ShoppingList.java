@@ -2,6 +2,8 @@ package RMan.Core.Types;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Represents a shopping list comprised of the components required to make one or more Cards.
@@ -25,8 +27,6 @@ public class ShoppingList extends NamedObject implements Serializable
     public ShoppingList(List list)
     {
         this();
-        if(list == null) throw new NullPointerException();
-
         this.loadList(list);
     }
 
@@ -35,6 +35,24 @@ public class ShoppingList extends NamedObject implements Serializable
      */
     private void loadList(List list)
     {
-        // todo finish: pull list data and file by name (HM?)
+        this.name = list.name;
+
+        Map<String, ArrayList<Component>> componentMapping = new HashMap<>();
+
+        // Iterate through the list of cards, grabbing the components from each and storing them in the map
+        for(Card c : list.cards)
+        {
+            for(Component cm : c.components)
+            {
+                // Initialize the map entry if this is the first component by that name; otherwise, add it to the
+                // existing entry.
+                if(!componentMapping.containsKey(cm.name)) componentMapping.put(cm.name, new ArrayList<>());
+                componentMapping.get(cm.name).add(cm);
+            }
+        }
+
+        // Translate the map entries into ShoppingListEntry objects using the builder-constructor
+        for(String k : componentMapping.keySet())
+           this.entries.add(new ShoppingListEntry(componentMapping.get(k).toArray(new Component[0])));
     }
 }

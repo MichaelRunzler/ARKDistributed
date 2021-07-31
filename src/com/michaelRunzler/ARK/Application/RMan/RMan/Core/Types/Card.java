@@ -1,6 +1,7 @@
 package RMan.Core.Types;
 
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -111,5 +112,20 @@ public class Card extends NamedObject implements Serializable
         this.makesNum = 0;
         this.components = new ArrayList<>();
         this.category = Category.defaultCategory;
+    }
+
+    public String fullToString()
+    {
+        return String.format("\"%s\"\n" +
+                "Author: %s\n" +
+                "Created on: %s\n" +
+                "Category: %s\n" +
+                "Preparation Time: %.2f min.\n" +
+                "Makes %d serving(s)\n" +
+                "%s\n\n" +
+                "Preparation Instructions:\n" +
+                "%s",
+                this.name, this.creator, new SimpleDateFormat("yyyy-MM-dd hh:mm aa").format(this.creationDate),
+                this.category.name, this.prepTime, this.makesNum, this.description, this.instructions);
     }
 }
