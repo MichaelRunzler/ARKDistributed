@@ -29,19 +29,28 @@ public abstract class CollectionManager<E>
         // Ensure the target is at least a valid file reference, even if it doesn't exist yet
         if(target == null || target.isDirectory()) return false;
 
+        // Declare here so we can close if an error occurs
+        ObjectOutputStream os = null;
+
         try {
             // Prep file for writing
             if(target.exists() && !target.delete()) throw new IOException("Could not delete existing file.");
             if(!target.createNewFile()) throw new IOException("Could not create destination file.");
 
             // Open stream and write index; clean up.
-            ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream(target));
+            os = new ObjectOutputStream(new FileOutputStream(target));
             os.writeObject(index);
             os.flush();
             os.close();
         } catch (IOException e) {
             e.printStackTrace();
             return false;
+        } finally {
+            try {
+                if(os != null) os.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         return true;
@@ -61,24 +70,33 @@ public abstract class CollectionManager<E>
         // Ensure the file is valid and exists
         if(source == null || !source.exists() || source.isDirectory() || !source.canRead()) return false;
 
+        // Declare here so that we can close if an error occurs
+        ObjectInputStream is = null;
+
         try {
             // Open the stream and read the index. If it's null, something probably went wrong, so declare failure and
             // return. Otherwise, replace or merge with the current index and continue.
-            ObjectInputStream is = new ObjectInputStream(new FileInputStream(source));
+            is = new ObjectInputStream(new FileInputStream(source));
             ArrayList<E> tmp = (ArrayList<E>)is.readObject();
-            is.close();
 
             if(tmp != null)
             {
                 // Go through the new index and add any entries that don't already exist in the current index.
-                if(merge)
-                    for(E entry : tmp)
-                        if(!index.contains(entry)) index.add(entry);
-                else index = tmp;
+                if(merge) {
+                    for (E entry : tmp)
+                        if (!index.contains(entry)) index.add(entry);
+                }else index = tmp;
             } else return false;
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
             return false;
+        } finally {
+            // Close stream so we don't hold a lock
+            try {
+                if(is != null) is.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         return true;

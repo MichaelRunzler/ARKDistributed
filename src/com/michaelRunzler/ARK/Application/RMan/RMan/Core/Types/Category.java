@@ -8,7 +8,6 @@ import java.io.Serializable;
  */
 public class Category extends NamedObject implements Serializable
 {
-    public String name;
     public boolean userAdded;
 
     // The default category object. Eliminates the need to repeatedly call the default constructor.
